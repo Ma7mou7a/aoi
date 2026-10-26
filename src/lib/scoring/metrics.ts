@@ -69,9 +69,14 @@ function conflictCost(trials: TrialRecord[], key: string, prefix: "interference"
   const hard = trials.filter((t) => t.stimulus[key] === (prefix === "interference" ? false : true));
   const easy = trials.filter((t) => t.stimulus[key] === (prefix === "interference" ? true : false));
   const err = (ts: TrialRecord[]) => rate(ts.filter((t) => t.correct === false).length, ts.filter((t) => t.correct !== null).length);
+  const base = median(correctRts(easy));
+  const cost = median(correctRts(hard)) - base;
   const out: Metrics = {
     ...basic(trials),
-    [`${prefix}_cost_ms`]: median(correctRts(hard)) - median(correctRts(easy)),
+    [`${prefix}_cost_ms`]: cost,
+    // Proportional cost (cost ÷ the person's own baseline RT): unaffected by overall response speed,
+    // so slower but equally accurate people are not scored as worse at inhibition or switching.
+    [prefix === "interference" ? "interference_ratio" : "switch_cost_ratio"]: base > 0 ? cost / base : NaN,
   };
   if (prefix === "interference") out.incongruent_accuracy = 1 - err(hard);
   else out.switch_cost_errors = err(hard) - err(easy);

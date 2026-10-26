@@ -10,7 +10,7 @@ AI4Brain is a non-clinical agent that **assesses** six cognitive skills with cla
 Three design choices set it apart:
 
 1. **Transparent statistics, not a black box.** Scoring and profiling are explicit formulas over configuration, so every number can be explained. The language model only writes language, constrained to an evidence pack and re-checked in code.
-2. **Measured, not claimed.** We ran 500 simulated users with known abilities through the real pipeline. After calibration the 90% bands contain the true ability **89–96%** of the time, mean error is **±5.5–10%**, adaptive block selection is **18% more accurate** than random order at equal effort, and **99%** of invalid play is flagged with **2%** false alarms.
+2. **Measured, not claimed.** We ran 500 simulated users with known abilities through the real pipeline. After calibration the 90% bands contain the true ability **89–96%** of the time, mean error is **±5–11%**, adaptive block selection is **12% more accurate** than random order at equal effort, **99%** of invalid play is flagged with **2%** false alarms, 7-day forecasts have calibrated bands (TADPOLE-style CPA 0.007), and slower but equally accurate users are not penalised (bias under 2 points outside processing speed).
 3. **Generalisable by configuration.** A skill is a YAML file. A new skill reusing any of the six task types is added with one command and no code change, which is how we prepare for the surprise element.
 
 ## 2. Cognitive dimensions and tasks
@@ -82,22 +82,26 @@ Each skill has a **measurement card** (definition, what it is *not*, task, level
 
 **Set-up.** Each simulated user has a known latent ability per skill (*N*(0.5, 0.18), clamped). Task simulators turn ability into trial-level behaviour (hit and false-alarm rates, interference, switch costs, spans, coding speed, puzzle accuracy). Each user does 18 blocks through the **real** selector, scoring and profiler. Calibration is fitted on 250 users and every result is reported on the other 250 (`npm run validate`, `docs/validation.md`, `/validation`).
 
-**Calibration (per level).** The first run showed bands covering the truth only 62–77% of the time, with coverage *falling* as blocks accumulated. The hand-set level ranges were systematically biased, so errors did not average out. We fitted a measurement model per difficulty level, *c = a + b·ability + ε*, on blocks played at **random** levels (so every level gets data) and inverted it into the level's range. The residual noise became each skill's *σ*. The fit is written back into the YAML, so pilot data can refit it with no code change.
+**Calibration (per level).** The first run showed bands covering the truth only 62–76% of the time, with coverage *falling* as blocks accumulated. The hand-set level ranges were systematically biased, so errors did not average out. We fitted a measurement model per difficulty level, *c = a + b·ability + ε*, on blocks played at **random** levels (so every level gets data) and inverted it into the level's range. The residual noise became each skill's *σ*. The fit is written back into the YAML, so pilot data can refit it with no code change.
 
 | Skill | r | Mean abs. error | 90% coverage (hand-set → fitted) |
 |-|-|-|-|
-| Working memory | 0.92 | 5.5% | 69% → **96%** |
-| Attention & inhibition | 0.90 | 6.4% | 63% → **93%** |
-| Processing speed | 0.91 | 5.6% | 62% → **94%** |
-| Cognitive flexibility | 0.73 | 10.1% | 62% → **89%** |
-| Visuospatial memory | 0.93 | 5.6% | 77% → **89%** |
-| Reasoning | 0.89 | 6.3% | 66% → **90%** |
+| Working memory | 0.87 | 7.2% | 66% → **96%** |
+| Attention & inhibition | 0.77 | 9.5% | 64% → **92%** |
+| Processing speed | 0.90 | 5.8% | 62% → **93%** |
+| Cognitive flexibility | 0.68 | 10.5% | 62% → **89%** |
+| Visuospatial memory | 0.93 | 5.3% | 76% → **91%** |
+| Reasoning | 0.90 | 6.0% | 67% → **92%** |
 
-**Adaptive vs random selection** (RMSE across six skills, equal budget): 11.4% vs 13.2% after 6 blocks and **8.0% vs 9.7% after 18 blocks** (−18%). Bands are also narrower (σ 0.087 vs 0.097).
+**Adaptive vs random selection** (RMSE across six skills, equal budget): 12.4% vs 13.6% after 6 blocks and **9.2% vs 10.4% after 18 blocks** (−12%). Bands are also narrower (σ 0.097 vs 0.106).
 
-**Robustness** (200 blocks per cell): random answers 93–100% flagged, same-key, no-response and too-fast play 100%, genuine players 0–8% (matrices 3%, after the chance-margin test was relaxed for 8-item blocks, a change this study prompted).
+**Robustness** (200 blocks per cell): random answers 93–100% flagged, same-key, no-response and too-fast play 100%, genuine players 0–11% (n-back 11%, matrices 3%; the matrices chance-margin test was relaxed for 8-item blocks, a change this study prompted).
 
-**Growth** (100 users improving working memory by 15 points over a month): the drift rate was swept, and *q* = 0.03/day is the smallest value that keeps final coverage ≥ 90% (94%). Improvement was detected for 75% of users; the estimate is deliberately cautious (6.5 of 11.7 points of true gain).
+**Growth** (100 users improving working memory by 15 points over a month): the drift rate was swept, and *q* = 0.01/day is the smallest value that keeps final coverage ≥ 90% (92%). Improvement was detected for 67% of users; the estimate is deliberately cautious (3.5 of 11.7 points of true gain).
+
+**Forecasts** (1,200 seven-day forecasts, scored like the TADPOLE Alzheimer's forecasting challenge): mean absolute error 7.7% (a no-change forecast: 7.4%), with 50% and 90% bands covering the truth 48% and 91% of the time (coverage probability accuracy 0.02 and 0.007). A first version extrapolated the raw two-week trend and lost to the no-change baseline (8.5% vs 7.0%), so the slope now has a Bayesian prior that shrinks noisy trends toward zero.
+
+**Fairness** (inspired by the PREPARE challenge winners, who were judged on generalisation across populations): the same users were re-run with +80 ms device lag and with 30% slower, equally accurate responding. Scoring originally used raw milliseconds and overall speed, which put a slower person's attention estimate **14 points too low** (band coverage 54%). Attention and flexibility now use *proportional* costs (cost ÷ the person's own baseline response time) and working memory uses d′ alone, so the slower group's bias is under 2 points with 90–96% coverage. Processing speed still drops, by design: it *is* speed. The price is some accuracy for typical users (attention r 0.90 → 0.77), because in the simulator overall speed carried real signal. We chose fairness and say so.
 
 ## 9. Ethics, safety and robustness
 
@@ -109,13 +113,13 @@ Each skill has a **measurement card** (definition, what it is *not*, task, level
 
 ## 10. Engineering
 
-Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **94 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
+Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **98 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
 
 ## 11. Limitations and next steps
 
 - **Simulated, not human, validation.** The study shows the pipeline is internally consistent, calibrated and robust. It does not show that the tasks measure cognition in real people. Next step: a pilot (e.g. 30 people × 2 sessions) to refit `profile.calibration` and the level ranges, and to estimate test–retest reliability.
 - **Independent skills.** Real skills correlate. A hierarchical model could share information between them and speed up assessment.
-- **Cognitive flexibility** recovers least well (r = 0.73) because switch costs are noisy. More trials per block or an extra measure (e.g. mixing cost) would help.
+- **Cognitive flexibility** recovers least well (r = 0.68) because switch costs are noisy (the reliability paradox: Hedge et al. 2018). More trials per block or an extra measure (e.g. mixing cost) would help.
 - **Language and device.** Stroop requires fluent reading of English colour words, and response times depend on the device. Both are documented biases and mitigated by within-user comparison.
 - **The AI Collaboration Score** is a design proposal. Its weights and signal values should be validated against expert ratings.
 

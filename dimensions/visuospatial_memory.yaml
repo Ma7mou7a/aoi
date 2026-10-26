@@ -54,7 +54,7 @@ profile:
     obs_sd: 0.107
     reference_trials: 10
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.03
+    drift_sd_per_day: 0.01
   calibration:
     intercept: 0
     slope: 1

@@ -90,7 +90,18 @@ describe("composite", () => {
     expect(normaliseMetric(NaN, n)).toBe(0);
   });
   it("is the weighted sum of components", () => {
-    const { composite, components } = compositeScore({ d_prime: 3.5, median_rt_ms: 1200 }, nback);
+    // A two-component config (the shipped n-back config uses d′ alone since the fairness study).
+    const twoPart = {
+      ...nback,
+      scoring: {
+        ...nback.scoring,
+        components: [
+          { metric: "d_prime", weight: 0.8, normalise: { method: "linear" as const, min: 0, max: 3.5, invert: false } },
+          { metric: "median_rt_ms", weight: 0.2, normalise: { method: "linear" as const, min: 350, max: 1200, invert: true } },
+        ],
+      },
+    };
+    const { composite, components } = compositeScore({ d_prime: 3.5, median_rt_ms: 1200 }, twoPart);
     expect(components.map((c) => c.contribution)).toEqual([0.8, 0]);
     expect(composite).toBeCloseTo(0.8);
   });

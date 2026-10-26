@@ -35,15 +35,15 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {n: 1}, ability_range: [-0.526, 0.966]}
-        - {level: 2, params: {n: 2}, ability_range: [-0.152, 0.994]}
-        - {level: 3, params: {n: 3}, ability_range: [-0.138, 1.263]}
+        - {level: 1, params: {n: 1}, ability_range: [-0.725, 1.031]}
+        - {level: 2, params: {n: 2}, ability_range: [-0.253, 1.05]}
+        - {level: 3, params: {n: 3}, ability_range: [-0.188, 1.314]}
     scoring:
       # composite (0..1) = sum(weight * normalised metric); then mapped into the
       # level's ability_range to give one observation for the profiler.
       components:
-        - {metric: d_prime, weight: 0.8, normalise: {method: linear, min: 0.0, max: 3.5}}
-        - {metric: median_rt_ms, weight: 0.2, normalise: {method: linear, min: 350, max: 1200, invert: true}}
+        # d′ only: speed is processing speed's job, and weighting it here penalised slower responders (validation E6).
+        - {metric: d_prime, weight: 1.0, normalise: {method: linear, min: 0.0, max: 3.5}}
     validity:
       min_rt_ms: 150
       max_rt_ms: 2500
@@ -55,10 +55,10 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.164
+    obs_sd: 0.199
     reference_trials: 24
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.03
+    drift_sd_per_day: 0.01
   calibration:
     intercept: 0
     slope: 1

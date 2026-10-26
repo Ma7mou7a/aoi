@@ -32,14 +32,15 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {incongruent_rate: 0.25, deadline_ms: 2500}, ability_range: [-0.362, 1.266]}
-        - {level: 2, params: {incongruent_rate: 0.5, deadline_ms: 1800}, ability_range: [-0.339, 1.262]}
-        - {level: 3, params: {incongruent_rate: 0.75, deadline_ms: 1200}, ability_range: [-0.283, 1.237]}
+        - {level: 1, params: {incongruent_rate: 0.25, deadline_ms: 2500}, ability_range: [-0.58, 1.427]}
+        - {level: 2, params: {incongruent_rate: 0.5, deadline_ms: 1800}, ability_range: [-0.513, 1.363]}
+        - {level: 3, params: {incongruent_rate: 0.75, deadline_ms: 1200}, ability_range: [-0.442, 1.314]}
     scoring:
       components:
-        - {metric: interference_cost_ms, weight: 0.5, normalise: {method: linear, min: 0, max: 300, invert: true}}
-        - {metric: incongruent_accuracy, weight: 0.35, normalise: {method: linear, min: 0.5, max: 1.0}}
-        - {metric: median_rt_ms, weight: 0.15, normalise: {method: linear, min: 450, max: 1400, invert: true}}
+        # Proportional interference (cost ÷ congruent RT), not raw ms or overall speed: fair to slower, equally
+        # accurate responders (validation E6). Faust et al. 1999 on proportional measures and general slowing.
+        - {metric: interference_ratio, weight: 0.55, normalise: {method: linear, min: 0.05, max: 0.3, invert: true}}
+        - {metric: incongruent_accuracy, weight: 0.45, normalise: {method: linear, min: 0.5, max: 1.0}}
     validity:
       min_rt_ms: 200
       max_rt_ms: 2500
@@ -51,10 +52,10 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.172
+    obs_sd: 0.287
     reference_trials: 32
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.03
+    drift_sd_per_day: 0.01
   calibration:
     intercept: 0
     slope: 1

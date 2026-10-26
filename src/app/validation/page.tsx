@@ -80,6 +80,61 @@ export default function ValidationPage() {
         </p>
       </section>
 
+      {data.e5 && (
+        <section className="space-y-2 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
+          <h2 className="font-semibold">Are growth forecasts honest?</h2>
+          <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>
+            {data.e5.forecasts} seven-day forecasts compared with the true ability a week later, scored like the TADPOLE Alzheimer&apos;s forecasting challenge.
+            Coverage probability accuracy (CPA) is the gap between how often the band holds the truth and how often it should: 0 is perfect.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead className="text-xs" style={{ color: "var(--chart-muted)" }}>
+                <tr>{["Forecast", "Mean abs. error", "50% band holds truth (CPA)", "90% band holds truth (CPA)"].map((h) => <th key={h} className="py-1 pr-3 text-left font-medium">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {([["AI4Brain trend forecast", data.e5.forecast], ["No-change baseline", data.e5.noChange]] as const).map(([name, f]) => (
+                  <tr key={name} className="border-t" style={{ borderColor: "var(--chart-grid)" }}>
+                    <td className="py-1 pr-3">{name}</td>
+                    <td className="py-1 pr-3">{pct(f.mae)}</td>
+                    <td className="py-1 pr-3">{pct(f.coverage50)} ({f.cpa50})</td>
+                    <td className="py-1 pr-3">{pct(f.coverage90)} ({f.cpa90})</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {data.e6 && (
+        <section className="space-y-2 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
+          <h2 className="font-semibold">Is it fair to slower people and slower devices?</h2>
+          <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>
+            The same users re-run with device lag or a slower but equally accurate response style. Fair means a bias (estimate − truth) near 0 and a band that still holds the truth about 90% of the time.
+            Processing speed is the exception by design: it measures speed.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead className="text-xs" style={{ color: "var(--chart-muted)" }}>
+                <tr><th className="py-1 pr-3 text-left font-medium">Skill</th>{data.e6.map((g) => <th key={g.id} className="py-1 pr-3 text-left font-medium">{g.label}</th>)}</tr>
+              </thead>
+              <tbody>
+                {skills.map((sk) => (
+                  <tr key={sk.id} className="border-t" style={{ borderColor: "var(--chart-grid)" }}>
+                    <td className="py-1 pr-3">{sk.name}</td>
+                    {data.e6!.map((g) => {
+                      const c = g.bySkill[sk.id];
+                      return <td key={g.id} className="py-1 pr-3">{c.bias >= 0 ? "+" : ""}{Math.round(c.bias * 100)} pts · {pct(c.coverage90)}</td>;
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <p className="text-sm text-slate-500">
         Limits: abilities and task behaviour are simulated, so this shows the pipeline is consistent and calibratable, not that it measures cognition in real people. Next step: a pilot with real participants to refit the config.
         Full write-up: <Link href="https://github.com/ChaimaGhazali/aoi/blob/main/docs/validation.md" className="underline">docs/validation.md</Link>.

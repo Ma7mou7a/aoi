@@ -13,22 +13,21 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 
 | Level | Settings | Ability range (fitted) |
 |-|-|-|
-| 1 | incongruent_rate: 0.25, deadline_ms: 2500 | -0.36 → 1.27 |
-| 2 | incongruent_rate: 0.5, deadline_ms: 1800 | -0.34 → 1.26 |
-| 3 | incongruent_rate: 0.75, deadline_ms: 1200 | -0.28 → 1.24 |
+| 1 | incongruent_rate: 0.25, deadline_ms: 2500 | -0.58 → 1.43 |
+| 2 | incongruent_rate: 0.5, deadline_ms: 1800 | -0.51 → 1.36 |
+| 3 | incongruent_rate: 0.75, deadline_ms: 1200 | -0.44 → 1.31 |
 
 **Scoring** (block score = weighted sum, each metric scaled to 0–100%):
 
-- interference cost ms × 50%: lower is better: 0 or less → 100%, 300 or more → 0%
-- incongruent accuracy × 35%: 0.5 or less → 0%, 1 or more → 100%
-- median rt ms × 15%: lower is better: 450 or less → 100%, 1400 or more → 0%
+- interference ratio × 55%: lower is better: 0.05 or less → 100%, 0.3 or more → 0%
+- incongruent accuracy × 45%: 0.5 or less → 0%, 1 or more → 100%
 
 **Uncertainty.**
 
 - Starts at 50% ± 33 points (90% band) before any data.
-- One full block (32 valid trials) is a noisy reading with SD 0.172 on the 0–1 scale; fewer valid trials → noisier (√n rule).
+- One full block (32 valid trials) is a noisy reading with SD 0.287 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**
@@ -62,22 +61,22 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 
 | Level | Settings | Ability range (fitted) |
 |-|-|-|
-| 1 | switch_rate: 0.25, cue_lead_ms: 600 | -1.05 → 1.39 |
-| 2 | switch_rate: 0.5, cue_lead_ms: 300 | -0.77 → 1.21 |
-| 3 | switch_rate: 0.5, cue_lead_ms: 0 | -0.86 → 1.26 |
+| 1 | switch_rate: 0.25, cue_lead_ms: 600 | -0.89 → 1.40 |
+| 2 | switch_rate: 0.5, cue_lead_ms: 300 | -0.64 → 1.23 |
+| 3 | switch_rate: 0.5, cue_lead_ms: 0 | -0.72 → 1.28 |
 
 **Scoring** (block score = weighted sum, each metric scaled to 0–100%):
 
-- switch cost ms × 45%: lower is better: 0 or less → 100%, 500 or more → 0%
+- switch cost ratio × 45%: lower is better: 0.1 or less → 100%, 0.42 or more → 0%
 - switch cost errors × 30%: lower is better: 0 or less → 100%, 0.2 or more → 0%
 - accuracy × 25%: 0.5 or less → 0%, 1 or more → 100%
 
 **Uncertainty.**
 
 - Starts at 50% ± 33 points (90% band) before any data.
-- One full block (40 valid trials) is a noisy reading with SD 0.265 on the 0–1 scale; fewer valid trials → noisier (√n rule).
+- One full block (40 valid trials) is a noisy reading with SD 0.287 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**
@@ -123,7 +122,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - Starts at 50% ± 33 points (90% band) before any data.
 - One full block (40 valid trials) is a noisy reading with SD 0.138 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**
@@ -170,7 +169,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - Starts at 50% ± 33 points (90% band) before any data.
 - One full block (8 valid trials) is a noisy reading with SD 0.133 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**
@@ -217,7 +216,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - Starts at 50% ± 33 points (90% band) before any data.
 - One full block (10 valid trials) is a noisy reading with SD 0.107 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**
@@ -249,21 +248,20 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 
 | Level | Settings | Ability range (fitted) |
 |-|-|-|
-| 1 | n: 1 | -0.53 → 0.97 |
-| 2 | n: 2 | -0.15 → 0.99 |
-| 3 | n: 3 | -0.14 → 1.26 |
+| 1 | n: 1 | -0.72 → 1.03 |
+| 2 | n: 2 | -0.25 → 1.05 |
+| 3 | n: 3 | -0.19 → 1.31 |
 
 **Scoring** (block score = weighted sum, each metric scaled to 0–100%):
 
-- d prime × 80%: 0 or less → 0%, 3.5 or more → 100%
-- median rt ms × 20%: lower is better: 350 or less → 100%, 1200 or more → 0%
+- d prime × 100%: 0 or less → 0%, 3.5 or more → 100%
 
 **Uncertainty.**
 
 - Starts at 50% ± 33 points (90% band) before any data.
-- One full block (24 valid trials) is a noisy reading with SD 0.164 on the 0–1 scale; fewer valid trials → noisier (√n rule).
+- One full block (24 valid trials) is a noisy reading with SD 0.199 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
-- Between sessions the band widens by 0.03 per day, because ability can change.
+- Between sessions the band widens by 0.01 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
 
 **Data quality checks.**

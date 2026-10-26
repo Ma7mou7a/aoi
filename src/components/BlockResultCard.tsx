@@ -15,11 +15,13 @@ const METRIC_LABELS: Record<string, string> = {
   hit_rate: "Matches caught",
   false_alarm_rate: "False alarms",
   interference_cost_ms: "Slow-down when word ≠ colour",
+  interference_ratio: "Slow-down when word ≠ colour (share of your usual speed)",
   incongruent_accuracy: "Accuracy when word ≠ colour",
   span: "Longest sequence recalled",
   total_score: "Total blocks recalled",
   correct_per_minute: "Correct per minute",
   switch_cost_ms: "Slow-down after a rule switch",
+  switch_cost_ratio: "Slow-down after a switch (share of your usual speed)",
   switch_cost_errors: "Extra errors after a switch",
 };
 
@@ -46,6 +48,7 @@ const FLAG_TEXT: Record<ValidityFlag, string> = {
 function fmt(metric: string, v: number) {
   if (!Number.isFinite(v)) return "n/a";
   if (metric.endsWith("_ms")) return `${Math.round(v)} ms`;
+  if (metric.endsWith("_ratio")) return `+${Math.round(v * 100)}%`;
   if (metric.endsWith("_rate") || metric.endsWith("accuracy")) return pct(v);
   if (metric === "span" || metric === "total_score" || metric === "correct_per_minute") return String(Math.round(v));
   if (metric === "switch_cost_errors") return `${Math.round(v * 100)} pts`;

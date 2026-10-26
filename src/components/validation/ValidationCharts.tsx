@@ -13,7 +13,10 @@ export type ValidationData = {
   e2: { adaptive: Array<{ blocks: number; rmse: number; meanSd: number; coverage: number }>; random: Array<{ blocks: number; rmse: number; meanSd: number; coverage: number }> };
   e3: Array<Record<string, string | number>>;
   e4: { driftSdPerDay: number; meanTrueGain: number; meanEstimatedGain: number; detectedImprovement: number; finalCoverage90: number; sweep: Array<{ driftSdPerDay: number; meanTrueGain: number; meanEstimatedGain: number; detectedImprovement: number; finalCoverage90: number }> };
+  e5?: { forecasts: number; horizonDays: number; forecast: ForecastScore; noChange: ForecastScore };
+  e6?: Array<{ id: string; label: string; bySkill: Record<string, { bias: number; coverage90: number }> }>;
 };
+type ForecastScore = { mae: number; coverage50: number; cpa50: number; coverage90: number; cpa90: number };
 
 type Skill = { id: string; name: string; color: string };
 const pct = (x: number) => `${Math.round(x * 100)}%`;

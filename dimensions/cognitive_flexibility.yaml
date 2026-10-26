@@ -33,12 +33,13 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {switch_rate: 0.25, cue_lead_ms: 600}, ability_range: [-1.047, 1.388]}
-        - {level: 2, params: {switch_rate: 0.5, cue_lead_ms: 300}, ability_range: [-0.769, 1.208]}
-        - {level: 3, params: {switch_rate: 0.5, cue_lead_ms: 0}, ability_range: [-0.858, 1.256]}
+        - {level: 1, params: {switch_rate: 0.25, cue_lead_ms: 600}, ability_range: [-0.889, 1.403]}
+        - {level: 2, params: {switch_rate: 0.5, cue_lead_ms: 300}, ability_range: [-0.639, 1.227]}
+        - {level: 3, params: {switch_rate: 0.5, cue_lead_ms: 0}, ability_range: [-0.718, 1.278]}
     scoring:
       components:
-        - {metric: switch_cost_ms, weight: 0.45, normalise: {method: linear, min: 0, max: 500, invert: true}}
+        # Proportional switch cost (cost ÷ repeat-trial RT): independent of overall speed (validation E6).
+        - {metric: switch_cost_ratio, weight: 0.45, normalise: {method: linear, min: 0.1, max: 0.42, invert: true}}
         - {metric: switch_cost_errors, weight: 0.3, normalise: {method: linear, min: 0, max: 0.2, invert: true}}
         - {metric: accuracy, weight: 0.25, normalise: {method: linear, min: 0.5, max: 1.0}}
     validity:
@@ -52,10 +53,10 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.265
+    obs_sd: 0.287
     reference_trials: 40
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.03
+    drift_sd_per_day: 0.01
   calibration:
     intercept: 0
     slope: 1

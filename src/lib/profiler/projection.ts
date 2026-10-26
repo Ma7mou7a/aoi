@@ -15,6 +15,8 @@ export const MIN_POINTS = 3;
 export const MIN_SPAN_DAYS = 2;
 /** Practice gains are bounded: never extrapolate faster than this (ability scale per day). */
 export const MAX_SLOPE_PER_DAY = 0.01;
+/** Prior on the true trend: most people change by under ~12 points a month (ability scale per day). */
+export const SLOPE_PRIOR_SD = 0.004;
 
 const DAY = 86_400_000;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -45,12 +47,17 @@ export function projectGrowth(
   const sxx = xs.reduce((s, x, i) => s + ws[i] * (x - mx) ** 2, 0);
   const sxy = xs.reduce((s, x, i) => s + ws[i] * (x - mx) * (history[i].mean - my), 0);
   const rawSlope = sxx > 0 ? sxy / sxx : 0;
-  const slope = Math.max(-MAX_SLOPE_PER_DAY, Math.min(MAX_SLOPE_PER_DAY, rawSlope));
 
-  // Residual variance → standard error of the slope.
+  // Residual variance → standard error of the fitted slope.
   const n = history.length;
   const resid = history.reduce((s, h, i) => s + ws[i] * (h.mean - (my + rawSlope * (xs[i] - mx))) ** 2, 0) / Math.max(1, n - 2);
-  const slopeSe = sxx > 0 ? Math.sqrt(resid / sxx) : MAX_SLOPE_PER_DAY;
+  const se = sxx > 0 ? Math.sqrt(resid / sxx) : Infinity;
+
+  // Bayesian shrinkage toward "no change": a noisy trend from a few blocks is mostly noise, so it only moves
+  // the forecast as far as its precision allows (validation E5: the raw trend lost to a no-change forecast).
+  const shrink = SLOPE_PRIOR_SD ** 2 / (SLOPE_PRIOR_SD ** 2 + se ** 2);
+  const slope = Math.max(-MAX_SLOPE_PER_DAY, Math.min(MAX_SLOPE_PER_DAY, rawSlope * shrink));
+  const slopeSe = Number.isFinite(se) ? Math.sqrt(shrink) * se : SLOPE_PRIOR_SD;
 
   const h = horizonDays;
   const mean = clamp01(current.mean + slope * h);

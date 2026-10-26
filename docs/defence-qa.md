@@ -10,13 +10,19 @@ Partly, and we say so. The simulation tests the *pipeline*: given behaviour that
 **"Are these tasks valid measures of anything?"**
 They are standard paradigms with decades of literature (N-back, Stroop, Corsi, task switching, symbol-digit, Raven-style matrices; references on every measurement card). Our claim is narrower than "measures intelligence": each score describes performance on that task compared with the user's own history. We never compare with norms; the coach filter even removes sentences that do.
 
-**"Why is cognitive flexibility weaker (r = 0.73)?"**
-Switch costs are a difference of two noisy reaction times, so they are noisy by nature. The band is correspondingly wider (we show it), and more trials per block or adding mixing cost would tighten it.
+**"Why is cognitive flexibility weaker (r = 0.68)?"**
+Switch costs are a difference of two noisy reaction times, so they are noisy by nature: the "reliability paradox" (Hedge et al. 2018). The band is correspondingly wider (we show it), and more trials per block or adding mixing cost would tighten it.
 
 ## Design choices
 
 **"Why not jsPsych?"**
 jsPsych is the research standard for running browser experiments, and our tasks follow the same model (stimulus, response, RT, trial log). We use its key timing technique too: stimulus onset is time-stamped at the animation frame that paints it, not when the code requests it. But our product loop needs every block to update a live Bayesian profile and choose the next block adaptively, inside one Next.js app with typed trial records going straight to scoring, the database and the coach. Embedding a second experiment runtime would add integration cost without improving any criterion. Porting the tasks as jsPsych plugins is a possible later step for researchers.
+
+**"Is it fair to older or slower people?"**
+We tested exactly that (validation E6). Raw-millisecond scoring put a slower but equally accurate person's attention 14 points too low. We switched to proportional costs (cost ÷ the person's own baseline speed) and d′ for working memory: the bias is now under 2 points. Processing speed still reflects speed, because that is what it measures. It cost some accuracy for typical users, and we chose fairness.
+
+**"Can you forecast growth?"**
+Yes, with honest bands: scored like the TADPOLE Alzheimer's forecasting challenge, our 90% forecast bands contain the truth 91% of the time. Our first version over-trusted short noisy trends and lost to a "no change" forecast, so we added a Bayesian prior on the slope. Its point accuracy now matches no-change, and it also reports the trend with its uncertainty.
 
 **"Browser reaction times are imprecise."**
 True for every web-based test (a few ms of jitter). Mitigations: frame-accurate onset, RT carries little weight in most scores (e.g. 20% for N-back), anticipations under a minimum RT count as errors, and users are only compared with themselves on the same device type (device is logged).
@@ -25,7 +31,7 @@ True for every web-based test (a few ms of jitter). Mitigations: frame-accurate 
 No labelled data exists for this, and the brief rewards explainability. Transparent statistics can be explained line by line, validated, and recalibrated from config. The LLM is used only for language, and its claims are verified in code.
 
 **"Why a Kalman filter?"**
-It is the simplest model that gives both an estimate and an honest uncertainty, updates in O(1) per block, and handles change over time through the drift term. The drift rate itself was tuned by simulation (0.03/day: the smallest value keeping 90% coverage while users improve).
+It is the simplest model that gives both an estimate and an honest uncertainty, updates in O(1) per block, and handles change over time through the drift term. The drift rate itself was tuned by simulation (0.01/day: the smallest value keeping 90% coverage while users improve).
 
 ## The AI coach
 
@@ -59,8 +65,10 @@ Ours uses no face or voice. It infers fatigue or frustration only from behaviour
 | | |
 |-|-|
 | Band coverage (target 90%) | 89–96% per skill, 92% average |
-| Mean error after 18 blocks | ±5.5–10%, ~7% average |
-| Adaptive vs random | 8.0% vs 9.7% RMSE after 18 blocks (−18%) |
-| Invalid play caught | 93–100% (random), 100% (same key, silent, too fast); false alarms 0–8% |
-| Unit tests | 94 |
+| Mean error after 18 blocks | ±5–11%, ~7% average |
+| Adaptive vs random | 9.2% vs 10.4% RMSE after 18 blocks (−12%) |
+| Invalid play caught | 93–100% (random), 100% (same key, silent, too fast); false alarms 0–11% (2% average) |
+| Forecast calibration | 90% bands hold 91%, 50% bands 48% (TADPOLE CPA 0.007 / 0.02) |
+| Fairness | slower, equally accurate users: bias < 2 points (was −14 for attention before the fix) |
+| Unit tests | 98 |
 | Collaboration score weights | 25 verification · 20 clarification · 20 iteration · 20 autonomy · 15 responsible use |

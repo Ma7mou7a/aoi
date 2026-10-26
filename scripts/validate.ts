@@ -7,6 +7,10 @@
  *   E2  Adaptive vs random block selection at equal budget (error and band width per block).
  *   E3  Robustness: are invalid behaviours flagged, and are genuine players left alone?
  *   E4  Growth: does the twin track a user whose ability improves over a month?
+ *   E5  Forecasts: are 7-day growth forecasts accurate and their bands honest? Scored like the TADPOLE
+ *       challenge (mean absolute error + coverage probability accuracy), against a no-change baseline.
+ *   E6  Fairness: are estimates equally accurate for players on a laggy device or with a slower,
+ *       equally accurate response style? (bias and coverage per subgroup, as in the PREPARE winners)
  *
  * Usage: npm run validate [-- --users 500 --apply]
  *   --apply writes the fitted calibration (intercept, slope) and noise (obs_sd) into dimensions/*.yaml
@@ -17,7 +21,9 @@ import path from "node:path";
 import { parseDocument } from "yaml";
 import { DIMENSIONS_DIR, loadDimensions } from "../src/lib/dimensions/loader";
 import type { Dimension, Paradigm } from "../src/lib/dimensions/schema";
-import { applyDrift, credibleInterval, priorFor, updatePosterior, type Posterior } from "../src/lib/profiler";
+import { applyDrift, credibleInterval, priorFor, updatePosterior, Z90, type Posterior } from "../src/lib/profiler";
+import { projectGrowth, type SnapshotPoint } from "../src/lib/profiler/projection";
+import type { TrialRecord } from "../src/lib/scoring/types";
 import { createRng, type Rng } from "../src/lib/rng";
 import { levelOf, scoreBlock } from "../src/lib/scoring";
 import { predictedComposite, selectNext } from "../src/lib/selector";
@@ -76,8 +82,11 @@ const drawTruth = (rng: Rng): Truth => Object.fromEntries(baseDims.map((d) => [d
 type BlockRecord = { dim: string; level: number; composite: number; raw: number; validTrials: number; valid: boolean; censored: boolean; truth: number };
 type Trace = { rmse: number; meanSd: number; coverage: number }[];
 
+/** Post-hoc change to a block's trials, e.g. a laggy device adding latency to every response (E6). */
+type TrialTweak = (trials: TrialRecord[]) => TrialRecord[];
+
 /** One simulated user taking `budget` blocks under a selection policy. */
-function runUser(dims: Dimension[], truth: Truth, policy: "adaptive" | "random", budget: number, rng: Rng) {
+function runUser(dims: Dimension[], truth: Truth, policy: "adaptive" | "random", budget: number, rng: Rng, tweak?: TrialTweak) {
   const posteriors: Record<string, Posterior> = Object.fromEntries(dims.map((d) => [d.id, priorFor(d, T0)]));
   const recent: string[] = [];
   const blocks: BlockRecord[] = [];
@@ -95,8 +104,8 @@ function runUser(dims: Dimension[], truth: Truth, policy: "adaptive" | "random",
     const task = dim.tasks[0];
     const params = { ...task.params, ...levelOf(task, level).params };
     const ability = clamp01(truth[dim.id] + 0.03 * rng.normal()); // day-to-day state noise
-    const trials = simulateBlock(task.paradigm as Paradigm, params, ability, rng.int(2 ** 31));
-    const score = scoreBlock(dim, task, level, trials);
+    const simulated = simulateBlock(task.paradigm as Paradigm, params, ability, rng.int(2 ** 31));
+    const score = scoreBlock(dim, task, level, tweak ? tweak(simulated) : simulated);
     posteriors[dim.id] = updatePosterior(posteriors[dim.id], score.observation, score.observationSd, score.validity.validTrials, T0);
     blocks.push({ dim: dim.id, level, composite: score.composite, raw: score.rawObservation, validTrials: score.validity.validTrials, valid: score.validity.valid, censored: score.censored, truth: truth[dim.id] });
     recent.push(dim.id);
@@ -261,6 +270,86 @@ const growthSweep = DRIFT_CANDIDATES.map(growthStudy);
 // but re-widen the band almost to the prior within a week, which makes the twin jumpy.
 const growthSummary = growthSweep.find((g) => g.finalCoverage90 >= 0.9) ?? growthSweep.at(-1)!;
 
+// ── E5: forecast accuracy and calibration (TADPOLE-style scoring) ───────────
+/**
+ * Users improve on every skill by a random amount (0 to +15 points over 4 weeks) and play 3 blocks every
+ * second day. On day 14 the app's 7-day forecast (projectGrowth) is compared with the TRUE ability on day 21.
+ * Scored like TADPOLE: mean absolute error, plus coverage probability accuracy (CPA) = |actual coverage − nominal|
+ * for the 50% and 90% bands. Baseline: "no change" (today's estimate and band).
+ */
+const Z50 = 0.6745;
+function forecastStudy() {
+  const rng = createRng(6);
+  const dims = cal.map((d) => ({ ...d, profile: { ...d.profile, uncertainty: { ...d.profile.uncertainty, drift_sd_per_day: growthSummary.driftSdPerDay } } }));
+  const DAY_MS = 86_400_000;
+  const rows: Array<{ dim: string; truth: number; fc: [number, number, number]; base: [number, number, number] }> = [];
+  for (const start of evalUsers.slice(0, 200)) {
+    const gain = Object.fromEntries(dims.map((d) => [d.id, 0.15 * rng.next()]));
+    const truthOn = (id: string, day: number) => clamp01(start[id] + (gain[id] * day) / 28);
+    const posteriors: Record<string, Posterior> = Object.fromEntries(dims.map((d) => [d.id, priorFor(d, T0)]));
+    const hist: Record<string, SnapshotPoint[]> = Object.fromEntries(dims.map((d) => [d.id, []]));
+    const recent: string[] = [];
+    for (let day = 0; day <= 14; day += 2) {
+      const at = new Date(T0.getTime() + day * DAY_MS);
+      for (const d of dims) posteriors[d.id] = applyDrift(posteriors[d.id], d, at);
+      for (let b = 0; b < 3; b++) {
+        const s = selectNext({ dimensions: dims, posteriors, mode: "assessment", available: AVAILABLE_PARADIGMS, recent, targetSd: 0 })!;
+        const dim = dims.find((d) => d.id === s.dimensionId)!;
+        const task = dim.tasks[0];
+        const params = { ...task.params, ...levelOf(task, s.level).params };
+        const sc = scoreBlock(dim, task, s.level, simulateBlock(task.paradigm as Paradigm, params, clamp01(truthOn(dim.id, day) + 0.03 * rng.normal()), rng.int(2 ** 31)));
+        posteriors[dim.id] = updatePosterior(posteriors[dim.id], sc.observation, sc.observationSd, sc.validity.validTrials, at);
+        hist[dim.id].push({ at, mean: posteriors[dim.id].mean, sd: posteriors[dim.id].sd });
+        recent.push(dim.id);
+      }
+    }
+    const now = new Date(T0.getTime() + 14 * DAY_MS);
+    for (const d of dims) {
+      const p = applyDrift(posteriors[d.id], d, now);
+      const f = projectGrowth(hist[d.id], p, 7, growthSummary.driftSdPerDay, now);
+      if (!f) continue;
+      const fSd = (f.ciHigh - f.ciLow) / (2 * Z90); // band half-width back to an SD (exact unless clamped at 0 or 1)
+      const bSd = Math.sqrt(p.sd ** 2 + growthSummary.driftSdPerDay ** 2 * 7);
+      rows.push({ dim: d.id, truth: truthOn(d.id, 21), fc: [f.mean, fSd, 0], base: [p.mean, bSd, 0] });
+    }
+  }
+  const score = (pick: (r: (typeof rows)[number]) => [number, number, number]) => {
+    const err = rows.map((r) => Math.abs(pick(r)[0] - r.truth));
+    const inside = (z: number) => mean(rows.map((r) => (Math.abs(pick(r)[0] - r.truth) <= z * pick(r)[1] ? 1 : 0)));
+    const c50 = inside(Z50), c90 = inside(Z90);
+    return { mae: round(mean(err)), coverage50: round(c50), cpa50: round(Math.abs(c50 - 0.5)), coverage90: round(c90), cpa90: round(Math.abs(c90 - 0.9)) };
+  };
+  return { forecasts: rows.length, horizonDays: 7, forecast: score((r) => r.fc), noChange: score((r) => r.base) };
+}
+const forecastSummary = forecastStudy();
+
+// ── E6: fairness across subgroups (device lag, response style) ──────────────
+/**
+ * Same held-out users, same ability, different circumstances. A fair twin keeps bias near 0 and coverage near 90%
+ * in every subgroup. Exception by design: processing speed IS speed, so slower responding should lower it.
+ */
+const SUBGROUPS: Array<{ id: string; label: string; tweak?: TrialTweak }> = [
+  { id: "reference", label: "Reference (desktop, typical pace)" },
+  { id: "lag80", label: "Laggy device (+80 ms on every response)", tweak: (ts) => ts.map((t) => (t.rtMs == null ? t : { ...t, rtMs: t.rtMs + 80 })) },
+  { id: "slow30", label: "Slower, equally accurate style (RT ×1.3)", tweak: (ts) => ts.map((t) => (t.rtMs == null ? t : { ...t, rtMs: Math.round(t.rtMs * 1.3) })) },
+];
+function fairnessStudy() {
+  return SUBGROUPS.map((g) => {
+    const rng = createRng(7); // same draws for every subgroup: only the tweak differs
+    const per: Record<string, { bias: number[]; covered: number[] }> = Object.fromEntries(cal.map((d) => [d.id, { bias: [], covered: [] }]));
+    for (const t of evalUsers.slice(0, 200)) {
+      const { posteriors } = runUser(cal, t, "adaptive", BUDGET, rng, g.tweak);
+      for (const d of cal) {
+        const [lo, hi] = credibleInterval(posteriors[d.id]);
+        per[d.id].bias.push(posteriors[d.id].mean - t[d.id]);
+        per[d.id].covered.push(t[d.id] >= lo && t[d.id] <= hi ? 1 : 0);
+      }
+    }
+    return { id: g.id, label: g.label, bySkill: Object.fromEntries(cal.map((d) => [d.id, { bias: round(mean(per[d.id].bias)), coverage90: round(mean(per[d.id].covered)) }])) };
+  });
+}
+const fairness = fairnessStudy();
+
 // ── Output ───────────────────────────────────────────────────────────────────
 const result = {
   meta: { users: N_USERS, fitUsers: fitUsers.length, evalUsers: evalUsers.length, blocksPerUser: BUDGET, generatedAt: new Date().toISOString(), truthDistribution: "N(0.5, 0.18) clamped to [0,1], independent per skill" },
@@ -269,6 +358,8 @@ const result = {
   e2: { adaptive, random },
   e3: robustness,
   e4: { ...growthSummary, sweep: growthSweep },
+  e5: forecastSummary,
+  e6: fairness,
 };
 writeFileSync(path.join(process.cwd(), "public", "validation.json"), JSON.stringify(result));
 
@@ -315,6 +406,25 @@ The twin widens its band between sessions by \`drift_sd_per_day\`, its "forgetti
 |-|-|-|-|-|
 ${growthSweep.map((g) => `| ${g.driftSdPerDay}${g === growthSummary ? " ✓" : ""} | ${pct(g.meanTrueGain)} | ${pct(g.meanEstimatedGain)} | ${pct(g.detectedImprovement)} | ${pct(g.finalCoverage90)} |`).join("\n")}
 
+## E5: Forecast accuracy and calibration (${forecastSummary.forecasts} seven-day forecasts)
+
+Users improved on every skill by a random 0 to 15 points over four weeks and played 3 blocks every second day. On day 14 the dashboard's 7-day forecast was compared with the **true** ability on day 21. Scoring follows the TADPOLE Alzheimer's forecasting challenge: mean absolute error, and *coverage probability accuracy* (CPA = |share of true values inside the band − nominal level|, 0 is perfect).
+
+| Forecast | Mean abs. error | 50% band coverage (CPA) | 90% band coverage (CPA) |
+|-|-|-|-|
+| AI4Brain trend forecast | ${pct(forecastSummary.forecast.mae)} | ${pct(forecastSummary.forecast.coverage50)} (${forecastSummary.forecast.cpa50}) | ${pct(forecastSummary.forecast.coverage90)} (${forecastSummary.forecast.cpa90}) |
+| No-change baseline | ${pct(forecastSummary.noChange.mae)} | ${pct(forecastSummary.noChange.coverage50)} (${forecastSummary.noChange.cpa50}) | ${pct(forecastSummary.noChange.coverage90)} (${forecastSummary.noChange.cpa90}) |
+
+## E6: Fairness across subgroups (${BUDGET} blocks, 200 held-out users per subgroup)
+
+Same users and same random draws; only the circumstances change. A fair twin keeps the bias (estimate − truth) near 0 and coverage near 90% in every group. Processing speed is the exception by design: it *is* speed, so slower responding should lower it.
+
+| Skill | ${fairness.map((g) => g.label).join(" | ")} |
+|-|${fairness.map(() => "-").join("|")}|
+${baseDims.map((d) => `| ${names[d.id]} | ${fairness.map((g) => `bias ${g.bySkill[d.id].bias >= 0 ? "+" : ""}${Math.round(g.bySkill[d.id].bias * 100)} · ${pct(g.bySkill[d.id].coverage90)}`).join(" | ")} |`).join("\n")}
+
+Bias in points (estimate − truth); then 90% band coverage. Device type is logged with every session, so a per-device correction can be fitted once real data shows a shift.
+
 ## Limitations
 
 - The abilities and task behaviour are simulated. The simulators encode plausible relations (e.g. higher ability means a higher n-back hit rate and smaller Stroop interference), not norms. The study shows the pipeline is internally consistent and calibratable, not that it measures cognition in real people.
@@ -342,4 +452,4 @@ if (APPLY) {
   }
 }
 
-console.log(JSON.stringify({ calibration, before: before.summary, after: after.summary, e2_at_6: at(6), e2_at_18: at(18), e3: robustness, e4: growthSummary, applied: APPLY }, null, 1));
+console.log(JSON.stringify({ calibration, before: before.summary, after: after.summary, e2_at_6: at(6), e2_at_18: at(18), e3: robustness, e4: growthSummary, e5: forecastSummary, e6: fairness, applied: APPLY }, null, 1));
