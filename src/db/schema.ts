@@ -104,6 +104,8 @@ export const taskRuns = pgTable("task_runs", {
   observation: real("observation"), // composite mapped into the level's ability_range
   observationSd: real("observation_sd"),
   validity: jsonb("validity").$type<BlockValidity>(),
+  /** Behaviour-only fatigue/frustration inference (src/lib/affect); only with behavioural_signals consent. */
+  affect: jsonb("affect").$type<{ fatigue: string; frustration: string; cues: string[]; suggestion: string | null; easeOff: boolean }>(),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
 }, (t) => [

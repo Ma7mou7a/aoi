@@ -5,7 +5,7 @@ import { db, schema } from "@/db";
 export const RETENTION_OPTIONS = [30, 90, 180, 365] as const;
 
 /** Consents the user can change after onboarding. data_processing is withdrawn by deleting all data. */
-export const EDITABLE_CONSENTS = ["behavioural_signals", "llm_coaching", "planted_flaws"] as const;
+export const EDITABLE_CONSENTS = ["behavioural_signals", "llm_coaching", "planted_flaws", "microphone"] as const;
 export type EditableConsent = (typeof EDITABLE_CONSENTS)[number];
 
 export async function getConsentState(userId: string) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CoachClaim } from "@/db/schema";
 import type { ClientCoachMessage, CollabView } from "@/lib/server/collab";
 import { CollabScoreCard } from "./CollabScoreCard";
 import { EvidencePanel } from "./EvidencePanel";
+import { spokenText, useDictation, useSpeaker } from "./voice";
 
 type ClaimAction = "opened_evidence" | "looks_right" | "something_off";
 type FeedbackFn = (messageId: string, claimIndex: number, action: ClaimAction) => void;
@@ -68,7 +69,7 @@ function ClaimCard({ m, index, claim, onFeedback }: { m: ClientCoachMessage; ind
   );
 }
 
-function CoachBubble({ m, onFeedback }: { m: ClientCoachMessage; onFeedback: FeedbackFn }) {
+function CoachBubble({ m, onFeedback, voice }: { m: ClientCoachMessage; onFeedback: FeedbackFn; voice?: ReturnType<typeof useSpeaker> }) {
   const dropped = m.meta?.dropped?.length ?? 0;
   const note = m.meta?.source === "rules" && m.meta.fallbackReason ? FALLBACK_TEXT[m.meta.fallbackReason] ?? "This feedback comes from built-in rules." : "";
   return (
@@ -84,6 +85,11 @@ function CoachBubble({ m, onFeedback }: { m: ClientCoachMessage; onFeedback: Fee
         <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"><b>Next step: </b>{m.nextStep}</p>
       )}
       <p className="text-xs text-slate-500">
+        {voice?.supported && (
+          <button onClick={() => (voice.speakingId === m.id ? voice.stop() : voice.speak(m.id, spokenText(m)))} className="mr-2 rounded-md border border-slate-300 px-2 py-0.5 dark:border-slate-700" aria-pressed={voice.speakingId === m.id}>
+            {voice.speakingId === m.id ? "■ Stop" : "🔊 Listen"}
+          </button>
+        )}
         {m.meta?.source === "llm" ? `AI coach (${m.model})` : "Rule-based coach"} · {new Date(m.createdAt).toLocaleString()}
         {dropped > 0 && ` · ${dropped} statement${dropped > 1 ? "s" : ""} removed for lacking evidence or using clinical language`}
         {note && <><br />{note}</>}
@@ -92,13 +98,27 @@ function CoachBubble({ m, onFeedback }: { m: ClientCoachMessage; onFeedback: Fee
   );
 }
 
-export function CoachChat({ initial, initialCollab, llmOn, spotTheError }: { initial: ClientCoachMessage[]; initialCollab: CollabView; llmOn: boolean; spotTheError: boolean }) {
+export function CoachChat({ initial, initialCollab, llmOn, spotTheError, micOn }: { initial: ClientCoachMessage[]; initialCollab: CollabView; llmOn: boolean; spotTheError: boolean; micOn: boolean }) {
   const [messages, setMessages] = useState(initial);
   const [collab, setCollab] = useState(initialCollab);
   const [question, setQuestion] = useState("");
   const [predicting, setPredicting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const voice = useSpeaker();
+  const dictation = useDictation(useCallback((t: string) => setQuestion(t), []));
+  const [autoRead, setAutoRead] = useState(false);
+  useEffect(() => {
+    try {
+      setAutoRead(localStorage.getItem("ai4b_autoread") === "1");
+    } catch {}
+  }, []);
+  const toggleAutoRead = (on: boolean) => {
+    setAutoRead(on);
+    try {
+      localStorage.setItem("ai4b_autoread", on ? "1" : "0");
+    } catch {}
+  };
 
   async function call(url: string, body: unknown) {
     const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -116,6 +136,8 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError }: { ini
       setMessages(json.messages);
       setCollab(json.collab);
       setQuestion("");
+      const newest = (json.messages as ClientCoachMessage[]).at(-1);
+      if (autoRead && newest?.role === "coach") voice.speak(newest.id, spokenText(newest));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -142,7 +164,7 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError }: { ini
       <ol className="space-y-6">
         {messages.map((m) => (
           <li key={m.id} className={m.role === "user" ? "ml-auto max-w-[80%] rounded-2xl bg-slate-900 px-4 py-2 text-white dark:bg-white dark:text-slate-900" : "rounded-2xl border border-slate-200 p-4 dark:border-slate-800"}>
-            {m.role === "user" ? m.content : <CoachBubble m={m} onFeedback={onFeedback} />}
+            {m.role === "user" ? m.content : <CoachBubble m={m} onFeedback={onFeedback} voice={voice} />}
           </li>
         ))}
       </ol>
@@ -175,8 +197,21 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError }: { ini
             placeholder={llmOn ? "Ask about your results, e.g. why did my score drop?" : "Turn on AI coaching in Settings to ask questions"}
             className="flex-1 rounded-xl border border-slate-300 bg-transparent px-3 py-2 disabled:opacity-50 dark:border-slate-700"
           />
+          {micOn && dictation.supported && llmOn && (
+            <button type="button" onClick={() => (dictation.listening ? dictation.stop() : dictation.start())} aria-pressed={dictation.listening}
+              aria-label={dictation.listening ? "Stop listening" : "Ask by voice"} className="rounded-xl border border-slate-300 px-3 dark:border-slate-700">
+              {dictation.listening ? "■" : "🎙️"}
+            </button>
+          )}
           <button disabled={busy || !llmOn || !question.trim()} className="rounded-xl border border-slate-900 px-4 font-medium disabled:opacity-40 dark:border-white">Ask</button>
         </form>
+        {dictation.error && <p className="text-xs text-red-600">{dictation.error}</p>}
+        {voice.supported && (
+          <label className="flex items-center gap-2 text-xs text-slate-500">
+            <input type="checkbox" checked={autoRead} onChange={(e) => toggleAutoRead(e.target.checked)} /> Read new feedback aloud
+            {micOn && dictation.supported ? " · voice questions are transcribed by your browser, then you review them before sending" : ""}
+          </label>
+        )}
       </div>
     </div>
   );

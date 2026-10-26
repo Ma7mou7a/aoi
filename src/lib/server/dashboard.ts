@@ -4,9 +4,10 @@ import { db, schema } from "@/db";
 import { getDimensions } from "../dimensions/loader";
 import { goalProgress, type GoalKind } from "../goals";
 import { generateWeeklyPlan, weekStartOf } from "../plan";
+import { checkForecast, projectGrowth, type Projection } from "../profiler/projection";
 import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { currentCollabScore } from "./collab";
-import { getPosteriors, getProfileView } from "./profile";
+import { getPosteriors, getProfileView, type ProfileView } from "./profile";
 import { HttpError } from "./user";
 
 export const RANGE_OPTIONS = [7, 14, 28] as const;
@@ -157,6 +158,50 @@ async function activity(userId: string, rangeDays: number) {
   return { days, cells };
 }
 
+export const FORECAST_HORIZON_DAYS = 14;
+const CHECK_HORIZON_DAYS = 7;
+
+/**
+ * Growth forecasts (shown) plus the twin's track record: once a week a 7-day forecast is stored;
+ * when its date has passed, we check whether the estimate actually landed inside the forecast band.
+ */
+async function forecasts(userId: string, profile: ProfileView) {
+  const dims = getDimensions();
+  const now = new Date();
+  const byDim: Record<string, Projection | null> = {};
+  const toStore: Array<typeof schema.projections.$inferInsert> = [];
+
+  const recent = await db
+    .select({ dimensionId: schema.projections.dimensionId, createdAt: schema.projections.createdAt })
+    .from(schema.projections)
+    .where(and(eq(schema.projections.userId, userId), gte(schema.projections.createdAt, new Date(now.getTime() - 7 * DAY))));
+
+  for (const d of profile.dimensions) {
+    const dim = dims.find((x) => x.id === d.id)!;
+    const history = d.history.filter((h) => h.measured).map((h) => ({ at: new Date(h.at), mean: h.mean, sd: (h.ciHigh - h.ciLow) / (2 * 1.6449) || 0.1 }));
+    const drift = dim.profile.uncertainty.drift_sd_per_day;
+    byDim[d.id] = projectGrowth(history, { mean: d.mean, sd: d.sd }, FORECAST_HORIZON_DAYS, drift, now);
+    const weekly = projectGrowth(history, { mean: d.mean, sd: d.sd }, CHECK_HORIZON_DAYS, drift, now);
+    if (weekly && !recent.some((r) => r.dimensionId === d.id)) {
+      toStore.push({ userId, dimensionId: d.id, model: "trend_v1", horizonDays: CHECK_HORIZON_DAYS, mean: weekly.mean, ciLow: weekly.ciLow, ciHigh: weekly.ciHigh, fittedOnSnapshots: history.length });
+    }
+  }
+  if (toStore.length) await db.insert(schema.projections).values(toStore);
+
+  // Track record: past forecasts whose target date has passed and that have newer data to compare with.
+  const past = await db.select().from(schema.projections).where(eq(schema.projections.userId, userId)).orderBy(desc(schema.projections.createdAt));
+  const checks = [];
+  for (const p of past) {
+    const target = p.createdAt.getTime() + p.horizonDays * DAY;
+    if (target > now.getTime()) continue;
+    const d = profile.dimensions.find((x) => x.id === p.dimensionId);
+    const after = d?.history.filter((h) => h.measured && new Date(h.at).getTime() > p.createdAt.getTime() && new Date(h.at).getTime() <= target).at(-1);
+    if (!d || !after) continue;
+    checks.push({ skill: d.name, madeAt: p.createdAt.toISOString(), forBand: [p.ciLow, p.ciHigh] as [number, number], actual: after.mean, hit: checkForecast(p, after.mean) });
+  }
+  return { byDim, checks, hitRate: checks.length ? checks.filter((c) => c.hit).length / checks.length : null };
+}
+
 export async function getDashboard(userId: string, rangeDays: RangeDays) {
   const [profile, plan, goals, heat, collab] = await Promise.all([
     getProfileView(userId),
@@ -165,7 +210,8 @@ export async function getDashboard(userId: string, rangeDays: RangeDays) {
     activity(userId, rangeDays),
     currentCollabScore(userId),
   ]);
-  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays };
+  const forecast = await forecasts(userId, profile);
+  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays, forecast };
 }
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
 

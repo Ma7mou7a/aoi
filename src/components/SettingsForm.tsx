@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DeleteMyData } from "./DeleteMyData";
 
-type Editable = "behavioural_signals" | "llm_coaching" | "planted_flaws";
+type Editable = "behavioural_signals" | "llm_coaching" | "planted_flaws" | "microphone";
 type HistoryRow = { kind: string; granted: boolean; policyVersion: string; at: string };
 
 const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
@@ -15,7 +15,12 @@ const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
   {
     kind: "behavioural_signals",
     title: "Behaviour signals",
-    text: "Things like the window losing focus mid-task, used only to judge how reliable a block was. Off: they are dropped before storage.",
+    text: "Timing, errors and the window losing focus, used to judge how reliable a block was and to gently suggest a break when you seem tired. Never from a camera or microphone. Off: they are dropped before storage.",
+  },
+  {
+    kind: "microphone",
+    title: "Voice questions to the coach",
+    text: "Lets you ask the coach by voice. Your browser turns speech into text (it may use its own online service); you review the text before sending. AI4Brain stores no audio and decides nothing from your voice. Listening to the coach needs no permission.",
   },
   {
     kind: "planted_flaws",
@@ -74,7 +79,7 @@ export function SettingsForm({ initial, retentionDays, history }: { initial: Rec
         ))}
         <div className="flex gap-3 rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-500 dark:border-slate-800">
           <span>📷🎙️</span>
-          <span><b>Camera and microphone: never used.</b> AI4Brain runs fully in non-biometric mode, and no decision is ever based on your face or voice.</span>
+          <span><b>Camera: never used. Microphone: only if you turn on voice questions above.</b> Profiling is fully non-biometric: no score or decision is ever based on your face or voice.</span>
         </div>
         {saved && <p className="text-sm text-emerald-600">{saved}</p>}
       </section>

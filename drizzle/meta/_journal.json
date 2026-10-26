@@ -15,6 +15,13 @@
       "when": 1793021938533,
       "tag": "0001_talented_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793035109367,
+      "tag": "0002_zippy_big_bertha",
+      "breakpoints": true
     }
   ]
 }

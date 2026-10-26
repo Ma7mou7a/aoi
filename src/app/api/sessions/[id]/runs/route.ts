@@ -53,7 +53,7 @@ export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: str
   const behaviourOk = latest?.granted ?? false;
   const trials = b.trials.map((t) => ({ ...t, behaviour: behaviourOk ? t.behaviour : undefined }));
 
-  const result = await recordRun({ ...b, trials, userId: user.id, sessionId: session.id, startedAt: new Date(b.startedAt) });
+  const result = await recordRun({ ...b, trials, userId: user.id, sessionId: session.id, startedAt: new Date(b.startedAt), behaviourOk, sessionStartedAt: session.startedAt });
   const next = await nextBlock(user.id, session.id, session.mode);
   if (!next) {
     await db.update(schema.sessions).set({ status: "completed", endedAt: new Date() }).where(eq(schema.sessions.id, session.id));

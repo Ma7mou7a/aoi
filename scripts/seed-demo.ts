@@ -7,6 +7,7 @@
 import { closeDb, db, schema } from "../src/db";
 import { loadDimensions } from "../src/lib/dimensions/loader";
 import { applyDrift, credibleInterval, priorFor, updatePosterior, type Posterior } from "../src/lib/profiler";
+import { projectGrowth, type SnapshotPoint } from "../src/lib/profiler/projection";
 import { createRng } from "../src/lib/rng";
 import type { Paradigm } from "../src/lib/dimensions/schema";
 import { levelOf, scoreBlock } from "../src/lib/scoring";
@@ -44,6 +45,7 @@ async function main() {
   );
 
   const posteriors: Record<string, Posterior> = Object.fromEntries(dims.map((d) => [d.id, priorFor(d, new Date(start))]));
+  const hist: Record<string, SnapshotPoint[]> = Object.fromEntries(dims.map((d) => [d.id, []]));
   const playDays = [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 13];
   let blocks = 0;
 
@@ -57,7 +59,7 @@ async function main() {
     const recent: string[] = [];
     const lastRuns: Record<string, LastRun> = {};
 
-    for (let b = 0; b < 2 + rng.int(2); b++) {
+    for (let b = 0; b < 3 + rng.int(2); b++) {
       const at = new Date(sessionStart + b * 3 * 60_000);
       for (const d of dims) posteriors[d.id] = applyDrift(posteriors[d.id], d, at);
       const sel = selectNext({ dimensions: dims, posteriors, mode, available: AVAILABLE_PARADIGMS, recent, lastRuns, targetSd: 0.04 });
@@ -94,11 +96,27 @@ async function main() {
       await db.insert(schema.profileSnapshots).values(before.nObservations === 0 ? [snap(before, "prior", at), snap(after, "task_run", new Date(at.getTime() + 90_000))] : [snap(after, "task_run", new Date(at.getTime() + 90_000))]);
 
       posteriors[dim.id] = after;
+      hist[dim.id].push({ at: new Date(at.getTime() + 90_000), mean: after.mean, sd: after.sd });
       recent.push(dim.id);
       lastRuns[task.id] = { taskId: task.id, level: sel.level, accuracy: score.metrics.accuracy ?? 0 };
       blocks++;
     }
   }
+
+  // Weekly forecasts the twin "made" in the past, from the history available at that time,
+  // so the dashboard can show its track record.
+  const forecasts = [];
+  // Days 3–5: their 7-day targets (days 10–12) have already passed, so each can be checked.
+  for (const cpDay of [3, 4, 5]) {
+    const cp = new Date(start + cpDay * DAY + 22 * 3_600_000);
+    for (const d of dims) {
+      const h = hist[d.id].filter((p) => p.at <= cp);
+      if (!h.length) continue;
+      const p = projectGrowth(h, h.at(-1)!, 7, d.profile.uncertainty.drift_sd_per_day, cp);
+      if (p) forecasts.push({ userId: user.id, dimensionId: d.id, model: "trend_v1", horizonDays: 7, mean: p.mean, ciLow: p.ciLow, ciHigh: p.ciHigh, fittedOnSnapshots: h.length, createdAt: cp });
+    }
+  }
+  if (forecasts.length) await db.insert(schema.projections).values(forecasts);
 
   const wm = posteriors.working_memory;
   await db.insert(schema.goals).values([

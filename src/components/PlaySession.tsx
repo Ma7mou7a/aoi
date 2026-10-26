@@ -103,6 +103,7 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
           result={state.result}
           next={state.next}
           onContinue={() => setState(state.next ? { kind: "block", spec: state.next } : { kind: "done" })}
+          onEnd={() => setState({ kind: "done" })}
         />
       );
     case "done":

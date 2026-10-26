@@ -26,6 +26,7 @@ export default async function CoachPage() {
         initialCollab={collab}
         llmOn={consents.current.llm_coaching}
         spotTheError={consents.current.planted_flaws}
+        micOn={consents.current.microphone}
       />
     </div>
   );

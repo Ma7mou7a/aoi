@@ -1,6 +1,7 @@
 import "server-only";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { inferAffect, type AffectState } from "../affect";
 import { getDimension, getDimensions } from "../dimensions/loader";
 import { newSeed } from "../rng";
 import { credibleInterval, priorFor, updatePosterior, type Posterior } from "../profiler";
@@ -40,13 +41,21 @@ export async function nextBlock(userId: string, sessionId: string, mode: Selecti
 
   const dim = getDimension(selection.dimensionId)!;
   const task = dim.tasks.find((t) => t.id === selection.taskId)!;
+  let { level, reason } = selection;
+  // Emotion-aware ease-off: after a block that looked frustrating, the next one of that task is one level easier.
+  const last = completed.at(-1);
+  const levels = task.difficulty.levels.map((l) => l.level);
+  if (last?.affect?.easeOff && last.taskId === task.id && level > levels[0]) {
+    level = levels[levels.indexOf(level) - 1] ?? levels[0];
+    reason = { ...reason, rule: `${reason.rule}+ease_off`, note: `${reason.note} We're easing off one level after a tough block.` };
+  }
   return {
     dimension: { id: dim.id, name: dim.name, color: dim.color },
     task: { id: task.id, name: task.name, paradigm: task.paradigm, instructions: task.instructions.trim(), params: task.params, validity: { min_rt_ms: task.validity.min_rt_ms } },
-    level: selection.level,
-    params: { ...task.params, ...levelOf(task, selection.level).params },
+    level,
+    params: { ...task.params, ...levelOf(task, level).params },
     seed: newSeed(),
-    reason: selection.reason,
+    reason,
   };
 }
 
@@ -55,6 +64,8 @@ export type RunResult = {
   score: BlockScore;
   before: { mean: number; sd: number; ci: [number, number] };
   after: { mean: number; sd: number; ci: [number, number] } | null;
+  /** Behaviour-based fatigue/frustration hint (null without behavioural_signals consent). */
+  affect: AffectState | null;
 };
 
 /**
@@ -72,6 +83,9 @@ export async function recordRun(input: {
   startedAt: Date;
   status: "completed" | "abandoned";
   trials: TrialRecord[];
+  /** behavioural_signals consent: enables the affect inference. */
+  behaviourOk?: boolean;
+  sessionStartedAt?: Date;
 }): Promise<RunResult> {
   const dim = getDimension(input.dimensionId);
   const task = dim?.tasks.find((t) => t.id === input.taskId);
@@ -83,6 +97,17 @@ export async function recordRun(input: {
   const before: Posterior = (await getPosteriors(input.userId, now))[dim.id] ?? priorFor(dim, now);
   const completed = input.status === "completed";
   const after = completed ? updatePosterior(before, score.observation, score.observationSd, score.validity.validTrials, now) : null;
+
+  let affect: AffectState | null = null;
+  if (completed && input.behaviourOk) {
+    const earlier = await db
+      .select({ taskId: schema.taskRuns.taskId, composite: schema.taskRuns.composite, status: schema.taskRuns.status })
+      .from(schema.taskRuns)
+      .where(eq(schema.taskRuns.sessionId, input.sessionId))
+      .orderBy(asc(schema.taskRuns.startedAt));
+    const minutes = input.sessionStartedAt ? (now.getTime() - input.sessionStartedAt.getTime()) / 60_000 : 0;
+    affect = inferAffect({ trials: input.trials, composite: score.composite, taskId: task.id, earlier, sessionMinutes: minutes });
+  }
 
   const taskRunId = await db.transaction(async (tx) => {
     const [run] = await tx
@@ -102,6 +127,7 @@ export async function recordRun(input: {
         observation: score.observation,
         observationSd: score.observationSd,
         validity: score.validity,
+        affect,
         startedAt: input.startedAt,
         endedAt: now,
       })
@@ -141,7 +167,7 @@ export async function recordRun(input: {
   await db.update(schema.users).set({ lastActiveAt: now }).where(eq(schema.users.id, input.userId));
 
   const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
-  return { taskRunId, score, before: view(before), after: after && view(after) };
+  return { taskRunId, score, before: view(before), after: after && view(after), affect };
 }
 
 /** JSON can't hold NaN/Infinity; store them as absent. */

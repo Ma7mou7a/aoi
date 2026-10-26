@@ -63,7 +63,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </Link>
         ))}
       </div>
-      <ProgressMultiples dims={dims} rangeDays={range} now={now} />
+      <ProgressMultiples dims={dims} rangeDays={range} now={now} projections={data.forecast.byDim} track={data.forecast} />
       <ActivityHeatmap heat={data.heat} skills={dims.map((d) => ({ id: d.id, name: d.name }))} />
     </div>
   );

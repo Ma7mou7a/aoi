@@ -13,6 +13,7 @@ export type RunRow = {
   metrics: Record<string, number> | null;
   composite: number | null;
   validity: { valid: boolean; flags: string[] } | null;
+  affect?: { fatigue: string; frustration: string } | null;
   startedAt: Date;
 };
 
@@ -51,6 +52,8 @@ export type RunEvidence = {
   metrics: Record<string, string>;
   reliable: boolean;
   reliabilityNotes: string[];
+  /** e.g. "fatigue high" (behaviour-only inference), empty when calm or not consented. */
+  engagement: string[];
 };
 
 export type TrialFact = { ref: string; runRef: string; label: string; count: number; trialIds: string[] };
@@ -156,6 +159,10 @@ export function buildEvidencePack(input: {
       metrics,
       reliable: r.validity?.valid ?? true,
       reliabilityNotes: r.validity?.flags ?? [],
+      engagement: [
+        ...(r.affect && r.affect.fatigue !== "low" ? [`fatigue ${r.affect.fatigue}`] : []),
+        ...(r.affect && r.affect.frustration !== "low" ? [`frustration ${r.affect.frustration}`] : []),
+      ],
     });
     const runTrials = input.trials.filter((t) => t.taskRunId === r.id).sort((a, b) => a.trialIndex - b.trialIndex);
     for (const f of factsFor(task.paradigm, runTrials)) {
@@ -181,7 +188,8 @@ export function packToPrompt(pack: EvidencePack): string {
       (r) =>
         `- ${r.ref}: ${r.skill}, ${r.task}, level ${r.level}, ${r.when} UTC, block score ${r.blockScorePct ?? "n/a"}%, ` +
         `${Object.entries(r.metrics).map(([k, v]) => `${k}=${v}`).join(", ")}` +
-        (r.reliable ? "" : ` [LOW RELIABILITY: ${r.reliabilityNotes.join(", ")}]`),
+        (r.reliable ? "" : ` [LOW RELIABILITY: ${r.reliabilityNotes.join(", ")}]`) +
+        (r.engagement.length ? ` [BEHAVIOUR SIGNALS (timing/errors only, a guess): ${r.engagement.join(", ")}]` : ""),
     )
     .join("\n");
   const facts = pack.facts.map((f) => `- ${f.ref} (in ${f.runRef}): ${f.count} ${f.label}`).join("\n");

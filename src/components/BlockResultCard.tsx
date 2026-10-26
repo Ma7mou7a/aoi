@@ -52,7 +52,7 @@ function fmt(metric: string, v: number) {
   return v.toFixed(2);
 }
 
-export function BlockResultCard({ spec, result, next, onContinue }: { spec: BlockSpec; result: RunResult; next: BlockSpec | null; onContinue: () => void }) {
+export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spec: BlockSpec; result: RunResult; next: BlockSpec | null; onContinue: () => void; onEnd?: () => void }) {
   const { score, before, after } = result;
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -103,6 +103,21 @@ export function BlockResultCard({ spec, result, next, onContinue }: { spec: Bloc
           <ul className="ml-4 list-disc">
             {score.validity.flags.map((f) => <li key={f}>{FLAG_TEXT[f]}</li>)}
           </ul>
+        </div>
+      )}
+
+      {result.affect?.suggestion && (
+        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
+          <p className="font-medium">{result.affect.suggestion}</p>
+          <p className="text-xs opacity-80">
+            Why we think so: {result.affect.cues.join("; ")}. This is a guess from your timing and errors only (never a camera or microphone), and you know best.
+          </p>
+          {next && onEnd && (
+            <div className="flex gap-2 pt-1">
+              <button onClick={onEnd} className="rounded-lg bg-indigo-900 px-3 py-1.5 text-white dark:bg-indigo-200 dark:text-indigo-950">Take a break</button>
+              <button onClick={onContinue} className="rounded-lg px-3 py-1.5">Keep going</button>
+            </div>
+          )}
         </div>
       )}
 
