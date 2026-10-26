@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { BlockResultCard } from "./BlockResultCard";
+import { CorsiTask } from "./tasks/CorsiTask";
 import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
+import { StroopTask } from "./tasks/StroopTask";
 
 type State =
   | { kind: "loading" }
@@ -75,8 +77,16 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
         </div>
       );
     case "block":
-      if (state.spec.task.paradigm === "n_back") return <NBackTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
-      return <p>Task “{state.spec.task.paradigm}” is not available yet.</p>;
+      switch (state.spec.task.paradigm) {
+        case "n_back":
+          return <NBackTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "stroop":
+          return <StroopTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "corsi":
+          return <CorsiTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        default:
+          return <p>Task “{state.spec.task.paradigm}” is not available yet.</p>;
+      }
     case "result":
       return (
         <BlockResultCard

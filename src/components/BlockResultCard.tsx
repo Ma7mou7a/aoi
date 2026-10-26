@@ -14,7 +14,19 @@ const METRIC_LABELS: Record<string, string> = {
   accuracy: "Accuracy",
   hit_rate: "Matches caught",
   false_alarm_rate: "False alarms",
+  interference_cost_ms: "Slow-down when word ≠ colour",
+  incongruent_accuracy: "Accuracy when word ≠ colour",
+  span: "Longest sequence recalled",
+  total_score: "Total blocks recalled",
 };
+
+/** One extra plain-language line per paradigm. */
+function detail(paradigm: string, m: Record<string, number>) {
+  if (paradigm === "n_back") return `Matches caught ${fmt("hit_rate", m.hit_rate)}, false alarms ${fmt("false_alarm_rate", m.false_alarm_rate)}.`;
+  if (paradigm === "stroop") return `Overall accuracy ${fmt("accuracy", m.accuracy)}. Conflicting words slowed you by ${fmt("interference_cost_ms", m.interference_cost_ms)}.`;
+  if (paradigm === "corsi") return `You recalled sequences of up to ${m.span ?? 0} blocks.`;
+  return "";
+}
 
 const FLAG_TEXT: Record<ValidityFlag, string> = {
   too_few_trials: "Not enough usable answers in this block.",
@@ -28,7 +40,8 @@ const FLAG_TEXT: Record<ValidityFlag, string> = {
 function fmt(metric: string, v: number) {
   if (!Number.isFinite(v)) return "n/a";
   if (metric.endsWith("_ms")) return `${Math.round(v)} ms`;
-  if (metric.endsWith("_rate") || metric === "accuracy") return pct(v);
+  if (metric.endsWith("_rate") || metric.endsWith("accuracy")) return pct(v);
+  if (metric === "span" || metric === "total_score") return String(Math.round(v));
   return v.toFixed(2);
 }
 
@@ -72,7 +85,7 @@ export function BlockResultCard({ spec, result, next, onContinue }: { spec: Bloc
           </tbody>
         </table>
         <p className="mt-2 text-xs text-slate-500">
-          Matches caught {fmt("hit_rate", score.metrics.hit_rate)}, false alarms {fmt("false_alarm_rate", score.metrics.false_alarm_rate)}.
+          {detail(spec.task.paradigm, score.metrics)}
           {score.censored && " The score hit the edge of this level, so it counts a little less."}
         </p>
       </div>

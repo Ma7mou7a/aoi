@@ -28,6 +28,8 @@ npm run dev
 
 To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL` (see `.env.example`).
 
+> **PGlite tip:** stop the dev server with Ctrl+C, not by killing the process. PGlite only writes its data to disk safely on a clean close. If the app logs `PGlite could not open ./.pglite`, rename that folder and run `npm run db:migrate` to start fresh. Use real Postgres for any data you care about.
+
 | Script | Purpose |
 |-|-|
 | `dims:check` | Validate dimension configs (schema, weights sum to 1, levels ascending, ids unique) |
