@@ -48,6 +48,18 @@ To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL` 
 - **AI Collaboration Score:** `collab_events` (raw signals per component) → `collab_scores` (0–100 + components + weights + formula version)
 - **Adaptive learning:** `plans` → `plan_items`, `goals`
 
+## Dashboard (`/dashboard`)
+
+- **Radar** of the current profile. The shaded ring between the low and high polygons is the 90% credible band, so the chart shows how sure the app is as well as the levels.
+- **Progress curves:** one small chart per skill on a shared 0–100% axis, with a stepped estimate line and a band wash. The band narrows with evidence and widens slowly between sessions.
+- **Practice heatmap:** skills × days, coloured by blocks played (one-hue sequential ramp), with a hover readout.
+- **Goals:** a score goal counts as reached only when the whole band is above the target. Until then the dashboard shows the probability the user is already there. Consistency goals count sessions.
+- **Weekly plan:** 12 blocks shared out by priority = 0.6 × uncertainty + 0.4 × room to grow (unmeasured skills first), each at the level where expected success is about 75%. It is regenerated each week, can be rebuilt on demand, and is traceable to the profile snapshots it was built from.
+
+Every chart has a table view. Skill colours are the validated categorical palette, with dark-mode steps chosen separately.
+
+**Demo data:** `npm run seed:demo` (with the dev server stopped when using PGlite) creates a demo user with about 2 weeks of simulated history through the real scoring pipeline, then prints a dev-only sign-in link (`/api/dev/login?uid=…`, which returns 404 in production).
+
 ## AI coach
 
 `/coach` gives feedback in which every statement links to the exact blocks and trials behind it.

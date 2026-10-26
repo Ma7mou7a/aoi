@@ -4,7 +4,8 @@ import { getCurrentUser } from "@/lib/server/user";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlayPage() {
+export default async function PlayPage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   if (!(await getCurrentUser())) redirect("/");
-  return <PlaySession mode="assessment" />;
+  const mode = (await searchParams).mode === "training" ? "training" : "assessment";
+  return <PlaySession key={mode} mode={mode} />;
 }

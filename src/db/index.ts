@@ -6,10 +6,15 @@ import * as schema from "./schema";
 
 export type DB = NodePgDatabase<typeof schema>;
 
+type Conn = { db: DB; close: () => Promise<void> };
+
 /** DATABASE_URL → real Postgres; otherwise an embedded PGlite (Postgres in WASM) under ./.pglite. */
-function createDb(): DB {
+function connect(): Conn {
   const url = process.env.DATABASE_URL;
-  if (url) return drizzlePg(new Pool({ connectionString: url }), { schema });
+  if (url) {
+    const pool = new Pool({ connectionString: url });
+    return { db: drizzlePg(pool, { schema }), close: () => pool.end() };
+  }
 
   const dir = process.env.PGLITE_DIR ?? "./.pglite";
   const client = new PGlite(dir);
@@ -24,10 +29,13 @@ function createDb(): DB {
     process.once(sig, () => void client.close().finally(() => process.exit(0)));
   }
   // Both drivers expose the same query builder; the cast only unifies the result-type generics.
-  return drizzlePglite(client, { schema }) as unknown as DB;
+  return { db: drizzlePglite(client, { schema }) as unknown as DB, close: () => client.close() };
 }
 
 // Reuse one connection across Next.js dev hot reloads.
-const g = globalThis as unknown as { __ai4brainDb?: DB };
-export const db = (g.__ai4brainDb ??= createDb());
+const g = globalThis as unknown as { __ai4brainConn?: Conn };
+const conn = (g.__ai4brainConn ??= connect());
+export const db = conn.db;
+/** For scripts: close the connection so PGlite flushes to disk before the process ends. */
+export const closeDb = conn.close;
 export { schema };

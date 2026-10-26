@@ -3,6 +3,30 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Chart chrome (dataviz reference palette, light) */
+  --chart-surface: #fcfcfb;
+  --chart-ink: #0b0b0b;
+  --chart-ink-2: #52514e;
+  --chart-muted: #898781;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-empty: #f0efec;
+  --chart-accent: #2a78d6; /* single-series slot 1 */
+
+  /* Sequential blue ramp for heatmaps (steps 200 → 650) */
+  --seq-1: #9ec5f4;
+  --seq-2: #6da7ec;
+  --seq-3: #2a78d6;
+  --seq-4: #184f95;
+
+  /* Skill identity: categorical slots in fixed order, validated light + dark */
+  --dim-working_memory: #2a78d6;
+  --dim-attention_inhibition: #eb6834;
+  --dim-processing_speed: #1baf7a;
+  --dim-cognitive_flexibility: #eda100;
+  --dim-visuospatial_memory: #e87ba4;
+  --dim-reasoning: #008300;
 }
 
 @theme inline {
@@ -16,6 +40,27 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --chart-surface: #1a1a19;
+    --chart-ink: #f0efec;
+    --chart-ink-2: #c3c2b7;
+    --chart-muted: #898781;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --chart-empty: #262624;
+    --chart-accent: #3987e5;
+
+    --seq-1: #184f95;
+    --seq-2: #256abf;
+    --seq-3: #3987e5;
+    --seq-4: #86b6ef;
+
+    --dim-working_memory: #3987e5;
+    --dim-attention_inhibition: #d95926;
+    --dim-processing_speed: #199e70;
+    --dim-cognitive_flexibility: #c98500;
+    --dim-visuospatial_memory: #d55181;
+    --dim-reasoning: #008300;
   }
 }
 

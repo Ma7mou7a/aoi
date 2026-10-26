@@ -35,7 +35,8 @@ export type ProfileView = {
     ci: [number, number];
     nObservations: number;
     nTrials: number;
-    history: Array<{ at: string; mean: number; ciLow: number; ciHigh: number }>;
+    /** `measured` is false for the starting prior (not a real estimate). */
+    history: Array<{ at: string; mean: number; ciLow: number; ciHigh: number; measured: boolean }>;
   }>;
 };
 
@@ -62,7 +63,7 @@ export async function getProfileView(userId: string): Promise<ProfileView> {
         nTrials: p.nTrials,
         history: history
           .filter((h) => h.dimensionId === dim.id)
-          .map((h) => ({ at: h.createdAt.toISOString(), mean: h.mean, ciLow: h.ciLow, ciHigh: h.ciHigh })),
+          .map((h) => ({ at: h.createdAt.toISOString(), mean: h.mean, ciLow: h.ciLow, ciHigh: h.ciHigh, measured: h.trigger !== "prior" })),
       };
     }),
   };
