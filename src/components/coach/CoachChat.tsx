@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CoachClaim } from "@/db/schema";
 import type { ClientCoachMessage, CollabView } from "@/lib/server/collab";
+import { LocalTime } from "../LocalTime";
 import { CollabScoreCard } from "./CollabScoreCard";
 import { EvidencePanel } from "./EvidencePanel";
 import { spokenText, useDictation, useSpeaker } from "./voice";
@@ -106,7 +107,7 @@ function CoachBubble({ m, onFeedback, voice }: { m: ClientCoachMessage; onFeedba
             {voice.speakingId === m.id ? "■ Stop" : "🔊 Listen"}
           </button>
         )}
-        {m.meta?.source === "llm" ? `AI coach (${m.model})` : "Rule-based coach"} · {new Date(m.createdAt).toLocaleString()}
+        {m.meta?.source === "llm" ? `AI coach (${m.model})` : "Rule-based coach"} · <LocalTime at={m.createdAt} />
         {dropped > 0 && ` · ${dropped} statement${dropped > 1 ? "s" : ""} removed for lacking evidence or using clinical language`}
         {note && <><br />{note}</>}
       </p>

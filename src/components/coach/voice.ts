@@ -7,7 +7,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** Text-to-speech for coach messages. */
 export function useSpeaker() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
+  // Decided after mount: the server can't know, and guessing differently there breaks hydration.
+  const [supported, setSupported] = useState(false);
+  useEffect(() => setSupported("speechSynthesis" in window), []);
 
   const stop = useCallback(() => {
     if (supported) window.speechSynthesis.cancel();
@@ -76,7 +78,9 @@ export function useDictation(onText: (text: string) => void) {
   }, [Ctor, onText]);
 
   const stop = useCallback(() => rec.current?.stop(), []);
-  return { supported: !!Ctor, listening, error, start, stop };
+  const [supported, setSupported] = useState(false);
+  useEffect(() => setSupported(!!Ctor), [Ctor]);
+  return { supported, listening, error, start, stop };
 }
 
 /** Plain text of a coach message for reading aloud. */

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DeleteMyData } from "./DeleteMyData";
+import { LocalTime } from "./LocalTime";
 
 type Editable = "behavioural_signals" | "llm_coaching" | "planted_flaws" | "microphone";
 type HistoryRow = { kind: string; granted: boolean; policyVersion: string; at: string };
@@ -113,7 +114,7 @@ export function SettingsForm({ initial, retentionDays, history }: { initial: Rec
         <ul className="text-sm">
           {rows.map((r, i) => (
             <li key={i} className="border-t border-slate-100 py-1 dark:border-slate-800">
-              {new Date(r.at).toLocaleString()}: <b>{r.kind.replaceAll("_", " ")}</b> {r.granted ? "granted" : "not granted"} <span className="text-xs text-slate-400">(policy {r.policyVersion})</span>
+              <LocalTime at={r.at} />: <b>{r.kind.replaceAll("_", " ")}</b> {r.granted ? "granted" : "not granted"} <span className="text-xs text-slate-400">(policy {r.policyVersion})</span>
             </li>
           ))}
         </ul>
