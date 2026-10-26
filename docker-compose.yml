@@ -1,0 +1,13 @@
+# Optional: real Postgres for teammates who prefer it over the embedded PGlite.
+# docker compose up -d, then set DATABASE_URL=postgres://ai4brain:ai4brain@localhost:5432/ai4brain
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ai4brain
+      POSTGRES_PASSWORD: ai4brain
+      POSTGRES_DB: ai4brain
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+volumes:
+  pgdata:

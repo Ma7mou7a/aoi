@@ -1,0 +1,59 @@
+id: visuospatial_memory
+name: Visuospatial memory
+version: 1
+color: "#06b6d4"
+
+card:
+  definition: >
+    The ability to remember where things are and in what order. Measured as
+    the longest sequence of highlighted blocks you can repeat back correctly.
+  what_it_is_not: >
+    Not a measure of navigation skill or a diagnostic test. It describes
+    short-term spatial span on this task.
+  citations:
+    - "Corsi, P. M. (1972). Human memory and the medial temporal region of the brain. PhD thesis, McGill University."
+    - "Kessels, R. P. C. et al. (2000). The Corsi block-tapping task: standardization and normative data. Appl. Neuropsychol., 7(4), 252-258."
+  biases:
+    - "Screen size: block positions are scaled so the layout is the same on every screen, but small phones are harder to tap."
+    - "Chunking strategies (seeing shapes in the path) can raise span; this is allowed and noted."
+    - "Motor errors (mis-taps) are logged separately from memory errors when the tap lands between blocks."
+
+tasks:
+  - id: corsi_blocks
+    name: Corsi blocks (forward)
+    paradigm: corsi
+    instructions: >
+      Blocks light up one after another. When they stop, tap the blocks in the
+      same order.
+    params:
+      blocks: 9
+      highlight_ms: 1000
+      gap_ms: 250
+      trials_per_span: 2
+      start_span: 3
+      max_span: 9
+    difficulty:
+      target_success: 0.75
+      # span is adapted inside the block (staircase); level sets the starting span
+      levels:
+        - { level: 1, params: { start_span: 3, backward: false }, ability_range: [0.0, 0.55] }
+        - { level: 2, params: { start_span: 4, backward: false }, ability_range: [0.25, 0.8] }
+        - { level: 3, params: { start_span: 4, backward: true }, ability_range: [0.45, 1.0] }
+    scoring:
+      components:
+        - { metric: span, weight: 0.7, normalise: { method: linear, min: 2, max: 8 } }
+        - { metric: total_score, weight: 0.3, normalise: { method: linear, min: 4, max: 60 } }
+    validity:
+      min_rt_ms: 100
+      max_rt_ms: 15000
+      min_valid_trials: 4
+      chance_accuracy: 0.0
+      max_same_response_streak: 9
+
+profile:
+  prior: { mean: 0.5, sd: 0.2 }
+  uncertainty:
+    model: normal
+    obs_sd: 0.15
+    reference_trials: 10
+    invalid_block_sd_multiplier: 2.5

@@ -1,0 +1,56 @@
+id: processing_speed
+name: Processing speed
+version: 1
+color: "#f59e0b"
+
+card:
+  definition: >
+    How quickly you can take in simple information and act on it correctly.
+    Measured as how fast and accurately you match symbols to digits using a key.
+  what_it_is_not: >
+    Not general intelligence and not a medical measure. Speed depends heavily
+    on device, input method and how rested you are.
+  citations:
+    - "Smith, A. (1982). Symbol Digit Modalities Test (SDMT) manual. Western Psychological Services."
+    - "Salthouse, T. A. (1996). The processing-speed theory of adult age differences in cognition. Psychol. Rev., 103(3), 403-428."
+  biases:
+    - "Device and input latency matter most here; the device type is logged and the coach compares you only with yourself."
+    - "Motor speed (typing, tapping) is mixed into the score; this is a known limitation of all speed tasks."
+    - "Practice effects are strong: the symbol-digit key is reshuffled every session."
+    - "Age: speed naturally varies with age, so the app never ranks users against each other."
+
+tasks:
+  - id: symbol_digit
+    name: Symbol-digit coding
+    paradigm: symbol_digit
+    instructions: >
+      A key at the top pairs 9 symbols with the digits 1-9. For each symbol
+      shown, press its digit as fast as you can.
+    params:
+      symbols: 9
+      reshuffle_key_each_session: true
+      block_duration_s: 60
+    difficulty:
+      target_success: 0.75
+      levels:
+        - { level: 1, params: { symbols: 6, key_visible: true }, ability_range: [0.0, 0.5] }
+        - { level: 2, params: { symbols: 9, key_visible: true }, ability_range: [0.25, 0.75] }
+        - { level: 3, params: { symbols: 9, key_visible: false, key_preview_s: 10 }, ability_range: [0.5, 1.0] }
+    scoring:
+      components:
+        - { metric: correct_per_minute, weight: 0.7, normalise: { method: linear, min: 15, max: 75 } }
+        - { metric: accuracy, weight: 0.3, normalise: { method: linear, min: 0.7, max: 1.0 } }
+    validity:
+      min_rt_ms: 150
+      max_rt_ms: 5000
+      min_valid_trials: 10
+      chance_accuracy: 0.11
+      max_same_response_streak: 8
+
+profile:
+  prior: { mean: 0.5, sd: 0.2 }
+  uncertainty:
+    model: normal
+    obs_sd: 0.1
+    reference_trials: 40
+    invalid_block_sd_multiplier: 2.5
