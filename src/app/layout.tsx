@@ -31,6 +31,7 @@ export default function RootLayout({
           <nav className="flex gap-4 text-sm text-slate-600 dark:text-slate-300">
             <Link href="/play">Assess</Link>
             <Link href="/profile">Brain Twin</Link>
+            <Link href="/coach">Coach</Link>
           </nav>
         </header>
         <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

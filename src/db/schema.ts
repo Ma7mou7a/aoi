@@ -177,6 +177,15 @@ export type CoachClaim = {
   why: string;
   evidenceTaskRunIds: string[];
   evidenceTrialIds: string[];
+  /** Human-readable label per cited reference, e.g. "6 matches you caught". */
+  evidenceLabels: string[];
+};
+
+export type CoachMeta = {
+  source: "llm" | "rules";
+  /** Why the rule-based coach was used instead of the LLM (no consent, API error, ...). */
+  fallbackReason?: string;
+  dropped?: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" }>;
 };
 
 export const coachMessages = pgTable("coach_messages", {
@@ -185,7 +194,9 @@ export const coachMessages = pgTable("coach_messages", {
   sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
   role: messageRole("role").notNull(),
   content: text("content").notNull(),
+  nextStep: text("next_step"),
   claims: jsonb("claims").$type<CoachClaim[]>().notNull().default([]),
+  meta: jsonb("meta").$type<CoachMeta>(),
   /** Set only in planted-flaw mode: which claim is deliberately wrong and how. */
   plantedFlaw: jsonb("planted_flaw").$type<{ claimIndex: number; description: string; caught?: boolean }>(),
   /** Clinical terms removed by the safety filter, kept for auditing the filter. */

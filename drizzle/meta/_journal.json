@@ -8,6 +8,13 @@
       "when": 1793013806596,
       "tag": "0000_fixed_maginty",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793021938533,
+      "tag": "0001_talented_red_shift",
+      "breakpoints": true
     }
   ]
 }

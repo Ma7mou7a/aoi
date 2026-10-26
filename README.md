@@ -48,6 +48,16 @@ To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL` 
 - **AI Collaboration Score:** `collab_events` (raw signals per component) → `collab_scores` (0–100 + components + weights + formula version)
 - **Adaptive learning:** `plans` → `plan_items`, `goals`
 
+## AI coach
+
+`/coach` gives feedback in which every statement links to the exact blocks and trials behind it.
+
+1. **Evidence pack** (`src/lib/coach/evidence.ts`): skill estimates with bands, the last 6 blocks, and trial groups (e.g. "5 matches you caught"). Each item gets a short reference (`R1`, `T3`); database ids never reach the model.
+2. **Draft:** with the user's `llm_coaching` consent, Claude (`claude-opus-5-5`, structured JSON output, server-side refusal fallback) writes 2–4 claims, each citing references. Without consent or API access, a deterministic rule-based coach writes the draft from the same pack.
+3. **Checks** (`src/lib/coach/claims.ts`, `safety.ts`): references are resolved to database ids, and claims that cite nothing valid are dropped. Every text passes a clinical-term filter: diagnostic language drops the claim, and medical-sounding words are rewritten. Questions about health conditions always get a non-clinical answer first. Dropped claims and filtered terms are stored for auditing and shown to the user.
+
+Set `ANTHROPIC_API_KEY` to enable the AI coach (see `.env.example`).
+
 ## Ethics
 
 Non-clinical by design: no diagnostic terms, and no decision is based on camera or voice alone. Users are only ever compared with themselves.
