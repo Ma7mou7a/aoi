@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { makeKey, symbolStream, type SymbolDigitParams } from "@/lib/tasks/symbolDigit";
-import { ProgressBar, TaskIntro, useCountdown, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "preview" | "running";
@@ -47,6 +47,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
     onset.current = performance.now();
     shownAt.current = new Date().toISOString();
     setPhase("running");
+    stampOnFrame(onset);
   }, []);
   const afterCountdown = useCallback(() => {
     startedAt.current = new Date().toISOString();
@@ -97,6 +98,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
       onset.current = performance.now();
       shownAt.current = new Date().toISOString();
       setIdx(idx + 1);
+      stampOnFrame(onset);
     },
     [phase, stream, idx, digitOf, spec.task.validity.min_rt_ms],
   );

@@ -68,8 +68,29 @@ export function filterClinical(text: string): FilterResult {
       return replacement;
     });
   }
+  // Norm comparisons: the app compares people only with themselves, so such sentences are removed.
+  const sentences = out.split(/(?<=[.!?])\s+/);
+  const kept = sentences.filter((s) => {
+    const m = NORM.find((re) => re.test(s));
+    if (m) hits.push(`norm: ${s.match(m)![0]}`);
+    return !m;
+  });
+  out = kept.join(" ");
+  // Nothing left after removing norm comparisons = nothing to say.
+  if (!out.trim()) blocked = true;
   return { text: out, blocked, hits };
 }
+
+/** Comparisons with other people or population norms (never allowed; the app has no norms). */
+const NORM: RegExp[] = [
+  /\b(typical|normal|usual) (for|of|at) (your|this|a|an|people|someone|adults?)\b/i,
+  /\b(above|below) (the )?(average|norm|normal)\b/i,
+  /\bthe average (person|user|adult)\b/i,
+  /\b(most|other|many) (people|users|adults)\b/i,
+  /\b(for|at) your age\b/i,
+  /\bcompared (to|with) (others|other people|peers|most)\b/i,
+  /\bpercentile\b/i,
+];
 
 /** Shown instead of anything that tried to diagnose. */
 export const NON_CLINICAL_NOTE =

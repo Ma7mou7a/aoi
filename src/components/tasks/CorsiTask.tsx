@@ -5,7 +5,7 @@ import { createRng } from "@/lib/rng";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { CORSI_LAYOUT, CorsiStaircase, corsiSequence, expectedOrder, type CorsiParams } from "@/lib/tasks/corsi";
 import type { BlockSpec } from "@/lib/tasks/registry";
-import { ProgressBar, TaskIntro, useCountdown, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "present" | "respond" | "pause";
@@ -74,6 +74,7 @@ export function CorsiTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
       setTimeout(() => {
         respondStart.current = performance.now();
         setPhase("respond");
+        stampOnFrame(respondStart);
       }, 500 + sequence.length * step),
     );
     return () => timers.forEach(clearTimeout);

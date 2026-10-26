@@ -58,6 +58,18 @@ export function Kbd({ children }: { children: React.ReactNode }) {
   return <kbd className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-sm dark:border-slate-600 dark:bg-slate-800">{children}</kbd>;
 }
 
+/**
+ * Frame-accurate stimulus onset (the technique jsPsych uses): call right after the stimulus is
+ * committed; the timestamp is that of the animation frame that paints it, not of the state change.
+ * RTs measured as `performance.now() - onset` are then not inflated by render latency.
+ */
+export function stampOnFrame(ref: { current: number }) {
+  if (typeof requestAnimationFrame === "undefined") return;
+  requestAnimationFrame((t) => {
+    ref.current = t;
+  });
+}
+
 /** Track window focus loss so blocks with distraction can be down-weighted. */
 export function useFocusLoss(onLoss: () => void) {
   useEffect(() => {

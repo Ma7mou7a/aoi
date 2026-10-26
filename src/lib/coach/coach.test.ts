@@ -23,6 +23,14 @@ describe("clinical filter", () => {
     const s = "You caught 6 of 7 matches; try staying with 2-back a little longer.";
     expect(filterClinical(s)).toEqual({ text: s, blocked: false, hits: [] });
   });
+  it("removes sentences that compare the user with norms or other people", () => {
+    const r = filterClinical("Your interference cost was 220 ms. That is typical for this skill level.");
+    expect(r.text).toBe("Your interference cost was 220 ms.");
+    expect(r.blocked).toBe(false);
+    expect(r.hits.join()).toMatch(/norm/);
+    expect(filterClinical("You are above average for your age.").blocked).toBe(true);
+    expect(filterClinical("Your best block this week, well above your average.").blocked).toBe(false);
+  });
   it("does not trip on words that merely contain a term", () => {
     expect(filterClinical("Add one more block, then rest.").blocked).toBe(false);
   });

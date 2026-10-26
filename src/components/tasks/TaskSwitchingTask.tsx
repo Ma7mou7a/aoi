@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { generateTaskSwitching, type Rule, type TaskSwitchingParams } from "@/lib/tasks/taskSwitching";
-import { Kbd, ProgressBar, TaskIntro, useCountdown, useFocusLoss } from "./common";
+import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "running" | "transition";
@@ -109,6 +109,7 @@ export function TaskSwitchingTask({ spec, onFinish }: { spec: BlockSpec; onFinis
       answered.current = false;
       focusLost.current = false;
       onset.current = performance.now();
+      stampOnFrame(onset);
       shownAt.current = new Date().toISOString();
       const t = setTimeout(() => record(null), p.max_response_ms);
       return () => clearTimeout(t);

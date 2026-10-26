@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { generateNBack, type NBackParams } from "@/lib/tasks/nback";
+import { stampOnFrame } from "./common";
 import type { BlockSpec } from "@/lib/tasks/registry";
 
 export type TaskFinish = (r: { trials: TrialRecord[]; status: "completed" | "abandoned"; startedAt: string }) => void;
@@ -61,6 +62,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
     onset.current = performance.now();
     const shownAt = new Date().toISOString();
     setVisible(true);
+    stampOnFrame(onset);
     const hide = setTimeout(() => setVisible(false), p.stimulus_ms);
     const end = setTimeout(() => {
       const { rt, focusLost } = current.current;

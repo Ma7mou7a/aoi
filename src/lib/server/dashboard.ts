@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { dayStreak } from "../motivation";
 import { db, schema } from "@/db";
 import { getDimensions } from "../dimensions/loader";
 import { goalProgress, type GoalKind } from "../goals";
@@ -158,7 +159,8 @@ async function activity(userId: string, rangeDays: number) {
   return { days, cells };
 }
 
-export const FORECAST_HORIZON_DAYS = 14;
+/** 7 days: far enough to plan a week, near enough for a band that still says something. */
+export const FORECAST_HORIZON_DAYS = 7;
 const CHECK_HORIZON_DAYS = 7;
 
 /**
@@ -211,7 +213,12 @@ export async function getDashboard(userId: string, rangeDays: RangeDays) {
     currentCollabScore(userId),
   ]);
   const forecast = await forecasts(userId, profile);
-  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays, forecast };
+  const days = await db
+    .selectDistinct({ day: sql<string>`to_char(${schema.taskRuns.startedAt} at time zone 'UTC', 'YYYY-MM-DD')` })
+    .from(schema.taskRuns)
+    .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed")));
+  const streak = dayStreak(days.map((d) => d.day));
+  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays, forecast, streak };
 }
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
 

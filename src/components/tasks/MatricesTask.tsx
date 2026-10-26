@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { generateMatrices, type Cell, type MatricesParams } from "@/lib/tasks/matrices";
 import type { BlockSpec } from "@/lib/tasks/registry";
-import { ProgressBar, TaskIntro, useCountdown, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 const SIZE = [0.42, 0.62, 0.82];
@@ -101,6 +101,7 @@ export function MatricesTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Ta
   useEffect(() => {
     if (phase !== "running") return;
     onset.current = performance.now();
+    stampOnFrame(onset);
     shownAt.current = new Date().toISOString();
     focusLost.current = false;
     changed.current = false;

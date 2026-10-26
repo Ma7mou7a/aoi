@@ -26,7 +26,7 @@ The brief refers to a list of dimensions in Section 3 that does not appear in th
 | Visuospatial memory | Corsi blocks with an in-block span staircase (backward at level 3) | span, total score | Corsi 1972; Kessels et al. 2000 |
 | Reasoning | **Generated** Raven-style 3×3 matrices (Latin-square / progression rules, one-attribute distractors) | accuracy | Raven 2000; Matzen et al. 2010 |
 
-Each skill has a **measurement card** (definition, what it is *not*, task, levels, scoring, uncertainty, data-quality checks, known biases, references) generated from its configuration and shown in the app (`/skills`, `docs/measurement-cards.md`). Every trial stores the stimulus, response, correctness, response time and behaviour signals (window focus loss, answer changes), which covers the brief's score, response time, error rate and behaviour. Assessment is **non-biometric only**.
+Each skill has a **measurement card** (definition, what it is *not*, task, levels, scoring, uncertainty, data-quality checks, known biases, references) generated from its configuration and shown in the app (`/skills`, `docs/measurement-cards.md`). Every trial stores the stimulus, response, correctness, response time and behaviour signals (window focus loss, answer changes), which covers the brief's score, response time, error rate and behaviour. Assessment is **non-biometric only**. Like jsPsych, the research standard for browser experiments, each stimulus onset is time-stamped at the animation frame that paints it (`requestAnimationFrame`), so response times are measured from what the user actually saw. We kept our own renderers rather than embedding jsPsych because every block must feed the live profile and the adaptive selector inside one typed app.
 
 ## 3. From trials to the Brain Twin
 
@@ -46,17 +46,17 @@ Each skill has a **measurement card** (definition, what it is *not*, task, level
 
 **Weekly plan.** Twelve blocks are allocated by *priority = 0.6·(band width / prior width) + 0.4·(room to grow)*, with unmeasured skills first. Each item has a target level and a reason. The plan is rebuilt weekly, or on demand, and stores the profile snapshots it was built from.
 
-**Goals.** Score goals count as reached only when the **whole 90% band** is above the target. Until then the app shows the probability that the user is already there (e.g. "6% likely you're already at 70%+"). Consistency goals count sessions.
+**Goals.** Score goals count as reached only when the **whole 90% band** is above the target. Until then the app shows the probability that the user is already there (e.g. "6% likely you're already at 70%+"). Consistency goals count sessions. After each block the user sees concrete wins compared only with their own history (a new personal best at that level, a new highest estimate, a 3/5/7/14/30-day streak).
 
-**Dashboard.** The dashboard shows a radar of the current profile with the band as a shaded ring, small-multiple progress curves with bands and the dashed forecast, a skill × day practice heatmap, goals, the plan and stat tiles. Every chart has a table view. Colours come from a palette validated for colour-vision deficiency in light and dark mode.
+**Dashboard.** The dashboard shows a radar of the current profile with the band as a shaded ring, small-multiple progress curves with bands and the dashed forecast, a skill × day heatmap (practice or performance view), a day streak, a 7-day forecast sentence, goals, the plan and stat tiles. Every chart has a table view. Colours come from a palette validated for colour-vision deficiency in light and dark mode.
 
 ## 5. AI coach
 
 **Architecture.**
 
 1. The server builds an **evidence pack**: skill estimates with bands, the last six blocks with metrics and reliability, and grouped trial facts ("5 matches you caught"). Each item gets a short reference (R1, T3); no names or database IDs leave the server.
-2. Claude (`claude-opus-5-5`) receives the pack and a short policy (non-clinical, cite references, mention uncertainty, compare only with the user's own history) and returns **structured JSON**: a summary, 2–4 claims each with "why" and references, and a next step.
-3. The server maps references back to blocks and trials and **drops any claim without valid evidence**. A **clinical-term filter** removes any claim with diagnostic language and rewrites medical-sounding words. A question about a health condition always gets a fixed non-clinical answer first.
+2. The LLM (Claude `claude-opus-5-5` when an Anthropic key is set, otherwise `gpt-oss-120b` on Groq; both with strict JSON-schema output) receives the pack and a short policy (non-clinical, cite references, mention uncertainty, compare only with the user's own history) and returns **structured JSON**: a summary, 2–4 claims each with "why" and references, and a next step.
+3. The server maps references back to blocks and trials and **drops any claim without valid evidence**. A **clinical-term filter** removes any claim with diagnostic language and rewrites medical-sounding words, and a **norm filter** removes any sentence comparing the user with other people or averages. A question about a health condition always gets a fixed non-clinical answer first.
 4. Without the user's consent to AI coaching, or if the API fails, a **deterministic rule-based coach** writes the claims from the same pack and goes through the same checks.
 
 **Why this design.** The LLM is good at language but must not invent facts or medicalise results. Forcing citations and verifying them in code turns explainability from a promise into a check the user can perform: every claim has a "See the evidence" button that opens the exact trials.
@@ -109,7 +109,7 @@ Each skill has a **measurement card** (definition, what it is *not*, task, level
 
 ## 10. Engineering
 
-Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK. **88 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts and affect. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
+Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **94 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
 
 ## 11. Limitations and next steps
 

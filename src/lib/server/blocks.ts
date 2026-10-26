@@ -1,5 +1,6 @@
 import "server-only";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
+import { dayStreak, milestones } from "../motivation";
 import { db, schema } from "@/db";
 import { inferAffect, type AffectState } from "../affect";
 import { getDimension, getDimensions } from "../dimensions/loader";
@@ -66,6 +67,8 @@ export type RunResult = {
   after: { mean: number; sd: number; ci: [number, number] } | null;
   /** Behaviour-based fatigue/frustration hint (null without behavioural_signals consent). */
   affect: AffectState | null;
+  /** Earned celebrations (personal best, highest estimate, streak); empty when nothing new. */
+  wins: string[];
 };
 
 /**
@@ -107,6 +110,31 @@ export async function recordRun(input: {
       .orderBy(asc(schema.taskRuns.startedAt));
     const minutes = input.sessionStartedAt ? (now.getTime() - input.sessionStartedAt.getTime()) / 60_000 : 0;
     affect = inferAffect({ trials: input.trials, composite: score.composite, taskId: task.id, earlier, sessionMinutes: minutes });
+  }
+
+  // Motivation: celebrate only real improvements against the user's own history.
+  let wins: string[] = [];
+  if (completed && after) {
+    const [prevBlocks, prevSnaps, days] = await Promise.all([
+      db.select({ composite: schema.taskRuns.composite }).from(schema.taskRuns)
+        .where(and(eq(schema.taskRuns.userId, input.userId), eq(schema.taskRuns.taskId, task.id), eq(schema.taskRuns.difficultyLevel, input.level), eq(schema.taskRuns.status, "completed"))),
+      db.select({ mean: schema.profileSnapshots.mean }).from(schema.profileSnapshots)
+        .where(and(eq(schema.profileSnapshots.userId, input.userId), eq(schema.profileSnapshots.dimensionId, dim.id), eq(schema.profileSnapshots.trigger, "task_run"))),
+      db.selectDistinct({ day: sql<string>`to_char(${schema.taskRuns.startedAt} at time zone 'UTC', 'YYYY-MM-DD')` }).from(schema.taskRuns)
+        .where(and(eq(schema.taskRuns.userId, input.userId), eq(schema.taskRuns.status, "completed"))),
+    ]);
+    const maxOf = (xs: Array<number | null>) => (xs.filter((x): x is number => x != null).length ? Math.max(...xs.filter((x): x is number => x != null)) : null);
+    wins = milestones({
+      taskName: task.name,
+      level: input.level,
+      composite: score.composite,
+      bestPreviousComposite: maxOf(prevBlocks.map((b) => b.composite)),
+      skillName: dim.name,
+      newMean: after.mean,
+      bestPreviousMean: maxOf(prevSnaps.map((s) => s.mean)),
+      streak: dayStreak([...days.map((d) => d.day), now.toISOString().slice(0, 10)], now),
+      valid: score.validity.valid,
+    });
   }
 
   const taskRunId = await db.transaction(async (tx) => {
@@ -167,7 +195,7 @@ export async function recordRun(input: {
   await db.update(schema.users).set({ lastActiveAt: now }).where(eq(schema.users.id, input.userId));
 
   const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
-  return { taskRunId, score, before: view(before), after: after && view(after), affect };
+  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins };
 }
 
 /** JSON can't hold NaN/Infinity; store them as absent. */

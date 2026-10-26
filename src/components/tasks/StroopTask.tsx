@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { generateStroop, INK, type StroopParams } from "@/lib/tasks/stroop";
-import { Kbd, ProgressBar, TaskIntro, useCountdown, useFocusLoss } from "./common";
+import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "running" | "transition";
@@ -102,6 +102,7 @@ export function StroopTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Task
         onset.current = performance.now();
         shownAt.current = new Date().toISOString();
         setStage("stimulus");
+        stampOnFrame(onset);
       }, FIXATION_MS);
       return () => clearTimeout(t);
     }

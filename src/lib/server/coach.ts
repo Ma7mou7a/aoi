@@ -3,7 +3,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { finaliseDraft, ruleBasedDraft } from "../coach/claims";
 import { buildEvidencePack, packToPrompt } from "../coach/evidence";
-import { COACH_MODEL, draftWithLlm } from "../coach/llm";
+import { draftWithLlm } from "../coach/llm";
 import { filterClinical, NON_CLINICAL_NOTE } from "../coach/safety";
 import { plantFlaw, PLANT_PROBABILITY } from "../collab/plant";
 import { actualDirection, isSpecificQuestion, type Prediction } from "../collab/score";
@@ -109,6 +109,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
   let source: "llm" | "rules" = "rules";
   let fallbackReason: string | undefined;
   let draft = null;
+  let modelUsed = "rules-v1";
 
   if (!pack.runs.length) {
     fallbackReason = "no_data_yet";
@@ -129,6 +130,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
     const res = await draftWithLlm(prompt);
     if (res.ok) {
       draft = res.draft;
+      modelUsed = res.model;
       source = "llm";
     } else fallbackReason = res.reason;
   }
@@ -169,7 +171,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
       claims,
       plantedFlaw,
       filteredTerms: final.filteredTerms,
-      model: source === "llm" ? COACH_MODEL : "rules-v1",
+      model: modelUsed,
       meta: { source, fallbackReason, dropped: final.dropped, prediction: predictionMeta },
     })
     .returning();

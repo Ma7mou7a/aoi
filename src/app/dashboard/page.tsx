@@ -42,7 +42,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Skills measured" value={`${measured.length}/${dims.length}`} />
         <Stat label="Blocks this week" value={String(blocksThisWeek)} note={`plan: ${data.plan.items.reduce((s, i) => s + i.blocksTarget, 0)}`} />
-        <Stat label="Sessions, last 7 days" value={String(data.goals.sessionsLast7Days)} />
+        <Stat label="Day streak" value={String(data.streak)} note={`${data.goals.sessionsLast7Days} session${data.goals.sessionsLast7Days === 1 ? "" : "s"} in the last 7 days`} />
         <Stat label="AI collaboration" value={String(data.collabScore)} note="out of 100 · see Coach" />
       </div>
 

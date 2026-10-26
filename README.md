@@ -12,7 +12,7 @@
 | **Uncertainty everywhere** | Bayesian (Kalman) profile per skill: 90% band on every estimate, wider for noisy or invalid blocks, widening between sessions |
 | **Adaptive testing** | The next block is the one expected to shrink the band most. In simulation this is **18% more accurate than random order** at equal effort |
 | **Validated** | 500 simulated users through the real pipeline: band coverage **89–96%** (target 90%), mean error ±6–10%, **99% of invalid play caught** with 2% false alarms (`/validation`, [docs/validation.md](docs/validation.md)) |
-| **Evidence-linked coach** | Claude writes claims that must cite the exact blocks and trials; unsupported claims are dropped; a clinical-term filter guards every word; falls back to a rule-based coach |
+| **Evidence-linked coach** | Claude or an open-weight model on Groq writes claims that must cite the exact blocks and trials; unsupported claims are dropped; a clinical-term filter guards every word and norm comparisons are removed; falls back to a rule-based coach |
 | **AI Collaboration Score** | Documented formula over 16 behaviour signals, plus an opt-in **spot-the-error mode** that measures whether you check the AI ([docs/collaboration-score.md](docs/collaboration-score.md)) |
 | **Forecasts that grade themselves** | Growth forecast with a widening band, and a **track record**: past forecasts are checked against what actually happened |
 | **Surprise-proof** | Skills are YAML config: `npm run new-dimension` adds a skill live with no code change ([docs/adding-a-dimension.md](docs/adding-a-dimension.md)) |
@@ -41,7 +41,7 @@ flowchart LR
   SC --> P[Bayesian profiler<br/>Kalman update + drift]
   P --> BT[(Brain Twin<br/>snapshots · forecasts)]
   BT --> D[Dashboard<br/>radar · curves · heatmap · goals · plan]
-  BT --> C[Coach<br/>evidence pack → Claude / rules<br/>→ evidence check → clinical filter]
+  BT --> C[Coach<br/>evidence pack → Claude · Groq / rules<br/>→ evidence check → clinical filter]
   C --> CS[AI Collaboration Score]
   SC --> A[Behaviour-only affect<br/>fatigue · frustration]
   A --> S
@@ -59,13 +59,13 @@ npm run seed:demo       # optional: a demo user with 2 weeks of history (prints 
 npm run dev             # http://localhost:3000
 ```
 
-Optional: `ANTHROPIC_API_KEY` in `.env.local` enables the AI coach (see `.env.example`). For production-like data use real Postgres: `docker compose up -d` and set `DATABASE_URL`.
+Optional: `ANTHROPIC_API_KEY` or `GROQ_API_KEY` in `.env.local` enables the AI coach (Claude is preferred when both are set; `COACH_PROVIDER` forces one) (see `.env.example`). For production-like data use real Postgres: `docker compose up -d` and set `DATABASE_URL`.
 
 > **PGlite tip:** stop the dev server with Ctrl+C, not by killing the process. If the app logs `PGlite could not open ./.pglite`, rename that folder and re-run `npm run db:migrate`.
 
 | Script | |
 |-|-|
-| `npm test` | 88 unit tests (scoring, profiler calibration, selector, tasks, coach safety, collaboration score, plans, forecasts, affect) |
+| `npm test` | 94 unit tests (scoring, profiler calibration, selector, tasks, coach safety, collaboration score, plans, forecasts, affect, milestones) |
 | `npm run validate` | Validation study (500 simulated users); `-- --apply` refits level maps and noise into the YAML |
 | `npm run dims:check` | Validate all dimension configs |
 | `npm run new-dimension -- --id … --name "…" --from …` | Add a skill from an existing task type |
@@ -87,6 +87,6 @@ Optional: `ANTHROPIC_API_KEY` in `.env.local` enables the AI coach (see `.env.ex
 
 ## Stack
 
-Next.js 15 · TypeScript · Drizzle ORM · PostgreSQL / PGlite · Recharts · Zod · Anthropic SDK (Claude) · Vitest.
+Next.js 15 · TypeScript · Drizzle ORM · PostgreSQL / PGlite · Recharts · Zod · Anthropic SDK (Claude) · Groq · Vitest.
 
 *AI4Brain is a learning tool. It does not diagnose or assess any health condition.*

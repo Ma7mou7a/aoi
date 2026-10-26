@@ -106,6 +106,12 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
+      {result.wins.length > 0 && (
+        <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+          {result.wins.map((w) => <li key={w}><span aria-hidden>★ </span>{w}</li>)}
+        </ul>
+      )}
+
       {result.affect?.suggestion && (
         <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
           <p className="font-medium">{result.affect.suggestion}</p>

@@ -12,9 +12,17 @@ const step = (blocks: number) => STEPS[Math.min(blocks, 4)];
 const fmtDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
 const weekday = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "narrow", timeZone: "UTC" });
 
-/** Skill × day grid of blocks played (training consistency), sequential blue, 2px surface gaps. */
+/** Average block score → the same sequential steps (bins of 25 points). */
+const scoreStep = (avg: number | null) => (avg == null ? STEPS[0] : STEPS[Math.min(4, 1 + Math.floor(avg * 4))]);
+
+/**
+ * Skill × day grid, sequential blue, 2px surface gaps. Two views of the same cells:
+ * practice (blocks played: consistency) and performance (average block score that day).
+ */
 export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ id: string; name: string }> }) {
   const [hover, setHover] = useState<{ skill: string; day: string } | null>(null);
+  const [mode, setMode] = useState<"blocks" | "score">("blocks");
+  const colour = (c: { blocks: number; avgScore: number | null }) => (mode === "blocks" ? step(c.blocks) : scoreStep(c.avgScore));
   const cell = hover ? heat.cells[hover.skill]?.[hover.day] : null;
   const total = Object.values(heat.cells).reduce((s, row) => s + Object.values(row).reduce((a, c) => a + c.blocks, 0), 0);
 
@@ -33,7 +41,23 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
   );
 
   return (
-    <ChartCard title="Practice heatmap" subtitle={`${total} block${total === 1 ? "" : "s"} in the last ${heat.days.length} days. The stronger the colour, the more blocks that day.`} table={table}>
+    <ChartCard
+      title={mode === "blocks" ? "Practice heatmap" : "Performance heatmap"}
+      subtitle={mode === "blocks"
+        ? `${total} block${total === 1 ? "" : "s"} in the last ${heat.days.length} days. The stronger the colour, the more blocks that day.`
+        : `Average block score per skill and day. The stronger the colour, the better the blocks went (empty = not played).`}
+      table={table}
+      actions={
+        <div className="flex overflow-hidden rounded-md border border-slate-300 text-xs dark:border-slate-700" role="group" aria-label="Heatmap view">
+          {(["blocks", "score"] as const).map((m) => (
+            <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}
+              className={`px-2 py-1 ${mode === m ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
+              {m === "blocks" ? "Practice" : "Performance"}
+            </button>
+          ))}
+        </div>
+      }
+    >
       <div className="overflow-x-auto">
         <div className="grid min-w-fit gap-[2px]" style={{ gridTemplateColumns: `minmax(7.5rem, auto) repeat(${heat.days.length}, minmax(14px, 1fr))` }}>
           <span />
@@ -55,7 +79,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
                     onFocus={() => setHover({ skill: s.id, day: d })}
                     onBlur={() => setHover(null)}
                     className="aspect-square min-h-[14px] rounded-[3px] outline-offset-1"
-                    style={{ background: step(c.blocks), outline: active ? "2px solid var(--chart-ink)" : undefined }}
+                    style={{ background: colour(c), outline: active ? "2px solid var(--chart-ink)" : undefined }}
                   />
                 );
               })}
@@ -70,7 +94,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
             : `${fmtDay(heat.days[0])} – ${fmtDay(heat.days.at(-1)!)}`}
         </p>
         <span className="flex items-center gap-1">
-          0 {STEPS.map((c, i) => <span key={i} className="inline-block h-3 w-3 rounded-[3px]" style={{ background: c }} />)} 4+
+          {mode === "blocks" ? "0" : "none"} {STEPS.map((c, i) => <span key={i} className="inline-block h-3 w-3 rounded-[3px]" style={{ background: c }} />)} {mode === "blocks" ? "4+ blocks" : "75%+"}
         </span>
       </div>
     </ChartCard>
