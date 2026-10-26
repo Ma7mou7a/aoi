@@ -10,7 +10,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 function Stat({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+    <div className="glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
       <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>{label}</p>
       <p className="text-3xl font-semibold" style={{ color: "var(--chart-ink)" }}>{value}</p>
       <p className="text-xs" style={{ color: "var(--chart-muted)" }}>{note}</p>
@@ -32,7 +32,7 @@ export default function ValidationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Validation study</h1>
+        <h1 className="text-5xl sm:text-6xl">Validation study</h1>
         <p className="text-slate-600 dark:text-slate-300">
           {data.meta.users} simulated users with <b>known</b> abilities went through the real pipeline (selector → tasks → scoring → Bayesian profiler).
           Calibration was fitted on {data.meta.fitUsers} users and every number below comes from the other {data.meta.evalUsers}. Reproduce with <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">npm run validate</code>.
@@ -52,7 +52,7 @@ export default function ValidationPage() {
         <AdaptiveVsRandom data={data} />
       </div>
 
-      <section className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+      <section className="space-y-2 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
         <h2 className="font-semibold">Is unreliable play caught?</h2>
         <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>Share of blocks flagged as unreliable, 200 blocks per cell. Flagged blocks still count, but with 2.5× the noise, so they barely move the profile.</p>
         <div className="overflow-x-auto">
@@ -72,7 +72,7 @@ export default function ValidationPage() {
         </div>
       </section>
 
-      <section className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+      <section className="space-y-2 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
         <h2 className="font-semibold">Does the twin follow real improvement?</h2>
         <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>
           100 users improving working memory by 15 points over a month. With the chosen forgetting rate ({data.e4.driftSdPerDay}/day), improvement was detected for {pct(data.e4.detectedImprovement)} of users

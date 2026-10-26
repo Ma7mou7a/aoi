@@ -1,17 +1,31 @@
 @import "tailwindcss";
 
+/* Theme follows <html data-theme>, set before paint (layout.tsx) and by the toggle. Dark is the default. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand (CISTAC family: IEEE blue, cyan, orange on deep navy) */
+  --brand: #007fae; /* light: 4.6:1 on white; dark mode uses the bright cyan */
+  --brand-2: #0095c8;
+  --brand-deep: #00629b;
+  --accent: #e87722;
+  --navy: #031426;
+
+  --background: #f4f8fb;
+  --foreground: #031426;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-line: rgba(3, 20, 38, 0.1);
+  --grid-line: rgba(0, 98, 155, 0.06);
+  --glow: rgba(0, 181, 226, 0.12);
 
   /* Chart chrome (dataviz reference palette, light) */
-  --chart-surface: #fcfcfb;
-  --chart-ink: #0b0b0b;
-  --chart-ink-2: #52514e;
-  --chart-muted: #898781;
-  --chart-grid: #e1e0d9;
-  --chart-axis: #c3c2b7;
-  --chart-empty: #f0efec;
+  --chart-surface: #ffffff;
+  --chart-ink: #031426;
+  --chart-ink-2: #43596b;
+  --chart-muted: #688196;
+  --chart-grid: #dde7ee;
+  --chart-axis: #b9cad6;
+  --chart-empty: #edf3f7;
   --chart-accent: #2a78d6; /* single-series slot 1 */
   --chart-series-2: #eb6834; /* categorical slot 2 */
 
@@ -30,44 +44,111 @@
   --dim-reasoning: #008300;
 }
 
+[data-theme="dark"] {
+  --brand: #00b5e2;
+  --brand-2: #62e4ff;
+  --background: #031426;
+  --foreground: #f4f9fc;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-line: rgba(255, 255, 255, 0.12);
+  --grid-line: rgba(0, 181, 226, 0.045);
+  --glow: rgba(0, 98, 155, 0.28);
+
+  /* Validated against the navy surface #0a2238 (all six checks pass) */
+  --chart-surface: #0a2238;
+  --chart-ink: #f4f9fc;
+  --chart-ink-2: #aac0ce;
+  --chart-muted: #7f98aa;
+  --chart-grid: #1b3249;
+  --chart-axis: #2b4760;
+  --chart-empty: #10293f;
+  --chart-accent: #3987e5;
+  --chart-series-2: #d95926;
+
+  --seq-1: #184f95;
+  --seq-2: #256abf;
+  --seq-3: #3987e5;
+  --seq-4: #86b6ef;
+
+  --dim-working_memory: #3987e5;
+  --dim-attention_inhibition: #d95926;
+  --dim-processing_speed: #199e70;
+  --dim-cognitive_flexibility: #c98500;
+  --dim-visuospatial_memory: #d55181;
+  --dim-reasoning: #008300;
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-deep: var(--brand-deep);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display-face);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-
-    --chart-surface: #1a1a19;
-    --chart-ink: #f0efec;
-    --chart-ink-2: #c3c2b7;
-    --chart-muted: #898781;
-    --chart-grid: #2c2c2a;
-    --chart-axis: #383835;
-    --chart-empty: #262624;
-    --chart-accent: #3987e5;
-    --chart-series-2: #d95926;
-
-    --seq-1: #184f95;
-    --seq-2: #256abf;
-    --seq-3: #3987e5;
-    --seq-4: #86b6ef;
-
-    --dim-working_memory: #3987e5;
-    --dim-attention_inhibition: #d95926;
-    --dim-processing_speed: #199e70;
-    --dim-cognitive_flexibility: #c98500;
-    --dim-visuospatial_memory: #d55181;
-    --dim-reasoning: #008300;
-  }
+/* Neutrals tinted toward the brand navy, so every existing slate class joins the theme. */
+@theme {
+  --color-slate-50: #f4f9fc;
+  --color-slate-100: #e6eff5;
+  --color-slate-200: #d3e0e9;
+  --color-slate-300: #aac0ce;
+  --color-slate-400: #8aa2b3;
+  --color-slate-500: #688196;
+  --color-slate-600: #4a6175;
+  --color-slate-700: #2b4760;
+  --color-slate-800: #1b3249;
+  --color-slate-900: #0b2238;
+  --color-slate-950: #031426;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, var(--glow), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 48px 48px,
+    var(--background);
+  background-attachment: fixed;
+}
+
+h1, h2 {
+  font-family: var(--font-display-face), var(--font-body), sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+h1 { line-height: 1; }
+
+/* Glass card: the shared surface for panels that are not charts. */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(10px);
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-2) 40%, #ffad6d 75%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Brain Twin artwork: signals travelling along the circuit, a soft pulse on skill nodes. */
+@keyframes trace { to { stroke-dashoffset: -260; } }
+@keyframes node-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+@keyframes ekg { to { stroke-dashoffset: 0; } }
+.bt-signal { stroke-dasharray: 10 250; animation: trace 4.5s linear infinite; }
+.bt-halo { animation: node-pulse 3s ease-in-out infinite; }
+.ekg-line { stroke-dasharray: 900; stroke-dashoffset: 900; animation: ekg 3.5s ease-out forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bt-signal, .bt-halo, .ekg-line { animation: none; stroke-dashoffset: 0; }
+  .bt-signal { opacity: 0; }
 }

@@ -112,7 +112,7 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
           <h2 className="text-2xl font-semibold">Session complete</h2>
           <p className="text-slate-600 dark:text-slate-300">Your Brain Twin has been updated. Take a break: rested sessions give more reliable results.</p>
           <div className="flex justify-center gap-3">
-            <Link href="/coach" className="inline-block rounded-xl bg-slate-900 px-6 py-3 font-medium text-white dark:bg-white dark:text-slate-900">
+            <Link href="/coach" className="inline-block rounded-xl bg-slate-900 px-6 py-3 font-medium text-white dark:bg-brand dark:text-slate-900">
               Get coach feedback
             </Link>
             <Link href="/profile" className="inline-block rounded-xl border border-slate-300 px-6 py-3 font-medium dark:border-slate-700">

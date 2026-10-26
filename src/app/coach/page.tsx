@@ -16,7 +16,7 @@ export default async function CoachPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Coach</h1>
+        <h1 className="text-5xl sm:text-6xl">Coach</h1>
         <p className="text-slate-600 dark:text-slate-300">
           Every statement is linked to the exact blocks and trials behind it. Tap <b>See the evidence</b> to check it yourself.
         </p>

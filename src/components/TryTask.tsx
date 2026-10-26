@@ -49,14 +49,14 @@ export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
           Level
           {task.difficulty.levels.map((l) => (
             <button key={l.level} onClick={() => { setLevel(l.level); setResult(null); setSeed(newSeed()); }} aria-pressed={level === l.level}
-              className={`rounded-lg border px-3 py-1 ${level === l.level ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
+              className={`rounded-lg border px-3 py-1 ${level === l.level ? "border-slate-900 bg-slate-900 text-white dark:border-brand dark:bg-brand dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
               {l.level}
             </button>
           ))}
         </div>
       </div>
       {result ? (
-        <div className="mx-auto max-w-md space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+        <div className="mx-auto max-w-md space-y-3 glass rounded-2xl p-4 ">
           <h2 className="text-xl font-semibold">Block score {pct(result.composite)}</h2>
           <ul className="text-sm">
             {result.components.map((c) => (
@@ -70,7 +70,7 @@ export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
             In the real app this block would count as an ability observation of {pct(result.observation)} (±{pct(1.645 * result.observationSd)}){result.validity.valid ? "" : `, down-weighted for: ${result.validity.flags.join(", ").replaceAll("_", " ")}`}.
           </p>
           <div className="flex gap-2">
-            <button onClick={() => { setResult(null); setSeed(newSeed()); }} className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white dark:bg-white dark:text-slate-900">Play again</button>
+            <button onClick={() => { setResult(null); setSeed(newSeed()); }} className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white dark:bg-brand dark:text-slate-900">Play again</button>
             <Link href="/try" className="rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700">All tasks</Link>
           </div>
         </div>

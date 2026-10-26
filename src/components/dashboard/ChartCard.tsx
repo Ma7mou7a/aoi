@@ -6,7 +6,7 @@ import { useState } from "react";
 export function ChartCard({ title, subtitle, table, children, actions }: { title: string; subtitle?: string; table: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode }) {
   const [asTable, setAsTable] = useState(false);
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+    <section className="space-y-3 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold" style={{ color: "var(--chart-ink)" }}>{title}</h2>

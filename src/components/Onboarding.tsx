@@ -44,7 +44,7 @@ export function Onboarding() {
         AI4Brain is a learning tool, not a medical or diagnostic test. No camera or microphone is used.
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={busy || !consents.data_processing} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-40 dark:bg-white dark:text-slate-900">
+      <button disabled={busy || !consents.data_processing} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-40 dark:bg-brand dark:text-slate-900">
         {busy ? "Creating…" : "Create my Brain Twin"}
       </button>
     </form>

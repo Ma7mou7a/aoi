@@ -152,13 +152,13 @@ export function MatricesTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Ta
           <div className="grid w-full grid-cols-3 gap-2 sm:grid-cols-6">
             {it.options.map((o, i) => (
               <button key={i} onClick={() => { if (picked != null && picked !== i) changed.current = true; setPicked(i); }} aria-pressed={picked === i} aria-label={`Option ${i + 1}`}
-                className={`aspect-square rounded-xl border-2 text-slate-800 dark:text-slate-100 ${picked === i ? "border-slate-900 bg-slate-100 dark:border-white dark:bg-slate-800" : "border-slate-200 dark:border-slate-700"}`}>
+                className={`aspect-square rounded-xl border-2 text-slate-800 dark:text-slate-100 ${picked === i ? "border-slate-900 bg-slate-100 dark:border-brand dark:bg-slate-800" : "border-slate-200 dark:border-slate-700"}`}>
                 <CellSvg cell={o} />
               </button>
             ))}
           </div>
           <button onClick={() => picked != null && submit(picked)} disabled={picked == null}
-            className="w-full max-w-xs rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-30 dark:bg-white dark:text-slate-900">
+            className="w-full max-w-xs rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-30 dark:bg-brand dark:text-slate-900">
             Confirm
           </button>
         </>

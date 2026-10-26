@@ -51,7 +51,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
         <div className="flex overflow-hidden rounded-md border border-slate-300 text-xs dark:border-slate-700" role="group" aria-label="Heatmap view">
           {(["blocks", "score"] as const).map((m) => (
             <button key={m} onClick={() => setMode(m)} aria-pressed={mode === m}
-              className={`px-2 py-1 ${mode === m ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
+              className={`px-2 py-1 ${mode === m ? "bg-slate-900 text-white dark:bg-brand dark:text-slate-900" : ""}`}>
               {m === "blocks" ? "Practice" : "Performance"}
             </button>
           ))}

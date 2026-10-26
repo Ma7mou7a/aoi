@@ -75,7 +75,7 @@ function CoachBubble({ m, onFeedback, voice }: { m: ClientCoachMessage; onFeedba
   return (
     <div className="space-y-3">
       {m.hasHiddenFlaw && (
-        <p className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200">
+        <p className="rounded-lg bg-brand/10 px-3 py-1.5 text-xs text-brand-deep dark:text-brand-2">
           Spot-the-error mode: this message contains one deliberate mistake. Can you find it?
         </p>
       )}
@@ -163,7 +163,7 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError, micOn }
       {messages.length === 0 && <p className="text-slate-500">No feedback yet. Ask for a debrief of your latest session.</p>}
       <ol className="space-y-6">
         {messages.map((m) => (
-          <li key={m.id} className={m.role === "user" ? "ml-auto max-w-[80%] rounded-2xl bg-slate-900 px-4 py-2 text-white dark:bg-white dark:text-slate-900" : "rounded-2xl border border-slate-200 p-4 dark:border-slate-800"}>
+          <li key={m.id} className={m.role === "user" ? "ml-auto max-w-[80%] rounded-2xl bg-slate-900 px-4 py-2 text-white dark:bg-brand dark:text-slate-900" : "glass rounded-2xl p-4 "}>
             {m.role === "user" ? m.content : <CoachBubble m={m} onFeedback={onFeedback} voice={voice} />}
           </li>
         ))}
@@ -184,7 +184,7 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError, micOn }
             </div>
           </div>
         ) : (
-          <button onClick={() => setPredicting(true)} disabled={busy} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-40 dark:bg-white dark:text-slate-900">
+          <button onClick={() => setPredicting(true)} disabled={busy} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-40 dark:bg-brand dark:text-slate-900">
             {busy ? "Thinking…" : "Debrief my latest session"}
           </button>
         )}
@@ -203,7 +203,7 @@ export function CoachChat({ initial, initialCollab, llmOn, spotTheError, micOn }
               {dictation.listening ? "■" : "🎙️"}
             </button>
           )}
-          <button disabled={busy || !llmOn || !question.trim()} className="rounded-xl border border-slate-900 px-4 font-medium disabled:opacity-40 dark:border-white">Ask</button>
+          <button disabled={busy || !llmOn || !question.trim()} className="rounded-xl border border-slate-900 px-4 font-medium disabled:opacity-40 dark:border-brand">Ask</button>
         </form>
         {dictation.error && <p className="text-xs text-red-600">{dictation.error}</p>}
         {voice.supported && (

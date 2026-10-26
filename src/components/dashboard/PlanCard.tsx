@@ -19,7 +19,7 @@ export function PlanCard({ plan, colors }: { plan: DashboardData["plan"]; colors
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+    <section className="space-y-3 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold" style={{ color: "var(--chart-ink)" }}>This week&apos;s plan</h2>
@@ -56,7 +56,7 @@ export function PlanCard({ plan, colors }: { plan: DashboardData["plan"]; colors
           );
         })}
       </ul>
-      <Link href="/play?mode=training" className="block rounded-xl bg-slate-900 py-2.5 text-center text-sm font-medium text-white dark:bg-white dark:text-slate-900">
+      <Link href="/play?mode=training" className="block rounded-xl bg-slate-900 py-2.5 text-center text-sm font-medium text-white dark:bg-brand dark:text-slate-900">
         Start a training session
       </Link>
     </section>

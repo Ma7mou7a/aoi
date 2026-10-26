@@ -64,7 +64,7 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
       </div>
 
       {after && (
-        <div className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+        <div className="space-y-2 glass rounded-2xl p-4 ">
           <BandBar label="Before" mean={before.mean} ci={before.ci} color="#94a3b8" />
           <BandBar label="After" mean={after.mean} ci={after.ci} color={spec.dimension.color} />
           <p className="pt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -73,7 +73,7 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+      <div className="glass rounded-2xl p-4 ">
         <h3 className="mb-2 font-medium">How this block was scored</h3>
         <table className="w-full text-sm">
           <tbody>
@@ -128,7 +128,7 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
       )}
 
       {next && <p className="text-sm text-slate-600 dark:text-slate-300"><b>Next:</b> {next.reason.note}</p>}
-      <button onClick={onContinue} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white dark:bg-white dark:text-slate-900">
+      <button onClick={onContinue} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white dark:bg-brand dark:text-slate-900">
         {next ? "Continue" : "Finish session"}
       </button>
     </div>

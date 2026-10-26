@@ -14,7 +14,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Brain Twin</h1>
+        <h1 className="text-5xl sm:text-6xl">Brain Twin</h1>
         <p className="text-slate-600 dark:text-slate-300">
           Each bar is your current estimate. The shaded band is where your level most likely is (90% range). Unmeasured skills show a wide band around 50%.
         </p>

@@ -11,13 +11,13 @@ export function CollabScoreCard({ view }: { view: CollabView }) {
   const weakest = [...COMPONENTS].sort((a, b) => score.components[a].score - score.components[b].score)[0];
 
   return (
-    <section className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+    <section className="space-y-4 glass rounded-2xl p-4 ">
       <div className="flex items-baseline justify-between gap-4">
         <div>
           <h2 className="font-semibold">AI Collaboration Score</h2>
           <p className="text-sm text-slate-500">How well you work with the coach: checking it, questioning it, thinking for yourself.</p>
         </div>
-        <p className="text-4xl font-bold tabular-nums">{score.score}<span className="text-base font-normal text-slate-400">/100</span></p>
+        <p className="font-display text-6xl leading-none text-brand tabular-nums">{score.score}<span className="text-base font-normal text-slate-400">/100</span></p>
       </div>
 
       <div className="space-y-2">
@@ -29,7 +29,7 @@ export function CollabScoreCard({ view }: { view: CollabView }) {
                 {COMPONENT_INFO[c].name} <span className="text-xs text-slate-400">{Math.round(score.weights[c] * 100)}%</span>
               </span>
               <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${s.score * 100}%` }} />
+                <div className="h-full rounded-full bg-brand" style={{ width: `${s.score * 100}%` }} />
               </div>
               <span className="text-right font-mono text-xs text-slate-500">{s.n ? `${Math.round(s.score * 100)}` : "–"}</span>
             </div>

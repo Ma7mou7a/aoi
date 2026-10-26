@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
-      <p className="text-sm" style={{ color: "var(--chart-ink-2)" }}>{label}</p>
-      <p className="text-3xl font-semibold" style={{ color: "var(--chart-ink)" }}>{value}</p>
+    <div className="glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
+      <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: "var(--chart-ink-2)" }}>{label}</p>
+      <p className="font-display text-5xl leading-tight text-brand">{value}</p>
       {note && <p className="text-xs" style={{ color: "var(--chart-muted)" }}>{note}</p>}
     </div>
   );
@@ -35,7 +35,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="font-display text-sm tracking-[0.25em] text-brand uppercase">Your Brain Twin</p>
+        <h1 className="text-6xl">Dashboard</h1>
         <p className="text-slate-600 dark:text-slate-300">Your Brain Twin, your plan and your goals. Every estimate comes with a band showing how sure we are.</p>
       </div>
 
@@ -58,7 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <span style={{ color: "var(--chart-ink-2)" }}>Time range</span>
         {RANGE_OPTIONS.map((d) => (
           <Link key={d} href={`/dashboard?range=${d}`} scroll={false} aria-current={d === range ? "true" : undefined}
-            className={`rounded-lg border px-3 py-1 ${d === range ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
+            className={`rounded-lg border px-3 py-1 ${d === range ? "border-slate-900 bg-slate-900 text-white dark:border-brand dark:bg-brand dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
             {d} days
           </Link>
         ))}

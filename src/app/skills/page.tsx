@@ -8,7 +8,7 @@ export default function SkillsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">How each skill is measured</h1>
+        <h1 className="text-5xl sm:text-6xl">How each skill is measured</h1>
         <p className="text-slate-600 dark:text-slate-300">
           One card per skill, generated from the same configuration the app runs on. Scores describe task performance compared with your own history: never a diagnosis, never a norm.
         </p>
@@ -16,7 +16,7 @@ export default function SkillsPage() {
       {dims.map((d) => {
         const task = d.tasks[0];
         return (
-          <section key={d.id} id={d.id} className="space-y-4 rounded-2xl border border-slate-200 p-5 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+          <section key={d.id} id={d.id} className="space-y-4 glass rounded-2xl p-5 " style={{ background: "var(--chart-surface)" }}>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="flex items-center gap-2 text-xl font-semibold">
                 <span className="inline-block h-3 w-3 rounded-full" style={{ background: `var(--dim-${d.id}, ${d.color})` }} aria-hidden /> {d.name}

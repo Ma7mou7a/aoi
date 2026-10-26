@@ -92,7 +92,7 @@ export function SettingsForm({ initial, retentionDays, history }: { initial: Rec
               key={d}
               onClick={() => changeRetention(d)}
               aria-pressed={retention === d}
-              className={`rounded-lg border px-3 py-1.5 text-sm ${retention === d ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${retention === d ? "border-slate-900 bg-slate-900 text-white dark:border-brand dark:bg-brand dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}
             >
               {d} days
             </button>

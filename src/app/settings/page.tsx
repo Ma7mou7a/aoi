@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Privacy &amp; data</h1>
+        <h1 className="text-5xl sm:text-6xl">Privacy &amp; data</h1>
         <p className="text-slate-600 dark:text-slate-300">You decide what AI4Brain may use and how long it keeps it. Changes apply immediately.</p>
       </div>
       <SettingsForm initial={consents.current} retentionDays={user.retentionDays} history={consents.history} />

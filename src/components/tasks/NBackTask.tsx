@@ -127,7 +127,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
         </p>
         <NBackExample n={p.n} />
         <p className="text-sm text-slate-500">{seq.length} letters · about {Math.round((seq.length * (p.stimulus_ms + p.isi_ms)) / 1000)} s · Esc to stop</p>
-        <button onClick={() => setPhase("countdown")} className="rounded-xl bg-slate-900 px-8 py-3 text-lg font-medium text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900">
+        <button onClick={() => setPhase("countdown")} className="rounded-xl bg-slate-900 px-8 py-3 text-lg font-medium text-white hover:bg-slate-700 dark:bg-brand dark:text-slate-900">
           Start
         </button>
       </div>
@@ -141,7 +141,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
       </div>
       <div
         className={`flex h-56 w-56 items-center justify-center rounded-3xl border-4 text-8xl font-bold transition-colors ${
-          flash ? "border-slate-900 dark:border-white" : "border-slate-200 dark:border-slate-800"
+          flash ? "border-slate-900 dark:border-brand" : "border-slate-200 dark:border-slate-800"
         }`}
         aria-live="polite"
       >
@@ -150,7 +150,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
       <button
         onPointerDown={respond}
         disabled={phase !== "running"}
-        className="w-full max-w-xs rounded-2xl border-2 border-slate-900 py-5 text-xl font-semibold active:scale-95 disabled:opacity-40 dark:border-white"
+        className="w-full max-w-xs rounded-2xl border-2 border-slate-900 py-5 text-xl font-semibold active:scale-95 disabled:opacity-40 dark:border-brand"
       >
         Match <span className="ml-2 text-sm font-normal text-slate-500">(SPACE)</span>
       </button>

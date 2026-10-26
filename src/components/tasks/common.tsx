@@ -24,7 +24,7 @@ export function TaskIntro({ spec, title, children, meta, onStart }: { spec: Bloc
       <h2 className="text-3xl font-semibold">{title}</h2>
       <div className="text-lg text-slate-600 dark:text-slate-300">{children}</div>
       <p className="text-sm text-slate-500">{meta}</p>
-      <button onClick={onStart} className="rounded-xl bg-slate-900 px-8 py-3 text-lg font-medium text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900">
+      <button onClick={onStart} className="rounded-xl bg-slate-900 px-8 py-3 text-lg font-medium text-white hover:bg-slate-700 dark:bg-brand dark:text-slate-900">
         Start
       </button>
     </div>

@@ -41,7 +41,7 @@ export function GoalsCard({ goals, skills }: { goals: Goals; skills: Array<{ id:
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800" style={{ background: "var(--chart-surface)" }}>
+    <section className="space-y-3 glass rounded-2xl p-4 " style={{ background: "var(--chart-surface)" }}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold" style={{ color: "var(--chart-ink)" }}>Goals</h2>
@@ -75,7 +75,7 @@ export function GoalsCard({ goals, skills }: { goals: Goals; skills: Array<{ id:
           <div className="flex gap-2">
             {(["reach_score", "consistency"] as const).map((k) => (
               <button key={k} onClick={() => setKind(k)} disabled={k === "reach_score" && !measured.length} aria-pressed={kind === k}
-                className={`rounded-lg border px-3 py-1 disabled:opacity-40 ${kind === k ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
+                className={`rounded-lg border px-3 py-1 disabled:opacity-40 ${kind === k ? "border-slate-900 bg-slate-900 text-white dark:border-brand dark:bg-brand dark:text-slate-900" : "border-slate-300 dark:border-slate-700"}`}>
                 {k === "reach_score" ? "Reach a score" : "Play regularly"}
               </button>
             ))}
@@ -96,7 +96,7 @@ export function GoalsCard({ goals, skills }: { goals: Goals; skills: Array<{ id:
           )}
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
-            <button onClick={create} className="rounded-lg bg-slate-900 px-3 py-1.5 text-white dark:bg-white dark:text-slate-900">Set goal</button>
+            <button onClick={create} className="rounded-lg bg-slate-900 px-3 py-1.5 text-white dark:bg-brand dark:text-slate-900">Set goal</button>
             <button onClick={() => setAdding(false)} className="px-3 py-1.5" style={{ color: "var(--chart-muted)" }}>Cancel</button>
           </div>
         </div>

@@ -150,7 +150,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
       <div className="grid w-full max-w-sm grid-cols-5 gap-2 sm:grid-cols-9">
         {key.map((k) => (
           <button key={k.digit} onPointerDown={() => respond(k.digit)} disabled={phase !== "running"}
-            className={`rounded-xl border-2 py-3 font-mono text-lg active:scale-95 disabled:opacity-40 ${flash === k.digit ? "border-slate-900 dark:border-white" : "border-slate-200 dark:border-slate-700"}`}>
+            className={`rounded-xl border-2 py-3 font-mono text-lg active:scale-95 disabled:opacity-40 ${flash === k.digit ? "border-slate-900 dark:border-brand" : "border-slate-200 dark:border-slate-700"}`}>
             {k.digit}
           </button>
         ))}
