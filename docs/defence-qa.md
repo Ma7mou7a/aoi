@@ -38,6 +38,9 @@ It is the simplest model that gives both an estimate and an honest uncertainty, 
 **"How do you stop the LLM from hallucinating?"**
 It can only speak through references (R1, T3) to an evidence pack we build. The server resolves every reference and drops any claim without valid evidence before the user sees it. Every claim opens its exact trials.
 
+**"Why not RAG with LangChain over a document store?"**
+Our corpus is 13 reviewed findings, not thousands of papers, so retrieval adds risk without benefit. The server picks the relevant cards deterministically (skills played, the situation, the question). The model cites them as S#, and the rule is "science explains, your data decides": a claim citing only science is dropped. One model call plus checks in our own code is easier to explain, test and demo than an orchestration framework.
+
 **"What if it says something medical?"**
 A clinical-term filter on every word: diagnostic terms drop the claim, medical words are rewritten, sentences comparing the user with norms are removed, and any health question gets a fixed non-clinical answer first. Tested live, e.g. "Could my low attention score mean I have ADHD?"
 
@@ -70,5 +73,6 @@ Ours uses no face or voice. It infers fatigue or frustration only from behaviour
 | Invalid play caught | 93–100% (random), 100% (same key, silent, too fast); false alarms 0–11% (2% average) |
 | Forecast calibration | 90% bands hold 91%, 50% bands 48% (TADPOLE CPA 0.007 / 0.02) |
 | Fairness | slower, equally accurate users: bias < 2 points (was −14 for attention before the fix) |
-| Unit tests | 98 |
+| Unit tests | 104 |
+| Science cards | 13 reviewed findings, cited only next to the user's own evidence |
 | Collaboration score weights | 25 verification · 20 clarification · 20 iteration · 20 autonomy · 15 responsible use |

@@ -3,9 +3,10 @@ import { loadDimensions } from "../dimensions/loader";
 import { priorFor, updatePosterior } from "../profiler";
 import { createRng } from "../rng";
 import { generateNBack, simulateNBackResponses } from "../tasks/nback";
-import { finaliseDraft, ruleBasedDraft } from "./claims";
+import { finaliseDraft, ruleBasedDraft, stripRefs } from "./claims";
 import { buildEvidencePack, packToPrompt, type TrialRow } from "./evidence";
 import { filterClinical } from "./safety";
+import { loadScience, MAX_SCIENCE_CARDS, scienceToPrompt, selectScience } from "./science";
 
 describe("clinical filter", () => {
   it("blocks diagnostic language", () => {
@@ -105,5 +106,58 @@ describe("rule-based coach", () => {
   it("asks for a first assessment when nothing is measured", () => {
     const empty = buildEvidencePack({ dimensions: dims, posteriors: Object.fromEntries(dims.map((d) => [d.id, priorFor(d, now)])), firstMeans: {}, runs: [], trials: [] });
     expect(ruleBasedDraft(empty).claims).toEqual([]);
+  });
+});
+
+describe("science cards", () => {
+  const cards = loadScience();
+  it("load, validate and cite real skills", () => {
+    expect(cards.length).toBeGreaterThanOrEqual(10);
+    const skillIds = new Set(dims.map((d) => d.id));
+    for (const c of cards) for (const s of c.applies_to) expect(s === "all" || skillIds.has(s)).toBe(true);
+  });
+  it("are selected for what the user has measured, numbered S1…", () => {
+    const refs = selectScience(pack);
+    expect(refs.length).toBeGreaterThan(0);
+    expect(refs.length).toBeLessThanOrEqual(MAX_SCIENCE_CARDS);
+    expect(refs.map((r) => r.ref)).toEqual(refs.map((_, i) => `S${i + 1}`));
+    // Strategy cards only for skills actually played: chunking applies to working memory (played), not Stroop focus.
+    expect(refs.some((r) => r.id === "chunking")).toBe(true);
+    expect(refs.some((r) => r.id === "stroop_focus")).toBe(false);
+    expect(scienceToPrompt(refs)).toContain("S1 (");
+  });
+  it("offer the automation-bias card only when the user asks about the AI", () => {
+    expect(selectScience(pack).some((r) => r.id === "automation_bias")).toBe(false);
+    expect(selectScience(pack, "Should I trust the coach's claims?").some((r) => r.id === "automation_bias")).toBe(true);
+  });
+  it("support claims but never replace the user's own evidence", () => {
+    const science = selectScience(pack);
+    const out = finaliseDraft(
+      {
+        summary: "Nice session.",
+        claims: [
+          { text: "You caught most matches.", why: "Chunking helps.", evidence: ["R1"], science: ["S1", "S99"] },
+          { text: "Practice makes perfect.", why: "Research says so.", evidence: ["S2"], science: [] },
+        ],
+        next_step: "",
+      },
+      pack,
+      science,
+    );
+    expect(out.claims).toHaveLength(1);
+    expect(out.claims[0].science.map((s) => s.id)).toEqual([science[0].id]);
+    expect(out.claims[0].science[0].url).toMatch(/^https:\/\//);
+    expect(out.dropped).toEqual([{ text: "Practice makes perfect.", reason: "no_valid_evidence" }]);
+    expect(out.unknownScience).toEqual(["S99"]);
+  });
+  it("findings themselves pass the clinical and norm filter", () => {
+    for (const c of cards) expect(filterClinical(c.finding).blocked).toBe(false);
+  });
+});
+
+describe("reference codes in text", () => {
+  it("are stripped from what the user reads", () => {
+    expect(stripRefs("Research (S6) says single blocks are noisy (R2, T3).")).toBe("Research says single blocks are noisy.");
+    expect(stripRefs("Rows R and T stay put.")).toBe("Rows R and T stay put.");
   });
 });

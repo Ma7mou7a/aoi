@@ -20,6 +20,7 @@ const FALLBACK_TEXT: Record<string, string> = {
 
 function ClaimCard({ m, index, claim, onFeedback }: { m: ClientCoachMessage; index: number; claim: CoachClaim; onFeedback: FeedbackFn }) {
   const [open, setOpen] = useState(false);
+  const [science, setScience] = useState<string | null>(null);
   const nTrials = claim.evidenceTrialIds.length;
   const verdict = m.meta?.feedback?.[index];
   const flaw = m.plantedFlaw && m.plantedFlaw.claimIndex === index ? m.plantedFlaw : null;
@@ -37,7 +38,22 @@ function ClaimCard({ m, index, claim, onFeedback }: { m: ClientCoachMessage; ind
         <button onClick={toggle} aria-expanded={open} className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
           {open ? "Hide evidence" : `See the evidence${nTrials ? ` (${nTrials} trial${nTrials > 1 ? "s" : ""})` : ""}`}
         </button>
+        {(claim.science ?? []).map((s) => (
+          <button key={s.id} onClick={() => setScience(science === s.id ? null : s.id)} aria-expanded={science === s.id}
+            className="rounded-full border border-brand/40 bg-brand/10 px-3 py-1 text-xs font-medium text-brand-deep hover:bg-brand/20 dark:text-brand-2">
+            Science: {s.title}
+          </button>
+        ))}
       </div>
+      {(claim.science ?? []).filter((s) => s.id === science).map((s) => (
+        <div key={s.id} className="rounded-lg border-l-2 border-brand bg-brand/5 p-2 text-sm">
+          <p>{s.finding}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            <a href={s.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-brand">{s.citation}</a>
+            {" · "}A general research finding that explains your result. It is not a comparison with other people.
+          </p>
+        </div>
+      ))}
       {open && (
         <>
           {/* Labels summarise the evidence, so they live behind the toggle: checking means opening it. */}

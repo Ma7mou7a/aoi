@@ -1,0 +1,113 @@
+# Science cards: the published findings the coach may cite (as S1, S2, …) next to the user's own evidence.
+#
+# Rules (enforced in code, see src/lib/coach/science.ts and claims.ts):
+#   - Science explains, the user's data decides: a claim must still cite the user's blocks or trials (R#/T#).
+#     A claim that cites only science is dropped.
+#   - Findings are non-clinical and are never used to compare the user with other people.
+#   - `finding` is the exact wording the coach is given; keep it short, plain and faithful to the paper.
+#   - `applies_to`: skill ids, or "all". `when`: situations that make the card relevant
+#     (always | repeated_practice | low_reliability | engagement | asked_about_ai | strategy).
+
+- id: practice_effects
+  title: Practice effects
+  finding: Scores on a repeated test usually rise over the first few sessions partly because the task itself becomes familiar; these gains tend to level off after about the third session.
+  citation: Scharfen, Peters & Holling (2018), Intelligence 67, 44–66
+  url: https://doi.org/10.1016/j.intell.2018.01.003
+  applies_to: [all]
+  when: [repeated_practice]
+
+- id: noisy_difference_scores
+  title: Why single blocks jump around
+  finding: Measures built from the difference between two response times, such as a slow-down on conflicting words or after a rule switch, vary a lot from one block to the next, so a trend over several blocks is more trustworthy than any single block.
+  citation: Hedge, Powell & Sumner (2018), Behavior Research Methods 50, 1166–1186
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC5990556
+  applies_to: [attention_inhibition, cognitive_flexibility]
+  when: [always]
+
+- id: spacing
+  title: Spaced practice
+  finding: Practice spread over several days tends to stick better than the same amount of practice crammed into one session.
+  citation: Cepeda, Pashler, Vul, Wixted & Rohrer (2006), Psychological Bulletin 132, 354–380
+  url: https://doi.org/10.1037/0033-2909.132.3.354
+  applies_to: [all]
+  when: [always]
+
+- id: sweet_spot
+  title: The difficulty sweet spot
+  finding: Learning tends to be fastest when practice is challenging but mostly successful, neither too easy nor too hard; the exact best success rate matters less than staying in that zone.
+  citation: Wilson, Shenhav, Straccia & Cohen (2019), Nature Communications 10, 4646
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC6831579
+  applies_to: [all]
+  when: [always]
+
+- id: limited_transfer
+  title: What practice improves
+  finding: Practising a task reliably improves that task; improvements carrying over to very different everyday activities are much less certain.
+  citation: Simons et al. (2016), Psychological Science in the Public Interest 17, 103–186
+  url: https://doi.org/10.1177/1529100616661983
+  applies_to: [all]
+  when: [repeated_practice]
+
+- id: attention_lapses
+  title: Drifting attention
+  finding: Responses that swing between fast and slow often go together with moments of drifting attention, and those moments bring more errors; a short break can help you come back focused.
+  citation: Bastian & Sackur (2013), Frontiers in Psychology 4, 573
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3763218
+  applies_to: [all]
+  when: [low_reliability, engagement]
+
+- id: speed_accuracy
+  title: Speed versus accuracy
+  finding: Going faster usually costs some accuracy and going slower usually buys some back; on these tasks a steady pace with few errors is the goal, not the fastest possible answer.
+  citation: Heitz (2014), Frontiers in Neuroscience 8, 150
+  url: https://doi.org/10.3389/fnins.2014.00150
+  applies_to: [attention_inhibition, cognitive_flexibility, processing_speed, working_memory]
+  when: [always]
+
+- id: web_testing
+  title: Testing in a browser
+  finding: Careful online testing gives results broadly comparable to lab testing, although the device and setting add some noise, which is why each estimate carries a band.
+  citation: Germine et al. (2012), Psychonomic Bulletin & Review 19, 847–857
+  url: https://testmybrain.org/research.html
+  applies_to: [all]
+  when: [low_reliability]
+
+- id: chunking
+  title: Chunking
+  finding: People can hold only a few separate items in mind at once, and grouping items into small chunks (for example, remembering a block sequence as two short shapes) helps hold more.
+  citation: Cowan (2001), Behavioral and Brain Sciences 24, 87–114
+  url: https://pubmed.ncbi.nlm.nih.gov/11515286/
+  applies_to: [working_memory, visuospatial_memory]
+  when: [strategy]
+
+- id: stroop_focus
+  title: Colour, not word
+  finding: Reading the word is automatic, so conflicting words slow everyone down; the usual advice is to attend to the ink colour and let the word pass.
+  citation: MacLeod (1991), Psychological Bulletin 109, 163–203
+  url: https://doi.org/10.1037/0033-2909.109.2.163
+  applies_to: [attention_inhibition]
+  when: [strategy]
+
+- id: switch_preparation
+  title: Prepare for the switch
+  finding: Part of the slow-down after a rule switch can be reduced by using the time before the next item to get ready for the new rule, though a small cost usually remains.
+  citation: "Rogers & Monsell (1995), Journal of Experimental Psychology: General 124, 207–231"
+  url: https://doi.org/10.1037/0096-3445.124.2.207
+  applies_to: [cognitive_flexibility]
+  when: [strategy]
+
+- id: rule_by_rule
+  title: One rule at a time
+  finding: Pattern puzzles like these are solved by finding the rule for each feature (shape, number, shading) one at a time and then combining them; keeping track of several rules at once is what makes harder puzzles hard.
+  citation: Carpenter, Just & Shell (1990), Psychological Review 97, 404–431
+  url: https://doi.org/10.1037/0033-295X.97.3.404
+  applies_to: [reasoning]
+  when: [strategy]
+
+- id: automation_bias
+  title: Checking the AI
+  finding: People tend to accept a helper's suggestions without checking them; looking at the evidence behind an AI's claim is a habit that guards against its mistakes.
+  citation: Parasuraman & Manzey (2010), Human Factors 52, 381–410
+  url: https://doi.org/10.1177/0018720810376055
+  applies_to: [all]
+  when: [asked_about_ai]

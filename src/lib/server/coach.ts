@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { finaliseDraft, ruleBasedDraft } from "../coach/claims";
 import { buildEvidencePack, packToPrompt } from "../coach/evidence";
+import { scienceToPrompt, selectScience } from "../coach/science";
 import { draftWithLlm } from "../coach/llm";
 import { filterClinical, NON_CLINICAL_NOTE } from "../coach/safety";
 import { plantFlaw, PLANT_PROBABILITY } from "../collab/plant";
@@ -69,6 +70,7 @@ export async function buildPackForUser(userId: string) {
 export async function generateCoachMessage(userId: string, opts: { question?: string; prediction?: Prediction | "skip" } = {}) {
   const { question, prediction } = opts;
   const { pack, nextNote } = await buildPackForUser(userId);
+  const science = selectScience(pack, question);
   const signals: SignalInput[] = [];
   const prefix: string[] = [];
 
@@ -124,6 +126,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
       .limit(HISTORY_MESSAGES);
     const prompt =
       `EVIDENCE PACK\n${packToPrompt(pack)}\n\n` +
+      `${scienceToPrompt(science)}\n\n` +
       (nextNote ? `SUGGESTED NEXT BLOCK (from the adaptive selector)\n${nextNote}\n\n` : "") +
       (history.length ? `RECENT CONVERSATION (oldest first)\n${history.reverse().map((m) => `${m.role}: ${m.content}`).join("\n")}\n\n` : "") +
       (question ? `USER QUESTION\n${question}` : "TASK\nGive the user feedback on their most recent session.");
@@ -135,7 +138,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
     } else fallbackReason = res.reason;
   }
 
-  const final = finaliseDraft(draft ?? ruleBasedDraft(pack, nextNote), pack);
+  const final = finaliseDraft(draft ?? ruleBasedDraft(pack, nextNote, science), pack, science);
   if (question && source === "rules" && pack.runs.length) {
     final.content = `I can only answer free-form questions when AI coaching is on, but here's what your results show. ${final.content}`;
   }
@@ -172,7 +175,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
       plantedFlaw,
       filteredTerms: final.filteredTerms,
       model: modelUsed,
-      meta: { source, fallbackReason, dropped: final.dropped, prediction: predictionMeta },
+      meta: { source, fallbackReason, dropped: final.dropped, unknownScience: final.unknownScience, prediction: predictionMeta },
     })
     .returning();
   await recordSignals(userId, signals.map((s) => ({ ...s, coachMessageId: s.coachMessageId ?? msg.id })));

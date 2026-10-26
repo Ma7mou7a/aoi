@@ -181,6 +181,8 @@ export type CoachClaim = {
   evidenceTrialIds: string[];
   /** Human-readable label per cited reference, e.g. "6 matches you caught". */
   evidenceLabels: string[];
+  /** Published findings cited alongside (absent on messages from before science cards). */
+  science?: Array<{ id: string; title: string; finding: string; citation: string; url: string }>;
 };
 
 export type CoachMeta = {
@@ -194,6 +196,8 @@ export type CoachMeta = {
   opened?: number[];
   /** Self-prediction made before this debrief, and what actually happened. */
   prediction?: { guess: "better" | "same" | "worse" | "skip"; actual?: "better" | "same" | "worse" };
+  /** S# references the model cited that were not in the science pack. */
+  unknownScience?: string[];
 };
 
 export type PlantedFlawRecord = {

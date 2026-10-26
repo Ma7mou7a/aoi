@@ -55,7 +55,7 @@ Both run with `npm run validate` and appear at `/validation` and in `docs/valida
 1. **Pilot with real people** (CrossSense, Neurotrack): see `docs/pilot-protocol.md`. Even 10 people × 2 sessions gives test–retest reliability and a usability score, and it is the single biggest credibility gain.
 2. **Conformal check of the bands** (RASKA's Jackknife+): once pilot data exists, check band coverage on real people and widen it if needed. This needs no code beyond the existing calibration fit.
 3. **A short "check-in" mode** (Neurotrack): one block per skill, about 3 minutes, for a weekly snapshot.
-4. **Clean-code bonus thinking** (PREPARE): CI, 98 tests and one-command reproduction already exist. Name them explicitly in the report.
+4. **Clean-code bonus thinking** (PREPARE): CI, 104 tests and one-command reproduction already exist. Name them explicitly in the report.
 
 ## Sources
 
