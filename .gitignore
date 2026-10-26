@@ -44,3 +44,6 @@ next-env.d.ts
 
 # embedded dev database
 .pglite*
+
+# Slides artifact source (lives in the Slides artifact)
+/deck/
