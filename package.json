@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "vitest run"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.0",
@@ -22,6 +23,7 @@
     "react": "^19.1.10",
     "react-dom": "^19.1.10",
     "recharts": "^3.0.0",
+    "server-only": "^0.0.1",
     "yaml": "^2.6.0",
     "zod": "^3.24.0"
   },
@@ -37,6 +39,7 @@
     "eslint-config-next": "^15.5.28",
     "tailwindcss": "^4",
     "tsx": "^4.19.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

@@ -1,0 +1,150 @@
+import "server-only";
+import { asc, eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { getDimension, getDimensions } from "../dimensions/loader";
+import { newSeed } from "../rng";
+import { credibleInterval, priorFor, updatePosterior, type Posterior } from "../profiler";
+import { levelOf, scoreBlock, type BlockScore, type TrialRecord } from "../scoring";
+import { selectNext, type LastRun, type SelectionMode } from "../selector";
+import { AVAILABLE_PARADIGMS, type BlockSpec } from "../tasks/registry";
+import { getPosteriors } from "./profile";
+import { HttpError } from "./user";
+
+/** Blocks per assessment session before we stop even if bands are still wide (fatigue guard). */
+export const MAX_BLOCKS_PER_SESSION = 6;
+
+/** Ask the selector for the next block of this session and package it for the client. */
+export async function nextBlock(userId: string, sessionId: string, mode: SelectionMode): Promise<BlockSpec | null> {
+  const runs = await db
+    .select()
+    .from(schema.taskRuns)
+    .where(eq(schema.taskRuns.sessionId, sessionId))
+    .orderBy(asc(schema.taskRuns.startedAt));
+  const completed = runs.filter((r) => r.status === "completed");
+  if (mode === "assessment" && completed.length >= MAX_BLOCKS_PER_SESSION) return null;
+
+  const lastRuns: Record<string, LastRun> = {};
+  for (const r of completed) {
+    lastRuns[r.taskId] = { taskId: r.taskId, level: r.difficultyLevel, accuracy: r.metrics?.accuracy ?? 0 };
+  }
+
+  const selection = selectNext({
+    dimensions: getDimensions(),
+    posteriors: await getPosteriors(userId),
+    mode,
+    available: AVAILABLE_PARADIGMS,
+    recent: completed.map((r) => r.dimensionId),
+    lastRuns,
+  });
+  if (!selection) return null;
+
+  const dim = getDimension(selection.dimensionId)!;
+  const task = dim.tasks.find((t) => t.id === selection.taskId)!;
+  return {
+    dimension: { id: dim.id, name: dim.name, color: dim.color },
+    task: { id: task.id, name: task.name, paradigm: task.paradigm, instructions: task.instructions.trim(), params: task.params, validity: { min_rt_ms: task.validity.min_rt_ms } },
+    level: selection.level,
+    params: { ...task.params, ...levelOf(task, selection.level).params },
+    seed: newSeed(),
+    reason: selection.reason,
+  };
+}
+
+export type RunResult = {
+  taskRunId: string;
+  score: BlockScore;
+  before: { mean: number; sd: number; ci: [number, number] };
+  after: { mean: number; sd: number; ci: [number, number] } | null;
+};
+
+/**
+ * Store a finished (or abandoned) block with all its trials, score it, update the Brain Twin and
+ * append a snapshot. Abandoned blocks are kept for behaviour analysis but never change the profile.
+ */
+export async function recordRun(input: {
+  userId: string;
+  sessionId: string;
+  dimensionId: string;
+  taskId: string;
+  level: number;
+  params: Record<string, unknown>;
+  reason: BlockSpec["reason"];
+  startedAt: Date;
+  status: "completed" | "abandoned";
+  trials: TrialRecord[];
+}): Promise<RunResult> {
+  const dim = getDimension(input.dimensionId);
+  const task = dim?.tasks.find((t) => t.id === input.taskId);
+  if (!dim || !task) throw new HttpError(400, `unknown dimension/task ${input.dimensionId}/${input.taskId}`);
+  if (!task.difficulty.levels.some((l) => l.level === input.level)) throw new HttpError(400, `invalid level ${input.level}`);
+
+  const now = new Date();
+  const score = scoreBlock(dim, task, input.level, input.trials);
+  const before: Posterior = (await getPosteriors(input.userId, now))[dim.id] ?? priorFor(dim, now);
+  const completed = input.status === "completed";
+  const after = completed ? updatePosterior(before, score.observation, score.observationSd, score.validity.validTrials, now) : null;
+
+  const taskRunId = await db.transaction(async (tx) => {
+    const [run] = await tx
+      .insert(schema.taskRuns)
+      .values({
+        sessionId: input.sessionId,
+        userId: input.userId,
+        dimensionId: dim.id,
+        taskId: task.id,
+        configVersion: dim.version,
+        difficultyLevel: input.level,
+        params: input.params,
+        selectionReason: input.reason,
+        status: input.status,
+        metrics: sanitise(score.metrics),
+        composite: score.composite,
+        observation: score.observation,
+        observationSd: score.observationSd,
+        validity: score.validity,
+        startedAt: input.startedAt,
+        endedAt: now,
+      })
+      .returning({ id: schema.taskRuns.id });
+
+    if (input.trials.length) {
+      await tx.insert(schema.trials).values(
+        input.trials.map((t) => ({
+          taskRunId: run.id,
+          userId: input.userId,
+          trialIndex: t.trialIndex,
+          isPractice: t.isPractice ?? false,
+          stimulus: t.stimulus,
+          expected: t.expected ?? null,
+          response: t.response ?? null,
+          outcome: t.outcome,
+          correct: t.correct,
+          rtMs: t.rtMs == null ? null : Math.round(t.rtMs),
+          behaviour: t.behaviour ?? null,
+          shownAt: t.shownAt ? new Date(t.shownAt) : now,
+        })),
+      );
+    }
+
+    if (after) {
+      const snap = (p: Posterior, trigger: "prior" | "task_run", at: Date) => {
+        const [lo, hi] = credibleInterval(p);
+        return { userId: input.userId, dimensionId: dim.id, sessionId: input.sessionId, taskRunId: trigger === "task_run" ? run.id : null, trigger, mean: p.mean, sd: p.sd, ciLow: lo, ciHigh: hi, nObservations: p.nObservations, nTrials: p.nTrials, createdAt: at };
+      };
+      // First observation: also store the prior so the history chart starts from it.
+      const rows = before.nObservations === 0 ? [snap(before, "prior", input.startedAt), snap(after, "task_run", now)] : [snap(after, "task_run", now)];
+      await tx.insert(schema.profileSnapshots).values(rows);
+    }
+    return run.id;
+  });
+
+  await db.update(schema.users).set({ lastActiveAt: now }).where(eq(schema.users.id, input.userId));
+
+  const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
+  return { taskRunId, score, before: view(before), after: after && view(after) };
+}
+
+/** JSON can't hold NaN/Infinity; store them as absent. */
+function sanitise(m: Record<string, number>) {
+  return Object.fromEntries(Object.entries(m).filter(([, v]) => Number.isFinite(v)));
+}

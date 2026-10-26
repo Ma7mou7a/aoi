@@ -1,0 +1,115 @@
+import type { Paradigm } from "../dimensions/schema";
+import type { Metrics, TrialRecord } from "./types";
+
+// Every paradigm turns its trials into named metrics; YAML scoring components
+// refer to these names. Missing/undefined metrics come back as NaN.
+
+export function median(xs: number[]): number {
+  if (!xs.length) return NaN;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+const rate = (num: number, den: number) => (den ? num / den : NaN);
+
+/** Inverse standard-normal CDF (Acklam's rational approximation, |error| < 1.2e-9). */
+export function probit(p: number): number {
+  const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924];
+  const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857];
+  const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878];
+  const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742];
+  const lo = 0.02425;
+  if (p < lo) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  if (p > 1 - lo) return -probit(1 - p);
+  const q = p - 0.5;
+  const r = q * q;
+  return ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+}
+
+const scored = (trials: TrialRecord[]) => trials.filter((t) => !t.isPractice && t.outcome !== "abandoned");
+const correctRts = (trials: TrialRecord[]) =>
+  trials.filter((t) => t.correct && t.rtMs != null).map((t) => t.rtMs as number);
+
+function basic(trials: TrialRecord[]): Metrics {
+  const judged = trials.filter((t) => t.correct !== null);
+  return {
+    accuracy: rate(judged.filter((t) => t.correct).length, judged.length),
+    median_rt_ms: median(correctRts(trials)),
+  };
+}
+
+function nBack(trials: TrialRecord[]): Metrics {
+  const targets = trials.filter((t) => t.stimulus.isTarget === true);
+  const lures = trials.filter((t) => t.stimulus.isTarget === false);
+  const pressed = (t: TrialRecord) => t.response != null;
+  // An anticipation on a target is not a hit; on a lure it still counts as a false alarm.
+  const hits = targets.filter((t) => pressed(t) && t.outcome !== "anticipation").length;
+  const fas = lures.filter(pressed).length;
+  // Log-linear correction (Hautus, 1995) keeps d' finite at 0% / 100%.
+  const hitRateCorr = (hits + 0.5) / (targets.length + 1);
+  const faRateCorr = (fas + 0.5) / (lures.length + 1);
+  const hitRate = rate(hits, targets.length);
+  const faRate = rate(fas, lures.length);
+  return {
+    hit_rate: hitRate,
+    false_alarm_rate: faRate,
+    d_prime: probit(hitRateCorr) - probit(faRateCorr),
+    // Balanced accuracy: "never press" scores 0.5, i.e. chance.
+    accuracy: (hitRate + (1 - faRate)) / 2,
+    median_rt_ms: median(correctRts(targets)),
+    n_targets: targets.length,
+  };
+}
+
+function conflictCost(trials: TrialRecord[], key: string, prefix: "interference" | "switch"): Metrics {
+  const hard = trials.filter((t) => t.stimulus[key] === (prefix === "interference" ? false : true));
+  const easy = trials.filter((t) => t.stimulus[key] === (prefix === "interference" ? true : false));
+  const err = (ts: TrialRecord[]) => rate(ts.filter((t) => t.correct === false).length, ts.filter((t) => t.correct !== null).length);
+  const out: Metrics = {
+    ...basic(trials),
+    [`${prefix}_cost_ms`]: median(correctRts(hard)) - median(correctRts(easy)),
+  };
+  if (prefix === "interference") out.incongruent_accuracy = 1 - err(hard);
+  else out.switch_cost_errors = err(hard) - err(easy);
+  return out;
+}
+
+function symbolDigit(trials: TrialRecord[]): Metrics {
+  const elapsedMs = trials.reduce((s, t) => s + (t.rtMs ?? 0), 0);
+  const correct = trials.filter((t) => t.correct).length;
+  return { ...basic(trials), correct_per_minute: elapsedMs ? (correct / elapsedMs) * 60_000 : NaN };
+}
+
+function corsi(trials: TrialRecord[]): Metrics {
+  const ok = trials.filter((t) => t.correct);
+  const spanOf = (t: TrialRecord) => Number(t.stimulus.span ?? 0);
+  return {
+    ...basic(trials),
+    span: ok.length ? Math.max(...ok.map(spanOf)) : 0,
+    total_score: ok.reduce((s, t) => s + spanOf(t), 0),
+  };
+}
+
+const METRIC_FNS: Record<Paradigm, (trials: TrialRecord[]) => Metrics> = {
+  n_back: nBack,
+  stroop: (ts) => conflictCost(ts, "congruent", "interference"),
+  task_switching: (ts) => conflictCost(ts, "switch", "switch"),
+  symbol_digit: symbolDigit,
+  corsi,
+  matrices: basic,
+};
+
+/**
+ * Metrics over the scored (non-practice, non-abandoned) trials. Responses faster than `minRtMs`
+ * are anticipations: they are kept but always count as errors, so key-mashing can't earn points.
+ */
+export function computeMetrics(paradigm: Paradigm, trials: TrialRecord[], minRtMs = 0): Metrics {
+  const usable = scored(trials).map((t) =>
+    t.rtMs != null && t.rtMs < minRtMs ? { ...t, outcome: "anticipation" as const, correct: false } : t,
+  );
+  return METRIC_FNS[paradigm](usable);
+}

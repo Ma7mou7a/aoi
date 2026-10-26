@@ -79,6 +79,8 @@ export const dimensionSchema = z.object({
       obs_sd: z.number().positive(),
       reference_trials: z.number().int().positive(),
       invalid_block_sd_multiplier: z.number().min(1),
+      /** Process noise: how much the true ability may drift per day (lets the twin track growth). */
+      drift_sd_per_day: z.number().nonnegative().default(0.01),
     }),
   }),
 });
