@@ -1,13 +1,29 @@
 import { createHash } from "node:crypto";
 import { count, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { db, schema } from "@/db";
-import { handle, requireUser, USER_COOKIE } from "@/lib/server/user";
+import { purgeExpired, RETENTION_OPTIONS } from "@/lib/server/privacy";
+import { handle, HttpError, requireUser, USER_COOKIE } from "@/lib/server/user";
+
+const patch = z.object({ retentionDays: z.number().int().refine((d) => (RETENTION_OPTIONS as readonly number[]).includes(d)) });
+
+/** Change how long data is kept; anything older than the new window is deleted right away. */
+export const PATCH = handle(async (req: Request) => {
+  const user = await requireUser();
+  const parsed = patch.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, `Retention must be one of ${RETENTION_OPTIONS.join(", ")} days.`);
+  const days = parsed.data.retentionDays;
+  await db.update(schema.users).set({ retentionDays: days }).where(eq(schema.users.id, user.id));
+  await purgeExpired(user.id, days);
+  (await cookies()).set(USER_COOKIE, user.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: days * 86_400 });
+  return Response.json({ retentionDays: days });
+});
 
 /** One-click delete: every user-owned row goes (FK cascade); only a salted hash and row counts remain as proof. */
 export const DELETE = handle(async () => {
   const user = await requireUser();
-  const tables = { trials: schema.trials, task_runs: schema.taskRuns, profile_snapshots: schema.profileSnapshots, sessions: schema.sessions, consents: schema.consents, coach_messages: schema.coachMessages, collab_events: schema.collabEvents, goals: schema.goals, plans: schema.plans } as const;
+  const tables = { trials: schema.trials, task_runs: schema.taskRuns, profile_snapshots: schema.profileSnapshots, sessions: schema.sessions, consents: schema.consents, coach_messages: schema.coachMessages, collab_events: schema.collabEvents, collab_scores: schema.collabScores, goals: schema.goals, plans: schema.plans } as const;
 
   const rowsDeleted: Record<string, number> = {};
   await db.transaction(async (tx) => {

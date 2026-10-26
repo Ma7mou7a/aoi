@@ -32,6 +32,7 @@ export default function RootLayout({
             <Link href="/play">Assess</Link>
             <Link href="/profile">Brain Twin</Link>
             <Link href="/coach">Coach</Link>
+            <Link href="/settings">Settings</Link>
           </nav>
         </header>
         <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

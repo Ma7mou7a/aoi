@@ -1,6 +1,9 @@
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { nextBlock } from "@/lib/server/blocks";
+import { recordSignals, signalActedOnAdvice } from "@/lib/server/collab";
+import { purgeExpired } from "@/lib/server/privacy";
 import { handle, HttpError, requireUser } from "@/lib/server/user";
 
 const body = z.object({
@@ -19,6 +22,17 @@ export const POST = handle(async (req: Request) => {
   const user = await requireUser();
   const parsed = body.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, parsed.error.message);
+
+  // Housekeeping on activity: enforce the retention window, and credit acting on the coach's advice.
+  await purgeExpired(user.id, user.retentionDays);
+  const [previous] = await db
+    .select({ startedAt: schema.sessions.startedAt })
+    .from(schema.sessions)
+    .where(eq(schema.sessions.userId, user.id))
+    .orderBy(desc(schema.sessions.startedAt))
+    .limit(1);
+  const advice = await signalActedOnAdvice(user.id, previous?.startedAt ?? null);
+  if (advice.length) await recordSignals(user.id, advice);
 
   const [session] = await db
     .insert(schema.sessions)

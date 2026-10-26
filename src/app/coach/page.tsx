@@ -1,8 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { CoachChat } from "@/components/coach/CoachChat";
-import { db, schema } from "@/db";
 import { listCoachMessages } from "@/lib/server/coach";
+import { getCollabView } from "@/lib/server/collab";
+import { getConsentState } from "@/lib/server/privacy";
 import { getCurrentUser } from "@/lib/server/user";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +11,7 @@ export default async function CoachPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
-  const [messages, [consent]] = await Promise.all([
-    listCoachMessages(user.id),
-    db
-      .select({ granted: schema.consents.granted })
-      .from(schema.consents)
-      .where(and(eq(schema.consents.userId, user.id), eq(schema.consents.kind, "llm_coaching")))
-      .orderBy(desc(schema.consents.createdAt))
-      .limit(1),
-  ]);
+  const [messages, collab, consents] = await Promise.all([listCoachMessages(user.id), getCollabView(user.id), getConsentState(user.id)]);
 
   return (
     <div className="space-y-6">
@@ -30,8 +22,10 @@ export default async function CoachPage() {
         </p>
       </div>
       <CoachChat
-        llmOn={consent?.granted ?? false}
-        initial={messages.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }))}
+        initial={messages}
+        initialCollab={collab}
+        llmOn={consents.current.llm_coaching}
+        spotTheError={consents.current.planted_flaws}
       />
     </div>
   );

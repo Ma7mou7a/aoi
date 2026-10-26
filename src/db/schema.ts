@@ -186,6 +186,21 @@ export type CoachMeta = {
   /** Why the rule-based coach was used instead of the LLM (no consent, API error, ...). */
   fallbackReason?: string;
   dropped?: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" }>;
+  /** The user's verdict per claim index. */
+  feedback?: Record<string, "looks_right" | "something_off">;
+  /** Claim indexes whose evidence the user opened. */
+  opened?: number[];
+  /** Self-prediction made before this debrief, and what actually happened. */
+  prediction?: { guess: "better" | "same" | "worse" | "skip"; actual?: "better" | "same" | "worse" };
+};
+
+export type PlantedFlawRecord = {
+  claimIndex: number;
+  description: string;
+  /** The correct "why" text, restored once the flaw is revealed. */
+  original: string;
+  /** undefined until the user responds (or moves on); then revealed to them. */
+  caught?: boolean;
 };
 
 export const coachMessages = pgTable("coach_messages", {
@@ -198,7 +213,7 @@ export const coachMessages = pgTable("coach_messages", {
   claims: jsonb("claims").$type<CoachClaim[]>().notNull().default([]),
   meta: jsonb("meta").$type<CoachMeta>(),
   /** Set only in planted-flaw mode: which claim is deliberately wrong and how. */
-  plantedFlaw: jsonb("planted_flaw").$type<{ claimIndex: number; description: string; caught?: boolean }>(),
+  plantedFlaw: jsonb("planted_flaw").$type<PlantedFlawRecord>(),
   /** Clinical terms removed by the safety filter, kept for auditing the filter. */
   filteredTerms: jsonb("filtered_terms").$type<string[]>().notNull().default([]),
   model: text("model"),
@@ -213,14 +228,14 @@ export const collabComponent = pgEnum("collab_component", [
   "responsible_use", // 15%
 ]);
 
-/** Raw signals feeding the AI Collaboration Score, e.g. "opened_evidence", "caught_planted_flaw", "accepted_without_check". */
+/** Raw signals feeding the AI Collaboration Score; see SIGNALS in src/lib/collab/score.ts. */
 export const collabEvents = pgTable("collab_events", {
   id: id(),
   userId: userRef(),
   coachMessageId: uuid("coach_message_id").references(() => coachMessages.id, { onDelete: "set null" }),
   component: collabComponent("component").notNull(),
   signal: text("signal").notNull(),
-  value: real("value").notNull(), // -1..1 contribution before aggregation
+  value: real("value").notNull(), // 0..1 signal value before aggregation
   details: jsonb("details").$type<Record<string, unknown>>(),
   createdAt: createdAt(),
 }, (t) => [index("collab_events_user_idx").on(t.userId, t.createdAt)]);

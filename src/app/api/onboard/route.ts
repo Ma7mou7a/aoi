@@ -9,6 +9,8 @@ const body = z.object({
     data_processing: z.literal(true, { errorMap: () => ({ message: "Consent to data processing is required to use the app." }) }),
     behavioural_signals: z.boolean(),
     llm_coaching: z.boolean(),
+    // Spot-the-error mode is opt-in from Settings; recorded as "not granted" at signup.
+    planted_flaws: z.boolean().default(false),
   }),
   retentionDays: z.number().int().min(7).max(365).default(180),
 });

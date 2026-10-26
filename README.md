@@ -58,6 +58,14 @@ To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL` 
 
 Set `ANTHROPIC_API_KEY` to enable the AI coach (see `.env.example`).
 
+## AI Collaboration Score
+
+`score = round(100 × Σ w_c × s_c)`, where `s_c = (Σ signal values + 0.5 × 2) / (n_c + 2)` for each of five components: clarification 20%, critical verification 25%, iteration 20%, autonomy 20%, responsible use 15%. The signals come from real interactions: opening evidence, marking claims right or off, predicting before a debrief, follow-up questions, acting on advice. In the opt-in **spot-the-error mode**, some debriefs carry one deliberate number error that the user can catch by checking the evidence, and it is always revealed afterwards. Full formula, signal table and limitations: [docs/collaboration-score.md](docs/collaboration-score.md).
+
+## Privacy & data (`/settings`)
+
+Consents can be changed at any time; each change is stored as a new row, so there is a full history. Users can also choose how long data is kept (30, 90, 180 or 365 days; older data is purged when that setting changes and at every session start), download all their data as JSON, and delete everything with one click. Camera and microphone are never used.
+
 ## Ethics
 
 Non-clinical by design: no diagnostic terms, and no decision is based on camera or voice alone. Users are only ever compared with themselves.
