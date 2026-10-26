@@ -33,7 +33,9 @@ export type BlockScore = {
   /** Per-component breakdown, shown to the user and the coach (explainability). */
   components: ComponentScore[];
   composite: number;
-  /** Composite mapped into the difficulty level's ability range (0..1). */
+  /** Composite mapped into the difficulty level's ability range, before calibration. */
+  rawObservation: number;
+  /** Calibrated observation on the 0..1 ability scale (what the profiler uses). */
   observation: number;
   observationSd: number;
   /** True when the composite hit the floor or ceiling of the level, so the observation is less informative. */

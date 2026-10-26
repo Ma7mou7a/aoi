@@ -5,16 +5,11 @@ color: "#eda100"
 
 card:
   definition: >
-    The ability to switch between rules or ways of thinking. Measured as the
-    extra time and errors when you must switch from one rule to another,
-    compared with repeating the same rule.
+    The ability to switch between rules or ways of thinking. Measured as the extra time and errors when you must switch from one rule to another, compared with repeating the same rule.
   what_it_is_not: >
-    Not a personality trait and not a diagnostic measure. It describes
-    rule-switching on this task.
+    Not a personality trait and not a diagnostic measure. It describes rule-switching on this task.
   design_note: >
-    We use trial-by-trial task switching instead of Trail Making B because it
-    gives one data point per trial, which the adaptive profiler needs, and
-    because it works the same way on phones and laptops.
+    We use trial-by-trial task switching instead of Trail Making B because it gives one data point per trial, which the adaptive profiler needs, and because it works the same way on phones and laptops.
   citations:
     - "Rogers, R. D., & Monsell, S. (1995). Costs of a predictable switch between simple cognitive tasks. J. Exp. Psychol. Gen., 124(2), 207-231."
     - "Monsell, S. (2003). Task switching. Trends Cogn. Sci., 7(3), 134-140."
@@ -28,8 +23,7 @@ tasks:
     name: Number task switching
     paradigm: task_switching
     instructions: >
-      A number appears in a coloured frame. Blue frame: is it ODD or EVEN?
-      Orange frame: is it SMALLER or LARGER than 5? The rule can change at any time.
+      A number appears in a coloured frame. Blue frame: is it ODD or EVEN? Orange frame: is it SMALLER or LARGER than 5? The rule can change at any time.
     params:
       digits: [1, 2, 3, 4, 6, 7, 8, 9]
       rules: [parity, magnitude]
@@ -39,14 +33,14 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - { level: 1, params: { switch_rate: 0.25, cue_lead_ms: 600 }, ability_range: [0.0, 0.5] }
-        - { level: 2, params: { switch_rate: 0.5, cue_lead_ms: 300 }, ability_range: [0.25, 0.75] }
-        - { level: 3, params: { switch_rate: 0.5, cue_lead_ms: 0 }, ability_range: [0.5, 1.0] }
+        - {level: 1, params: {switch_rate: 0.25, cue_lead_ms: 600}, ability_range: [-1.047, 1.388]}
+        - {level: 2, params: {switch_rate: 0.5, cue_lead_ms: 300}, ability_range: [-0.769, 1.208]}
+        - {level: 3, params: {switch_rate: 0.5, cue_lead_ms: 0}, ability_range: [-0.858, 1.256]}
     scoring:
       components:
-        - { metric: switch_cost_ms, weight: 0.45, normalise: { method: linear, min: 0, max: 500, invert: true } }
-        - { metric: switch_cost_errors, weight: 0.3, normalise: { method: linear, min: 0, max: 0.2, invert: true } }
-        - { metric: accuracy, weight: 0.25, normalise: { method: linear, min: 0.5, max: 1.0 } }
+        - {metric: switch_cost_ms, weight: 0.45, normalise: {method: linear, min: 0, max: 500, invert: true}}
+        - {metric: switch_cost_errors, weight: 0.3, normalise: {method: linear, min: 0, max: 0.2, invert: true}}
+        - {metric: accuracy, weight: 0.25, normalise: {method: linear, min: 0.5, max: 1.0}}
     validity:
       min_rt_ms: 200
       max_rt_ms: 3000
@@ -55,9 +49,14 @@ tasks:
       max_same_response_streak: 10
 
 profile:
-  prior: { mean: 0.5, sd: 0.2 }
+  prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.14
+    obs_sd: 0.265
     reference_trials: 40
     invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.03
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data

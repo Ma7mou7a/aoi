@@ -8,15 +8,11 @@ import { closeDb, db, schema } from "../src/db";
 import { loadDimensions } from "../src/lib/dimensions/loader";
 import { applyDrift, credibleInterval, priorFor, updatePosterior, type Posterior } from "../src/lib/profiler";
 import { createRng } from "../src/lib/rng";
-import { levelOf, scoreBlock, type TrialRecord } from "../src/lib/scoring";
+import type { Paradigm } from "../src/lib/dimensions/schema";
+import { levelOf, scoreBlock } from "../src/lib/scoring";
 import { selectNext, type LastRun } from "../src/lib/selector";
-import { simulateCorsiBlock, type CorsiParams } from "../src/lib/tasks/corsi";
-import { generateNBack, simulateNBackResponses, type NBackParams } from "../src/lib/tasks/nback";
+import { simulateBlock } from "../src/lib/sim";
 import { AVAILABLE_PARADIGMS } from "../src/lib/tasks/registry";
-import { generateMatrices, simulateMatrices, type MatricesParams } from "../src/lib/tasks/matrices";
-import { generateStroop, simulateStroopResponses, type StroopParams } from "../src/lib/tasks/stroop";
-import { simulateSymbolDigit, type SymbolDigitParams } from "../src/lib/tasks/symbolDigit";
-import { generateTaskSwitching, simulateTaskSwitching, type TaskSwitchingParams } from "../src/lib/tasks/taskSwitching";
 
 const DAY = 86_400_000;
 const rng = createRng(2026);
@@ -36,25 +32,7 @@ const truthOn = (dimId: string, day: number) => {
   return a + ((b - a) * day) / 12;
 };
 
-function simulate(paradigm: string, params: Record<string, unknown>, ability: number, seed: number): TrialRecord[] {
-  const r = createRng(seed);
-  if (paradigm === "n_back") {
-    const p = params as unknown as NBackParams;
-    return simulateNBackResponses(generateNBack(p, seed), p.n, ability, r);
-  }
-  if (paradigm === "stroop") {
-    const p = params as unknown as StroopParams;
-    return simulateStroopResponses(generateStroop(p, seed), p.colours, ability, r);
-  }
-  if (paradigm === "corsi") return simulateCorsiBlock(params as unknown as CorsiParams, ability, r);
-  if (paradigm === "symbol_digit") return simulateSymbolDigit(params as unknown as SymbolDigitParams, ability, seed, r);
-  if (paradigm === "task_switching") return simulateTaskSwitching(generateTaskSwitching(params as unknown as TaskSwitchingParams, seed), ability, r);
-  if (paradigm === "matrices") {
-    const p = params as unknown as MatricesParams;
-    return simulateMatrices(generateMatrices(p, seed), p, ability, r);
-  }
-  throw new Error(`no simulator for paradigm ${paradigm}`);
-}
+const simulate = (paradigm: Paradigm, params: Record<string, unknown>, ability: number, seed: number) => simulateBlock(paradigm, params, ability, seed);
 
 async function main() {
   const start = Date.now() - 13 * DAY;

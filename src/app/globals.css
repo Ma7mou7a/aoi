@@ -13,6 +13,7 @@
   --chart-axis: #c3c2b7;
   --chart-empty: #f0efec;
   --chart-accent: #2a78d6; /* single-series slot 1 */
+  --chart-series-2: #eb6834; /* categorical slot 2 */
 
   /* Sequential blue ramp for heatmaps (steps 200 → 650) */
   --seq-1: #9ec5f4;
@@ -49,6 +50,7 @@
     --chart-axis: #383835;
     --chart-empty: #262624;
     --chart-accent: #3987e5;
+    --chart-series-2: #d95926;
 
     --seq-1: #184f95;
     --seq-2: #256abf;

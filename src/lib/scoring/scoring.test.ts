@@ -99,9 +99,12 @@ describe("composite", () => {
 describe("scoreBlock", () => {
   it("maps the composite into the level's ability range", () => {
     const s = scoreBlock(wm, nback, 2, block(2, (s) => s.isTarget, 350));
+    const [lo, hi] = nback.difficulty.levels.find((l) => l.level === 2)!.ability_range;
     expect(s.validity.valid).toBe(true);
-    expect(s.observation).toBeGreaterThan(0.3);
-    expect(s.observation).toBeLessThanOrEqual(0.75);
+    expect(s.rawObservation).toBeCloseTo(lo + (hi - lo) * s.composite, 10);
+    // The calibrated observation is always on the 0..1 ability scale.
+    expect(s.observation).toBeGreaterThanOrEqual(0);
+    expect(s.observation).toBeLessThanOrEqual(1);
     expect(s.observationSd).toBeGreaterThan(0);
   });
   it("trusts invalid blocks much less", () => {

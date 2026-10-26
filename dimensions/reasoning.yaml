@@ -5,11 +5,9 @@ color: "#008300"
 
 card:
   definition: >
-    The ability to find the rule behind a pattern and apply it to something new.
-    Measured with generated 3x3 visual puzzles where you choose the missing piece.
+    The ability to find the rule behind a pattern and apply it to something new. Measured with generated 3x3 visual puzzles where you choose the missing piece.
   what_it_is_not: >
-    Not an IQ score. Puzzles are generated, unnormed and only compared with
-    your own past results.
+    Not an IQ score. Puzzles are generated, unnormed and only compared with your own past results.
   citations:
     - "Raven, J. (2000). The Raven's Progressive Matrices: change and stability over culture and time. Cogn. Psychol., 41(1), 1-48."
     - "Matzen, L. E. et al. (2010). Recreating Raven's: software for systematically generating large numbers of Raven-like matrix problems with normed properties. Behav. Res. Methods, 42(2), 525-541."
@@ -24,8 +22,7 @@ tasks:
     name: Generated pattern matrices
     paradigm: matrices
     instructions: >
-      Look at the 3x3 grid. One piece is missing. Choose the option that
-      completes the pattern across rows and columns.
+      Look at the 3x3 grid. One piece is missing. Choose the option that completes the pattern across rows and columns.
     params:
       options: 6
       items_per_block: 8
@@ -34,24 +31,31 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - { level: 1, params: { rules_per_item: 1, attributes: [shape] }, ability_range: [0.0, 0.45] }
-        - { level: 2, params: { rules_per_item: 2, attributes: [shape, size] }, ability_range: [0.3, 0.75] }
-        - { level: 3, params: { rules_per_item: 3, attributes: [shape, size, count] }, ability_range: [0.55, 1.0] }
+        - {level: 1, params: {rules_per_item: 1, attributes: [shape]}, ability_range: [-0.582, 0.694]}
+        - {level: 2, params: {rules_per_item: 2, attributes: [shape, size]}, ability_range: [-0.04, 0.776]}
+        - {level: 3, params: {rules_per_item: 3, attributes: [shape, size, count]}, ability_range: [0.133, 1.026]}
     scoring:
       components:
-        - { metric: accuracy, weight: 0.9, normalise: { method: linear, min: 0.17, max: 1.0 } }
-        - { metric: median_rt_ms, weight: 0.1, normalise: { method: linear, min: 5000, max: 45000, invert: true } }
+        - {metric: accuracy, weight: 0.9, normalise: {method: linear, min: 0.17, max: 1.0}}
+        - {metric: median_rt_ms, weight: 0.1, normalise: {method: linear, min: 5000, max: 45000, invert: true}}
     validity:
       min_rt_ms: 1500
       max_rt_ms: 60000
       min_valid_trials: 6
       chance_accuracy: 0.17
+      # Only 8 items: a strict 95% test would flag many honest players (see docs/validation.md, E3).
+      chance_margin_z: 0.5
       max_same_response_streak: 6
 
 profile:
-  prior: { mean: 0.5, sd: 0.2 }
+  prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.16
+    obs_sd: 0.133
     reference_trials: 8
     invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.03
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data

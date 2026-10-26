@@ -44,7 +44,10 @@ export function scoreBlock(dim: Dimension, task: DimensionTask, level: number, t
   const { composite, components } = compositeScore(metrics, task);
 
   const [lo, hi] = levelOf(task, level).ability_range;
-  const observation = lo + (hi - lo) * composite;
+  const rawObservation = lo + (hi - lo) * composite;
+  // Calibration layer (per dimension, from config): maps the raw observation onto the ability scale.
+  const cal = dim.profile.calibration;
+  const observation = Math.min(1, Math.max(0, cal.intercept + cal.slope * rawObservation));
 
   const u = dim.profile.uncertainty;
   let observationSd = u.obs_sd * Math.sqrt(u.reference_trials / Math.max(validity.validTrials, 1));
@@ -52,5 +55,5 @@ export function scoreBlock(dim: Dimension, task: DimensionTask, level: number, t
   const censored = composite < CENSOR_MARGIN || composite > 1 - CENSOR_MARGIN;
   if (censored) observationSd *= CENSORED_SD_MULTIPLIER;
 
-  return { metrics, validity, components, composite, observation, observationSd, censored };
+  return { metrics, validity, components, composite, rawObservation, observation, observationSd, censored };
 }

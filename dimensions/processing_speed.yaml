@@ -5,11 +5,9 @@ color: "#1baf7a"
 
 card:
   definition: >
-    How quickly you can take in simple information and act on it correctly.
-    Measured as how fast and accurately you match symbols to digits using a key.
+    How quickly you can take in simple information and act on it correctly. Measured as how fast and accurately you match symbols to digits using a key.
   what_it_is_not: >
-    Not general intelligence and not a medical measure. Speed depends heavily
-    on device, input method and how rested you are.
+    Not general intelligence and not a medical measure. Speed depends heavily on device, input method and how rested you are.
   citations:
     - "Smith, A. (1982). Symbol Digit Modalities Test (SDMT) manual. Western Psychological Services."
     - "Salthouse, T. A. (1996). The processing-speed theory of adult age differences in cognition. Psychol. Rev., 103(3), 403-428."
@@ -24,8 +22,7 @@ tasks:
     name: Symbol-digit coding
     paradigm: symbol_digit
     instructions: >
-      A key at the top pairs 9 symbols with the digits 1-9. For each symbol
-      shown, press its digit as fast as you can.
+      A key at the top pairs 9 symbols with the digits 1-9. For each symbol shown, press its digit as fast as you can.
     params:
       symbols: 9
       reshuffle_key_each_session: true
@@ -33,13 +30,13 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - { level: 1, params: { symbols: 6, key_visible: true }, ability_range: [0.0, 0.5] }
-        - { level: 2, params: { symbols: 9, key_visible: true }, ability_range: [0.25, 0.75] }
-        - { level: 3, params: { symbols: 9, key_visible: false, key_preview_s: 10 }, ability_range: [0.5, 1.0] }
+        - {level: 1, params: {symbols: 6, key_visible: true}, ability_range: [-0.345, 1.45]}
+        - {level: 2, params: {symbols: 9, key_visible: true}, ability_range: [-0.284, 1.351]}
+        - {level: 3, params: {symbols: 9, key_visible: false, key_preview_s: 10}, ability_range: [-0.288, 2.124]}
     scoring:
       components:
-        - { metric: correct_per_minute, weight: 0.7, normalise: { method: linear, min: 15, max: 75 } }
-        - { metric: accuracy, weight: 0.3, normalise: { method: linear, min: 0.7, max: 1.0 } }
+        - {metric: correct_per_minute, weight: 0.7, normalise: {method: linear, min: 15, max: 75}}
+        - {metric: accuracy, weight: 0.3, normalise: {method: linear, min: 0.7, max: 1.0}}
     validity:
       min_rt_ms: 150
       max_rt_ms: 5000
@@ -48,9 +45,14 @@ tasks:
       max_same_response_streak: 8
 
 profile:
-  prior: { mean: 0.5, sd: 0.2 }
+  prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.1
+    obs_sd: 0.138
     reference_trials: 40
     invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.03
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data

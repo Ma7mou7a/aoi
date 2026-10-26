@@ -29,10 +29,10 @@ export function assessValidity(trials: TrialRecord[], metrics: Metrics, rules: D
   const flags: ValidityFlag[] = [];
   if (validTrials < rules.min_valid_trials) flags.push("too_few_trials");
 
-  // Accuracy must beat chance by a one-sided 95% binomial margin to count as engaged.
+  // Accuracy must beat chance by a binomial margin (default one-sided 95%) to count as engaged.
   const acc = metrics.accuracy;
   const p = rules.chance_accuracy;
-  if (p > 0 && Number.isFinite(acc) && acc <= p + 1.645 * Math.sqrt((p * (1 - p)) / n)) flags.push("near_chance");
+  if (p > 0 && Number.isFinite(acc) && acc <= p + rules.chance_margin_z * Math.sqrt((p * (1 - p)) / n)) flags.push("near_chance");
 
   if (longestStreak(scored) > rules.max_same_response_streak) flags.push("response_streak");
   if (anticipations.length / n > 0.2) flags.push("many_anticipations");

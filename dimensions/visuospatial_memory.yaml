@@ -5,11 +5,9 @@ color: "#e87ba4"
 
 card:
   definition: >
-    The ability to remember where things are and in what order. Measured as
-    the longest sequence of highlighted blocks you can repeat back correctly.
+    The ability to remember where things are and in what order. Measured as the longest sequence of highlighted blocks you can repeat back correctly.
   what_it_is_not: >
-    Not a measure of navigation skill or a diagnostic test. It describes
-    short-term spatial span on this task.
+    Not a measure of navigation skill or a diagnostic test. It describes short-term spatial span on this task.
   citations:
     - "Corsi, P. M. (1972). Human memory and the medial temporal region of the brain. PhD thesis, McGill University."
     - "Kessels, R. P. C. et al. (2000). The Corsi block-tapping task: standardization and normative data. Appl. Neuropsychol., 7(4), 252-258."
@@ -23,8 +21,7 @@ tasks:
     name: Corsi blocks (forward)
     paradigm: corsi
     instructions: >
-      Blocks light up one after another. When they stop, tap the blocks in the
-      same order.
+      Blocks light up one after another. When they stop, tap the blocks in the same order.
     params:
       blocks: 9
       highlight_ms: 1000
@@ -36,13 +33,13 @@ tasks:
       target_success: 0.75
       # span is adapted inside the block (staircase); level sets the starting span
       levels:
-        - { level: 1, params: { start_span: 3, backward: false }, ability_range: [0.0, 0.55] }
-        - { level: 2, params: { start_span: 4, backward: false }, ability_range: [0.25, 0.8] }
-        - { level: 3, params: { start_span: 4, backward: true }, ability_range: [0.45, 1.0] }
+        - {level: 1, params: {start_span: 3, backward: false}, ability_range: [-0.101, 1.087]}
+        - {level: 2, params: {start_span: 4, backward: false}, ability_range: [-0.063, 1.135]}
+        - {level: 3, params: {start_span: 4, backward: true}, ability_range: [-0.026, 1.283]}
     scoring:
       components:
-        - { metric: span, weight: 0.7, normalise: { method: linear, min: 2, max: 8 } }
-        - { metric: total_score, weight: 0.3, normalise: { method: linear, min: 4, max: 60 } }
+        - {metric: span, weight: 0.7, normalise: {method: linear, min: 2, max: 8}}
+        - {metric: total_score, weight: 0.3, normalise: {method: linear, min: 4, max: 60}}
     validity:
       min_rt_ms: 100
       max_rt_ms: 15000
@@ -51,9 +48,14 @@ tasks:
       max_same_response_streak: 9
 
 profile:
-  prior: { mean: 0.5, sd: 0.2 }
+  prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.15
+    obs_sd: 0.107
     reference_trials: 10
     invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.03
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data

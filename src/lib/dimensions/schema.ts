@@ -29,8 +29,11 @@ const scoringComponent = z.object({
 const difficultyLevel = z.object({
   level: z.number().int().positive(),
   params,
-  /** Where a composite score of 0..1 at this level lands on the 0..1 ability scale. */
-  ability_range: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)])
+  /**
+   * Where a composite score of 0 and 1 at this level land on the 0..1 ability scale (a linear map,
+   * fitted by scripts/validate.ts). Ends may lie outside 0..1: the observation is clamped afterwards.
+   */
+  ability_range: z.tuple([z.number().min(-2).max(3), z.number().min(-2).max(3)])
     .refine(([lo, hi]) => hi > lo, "ability_range must be [lo, hi] with hi > lo"),
 });
 
@@ -54,6 +57,8 @@ const task = z.object({
     max_rt_ms: z.number().positive(),
     min_valid_trials: z.number().int().positive(),
     chance_accuracy: z.number().min(0).max(1),
+    /** How far above chance (in binomial SDs) accuracy must be. Lower for short blocks (low power). */
+    chance_margin_z: z.number().nonnegative().default(1.645),
     max_same_response_streak: z.number().int().positive(),
   }),
 });
@@ -82,6 +87,13 @@ export const dimensionSchema = z.object({
       /** Process noise: how much the true ability may drift per day (lets the twin track growth). */
       drift_sd_per_day: z.number().nonnegative().default(0.01),
     }),
+    /**
+     * Linear map from raw observation to the ability scale, fitted by scripts/validate.ts on
+     * simulated users (to be refitted on real pilot data). Identity when absent.
+     */
+    calibration: z
+      .object({ intercept: z.number(), slope: z.number().positive(), source: z.string() })
+      .default({ intercept: 0, slope: 1, source: "uncalibrated" }),
   }),
 });
 

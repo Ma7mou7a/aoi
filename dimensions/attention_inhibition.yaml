@@ -5,12 +5,9 @@ color: "#eb6834"
 
 card:
   definition: >
-    The ability to stay focused on what matters and hold back an automatic
-    response. Measured as how much slower and less accurate you get when the
-    word meaning conflicts with the ink colour you must name.
+    The ability to stay focused on what matters and hold back an automatic response. Measured as how much slower and less accurate you get when the word meaning conflicts with the ink colour you must name.
   what_it_is_not: >
-    Not a measure of attention-related conditions and not a diagnosis.
-    It describes interference on this specific task.
+    Not a measure of attention-related conditions and not a diagnosis. It describes interference on this specific task.
   citations:
     - "Stroop, J. R. (1935). Studies of interference in serial verbal reactions. J. Exp. Psychol., 18(6), 643-662."
     - "MacLeod, C. M. (1991). Half a century of research on the Stroop effect: an integrative review. Psychol. Bull., 109(2), 163-203."
@@ -25,25 +22,24 @@ tasks:
     name: Colour-word Stroop
     paradigm: stroop
     instructions: >
-      A colour word appears in coloured ink. Press the key for the INK colour,
-      not the word. Be fast but accurate.
+      A colour word appears in coloured ink. Press the key for the INK colour, not the word. Be fast but accurate.
     params:
       colours: [red, green, blue, yellow]
-      keys: { red: d, green: f, blue: j, yellow: k }
+      keys: {red: d, green: f, blue: j, yellow: k}
       trials_per_block: 32
       practice_trials: 8
       max_response_ms: 2500
     difficulty:
       target_success: 0.75
       levels:
-        - { level: 1, params: { incongruent_rate: 0.25, deadline_ms: 2500 }, ability_range: [0.0, 0.5] }
-        - { level: 2, params: { incongruent_rate: 0.5, deadline_ms: 1800 }, ability_range: [0.25, 0.75] }
-        - { level: 3, params: { incongruent_rate: 0.75, deadline_ms: 1200 }, ability_range: [0.5, 1.0] }
+        - {level: 1, params: {incongruent_rate: 0.25, deadline_ms: 2500}, ability_range: [-0.362, 1.266]}
+        - {level: 2, params: {incongruent_rate: 0.5, deadline_ms: 1800}, ability_range: [-0.339, 1.262]}
+        - {level: 3, params: {incongruent_rate: 0.75, deadline_ms: 1200}, ability_range: [-0.283, 1.237]}
     scoring:
       components:
-        - { metric: interference_cost_ms, weight: 0.5, normalise: { method: linear, min: 0, max: 300, invert: true } }
-        - { metric: incongruent_accuracy, weight: 0.35, normalise: { method: linear, min: 0.5, max: 1.0 } }
-        - { metric: median_rt_ms, weight: 0.15, normalise: { method: linear, min: 450, max: 1400, invert: true } }
+        - {metric: interference_cost_ms, weight: 0.5, normalise: {method: linear, min: 0, max: 300, invert: true}}
+        - {metric: incongruent_accuracy, weight: 0.35, normalise: {method: linear, min: 0.5, max: 1.0}}
+        - {metric: median_rt_ms, weight: 0.15, normalise: {method: linear, min: 450, max: 1400, invert: true}}
     validity:
       min_rt_ms: 200
       max_rt_ms: 2500
@@ -52,9 +48,14 @@ tasks:
       max_same_response_streak: 10
 
 profile:
-  prior: { mean: 0.5, sd: 0.2 }
+  prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.13
+    obs_sd: 0.172
     reference_trials: 32
     invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.03
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data
