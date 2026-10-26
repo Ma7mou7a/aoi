@@ -26,17 +26,27 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <header className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <header className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4">
           <Link href="/" className="font-semibold tracking-tight">AI4Brain</Link>
-          <nav className="flex gap-4 text-sm text-slate-600 dark:text-slate-300">
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
             <Link href="/dashboard">Dashboard</Link>
             <Link href="/play">Assess</Link>
-            <Link href="/profile">Brain Twin</Link>
+            <Link href="/play?mode=training">Train</Link>
             <Link href="/coach">Coach</Link>
             <Link href="/settings">Settings</Link>
           </nav>
         </header>
-        <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <footer className="mx-auto max-w-5xl border-t border-slate-200 px-4 py-6 text-sm text-slate-500 dark:border-slate-800">
+          <nav className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/skills">How each skill is measured</Link>
+            <Link href="/try">Try the tasks</Link>
+            <Link href="/validation">Validation study</Link>
+            <Link href="/profile">Brain Twin details</Link>
+            <a href="https://github.com/ChaimaGhazali/aoi">Source code</a>
+          </nav>
+          <p className="mt-3 text-xs">AI4Brain is a non-clinical learning tool. It does not diagnose or assess any health condition.</p>
+        </footer>
       </body>
     </html>
   );

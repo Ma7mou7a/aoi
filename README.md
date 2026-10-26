@@ -1,83 +1,92 @@
 # AI4Brain: Cognitive Growth Agent
 
-CISTAC 1.0 entry. A non-clinical agent that continuously assesses six cognitive dimensions, keeps an uncertainty-aware **Brain Twin** profile, coaches with evidence-linked explanations, and adapts exercises and weekly plans.
+**CISTAC 1.0 · AI4Brain challenge entry.** A non-clinical agent that continuously **assesses** six cognitive skills with classic cognitive-science tasks, **understands** performance as an uncertainty-aware profile (the *Brain Twin*), **coaches** with claims you can verify trial by trial, and **improves** you with adaptive exercises, weekly plans and goals.
 
-## Dimensions
+> Every number comes with a band that says how sure the app is, every coach claim links to its evidence, and the whole pipeline is checked against 500 simulated users with known abilities.
 
-Each dimension is one YAML file in [`dimensions/`](dimensions). The file holds its measurement card (definition, citations, biases) and its engine config (tasks, difficulty levels, scoring formula, prior, uncertainty). **To add a dimension, add a file. No code change or migration is needed.**
+## What makes it different
 
-| Dimension | Task | Paradigm reference |
-|-|-|-|
-| Working memory | N-back | Kirchner 1958; Owen et al. 2005 |
-| Attention & inhibition | Colour-word Stroop | Stroop 1935; MacLeod 1991 |
-| Processing speed | Symbol-digit coding | Smith 1982; Salthouse 1996 |
-| Cognitive flexibility | Number task switching | Rogers & Monsell 1995; Monsell 2003 |
-| Visuospatial memory | Corsi blocks | Corsi 1972; Kessels et al. 2000 |
-| Reasoning | Generated pattern matrices | Raven 2000; Matzen et al. 2010 |
+| | |
+|-|-|
+| **Real paradigms** | N-back, Stroop, Corsi blocks, symbol-digit coding, task switching and *generated* Raven-style matrices, each with a measurement card (definition, scoring, uncertainty, biases, references) at `/skills` |
+| **Uncertainty everywhere** | Bayesian (Kalman) profile per skill: 90% band on every estimate, wider for noisy or invalid blocks, widening between sessions |
+| **Adaptive testing** | The next block is the one expected to shrink the band most. In simulation this is **18% more accurate than random order** at equal effort |
+| **Validated** | 500 simulated users through the real pipeline: band coverage **89–96%** (target 90%), mean error ±6–10%, **99% of invalid play caught** with 2% false alarms (`/validation`, [docs/validation.md](docs/validation.md)) |
+| **Evidence-linked coach** | Claude writes claims that must cite the exact blocks and trials; unsupported claims are dropped; a clinical-term filter guards every word; falls back to a rule-based coach |
+| **AI Collaboration Score** | Documented formula over 16 behaviour signals, plus an opt-in **spot-the-error mode** that measures whether you check the AI ([docs/collaboration-score.md](docs/collaboration-score.md)) |
+| **Forecasts that grade themselves** | Growth forecast with a widening band, and a **track record**: past forecasts are checked against what actually happened |
+| **Surprise-proof** | Skills are YAML config: `npm run new-dimension` adds a skill live with no code change ([docs/adding-a-dimension.md](docs/adding-a-dimension.md)) |
 
-**Scoring pipeline (per block):** metrics → each normalised to 0..1 → weighted composite → mapped into the difficulty level's `ability_range` → one observation with noise `obs_sd · √(reference_trials / valid_trials)`. Invalid blocks (near chance, response streaks, too few valid trials) get `× invalid_block_sd_multiplier`. A Normal–Normal Bayesian update then gives the posterior mean ± 90% credible interval, stored as a profile snapshot.
+## Challenge requirements → where to find them
 
-## Getting started
+| Brief | Implementation |
+|-|-|
+| A: tasks per dimension; score, RT, error rate, behaviour; dimension docs; non-biometric mode | 6 skills × 1 task, 3 levels each (`dimensions/*.yaml`); every trial stored with RT, correctness and behaviour; measurement cards (`/skills`, [docs/measurement-cards.md](docs/measurement-cards.md)); non-biometric only |
+| Brain Twin: history (+ projections with uncertainty) | Append-only profile snapshots; progress curves with bands; 14-day forecast with band and track record (`/dashboard`) |
+| B: explainable coaching, justified architecture, no clinical terms | Evidence-linked coach (`/coach`), clinical filter, rule-based fallback; architecture below |
+| C: difficulty adaptation, evolving plans, radar, curves, heatmap, goals | Adaptive selector + staircase; weekly plan rebuilt from the twin; radar with bands, progress curves, practice heatmap, uncertainty-aware goals (`/dashboard`) |
+| AI Collaboration Score (0–100, documented formula) | `/coach` score card + [docs/collaboration-score.md](docs/collaboration-score.md) |
+| Ethics & data: consent, retention, deletion | Opt-in consents with history, 30/90/180/365-day retention, JSON export, one-click delete (`/settings`, [docs/ethics.md](docs/ethics.md)) |
+| Bonus: voice coaching · emotion-aware AI · predictive growth | Browser speech (listen, ask by voice) · fatigue/frustration from **behaviour only** · forecasts with track record |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Y[(dimensions/*.yaml<br/>tasks · scoring · priors · calibration)] --> S
+  subgraph Assess
+    S[Adaptive selector<br/>max expected band shrinkage] --> T[Task renderer<br/>6 paradigms]
+    T --> SC[Scoring<br/>metrics → composite → level map<br/>+ validity checks]
+  end
+  SC --> P[Bayesian profiler<br/>Kalman update + drift]
+  P --> BT[(Brain Twin<br/>snapshots · forecasts)]
+  BT --> D[Dashboard<br/>radar · curves · heatmap · goals · plan]
+  BT --> C[Coach<br/>evidence pack → Claude / rules<br/>→ evidence check → clinical filter]
+  C --> CS[AI Collaboration Score]
+  SC --> A[Behaviour-only affect<br/>fatigue · frustration]
+  A --> S
+  A --> C
+```
+
+**Why this architecture.** Scoring and profiling are transparent statistics (no trained model), so every number can be explained and validated. The LLM only writes language, constrained to cite an evidence pack, and every output is re-checked in code. Everything about a skill lives in config, so new skills and recalibrations need no code.
+
+## Quickstart
 
 ```bash
 npm install
-npm run db:migrate   # creates the embedded PGlite DB in ./.pglite (no Postgres install needed)
-npm run dims:check   # validates every dimensions/*.yaml
-npm run dev
+npm run db:migrate      # embedded Postgres (PGlite) in ./.pglite, no install needed
+npm run seed:demo       # optional: a demo user with 2 weeks of history (prints a sign-in link)
+npm run dev             # http://localhost:3000
 ```
 
-To use real Postgres instead, run `docker compose up -d` and set `DATABASE_URL` (see `.env.example`).
+Optional: `ANTHROPIC_API_KEY` in `.env.local` enables the AI coach (see `.env.example`). For production-like data use real Postgres: `docker compose up -d` and set `DATABASE_URL`.
 
-> **PGlite tip:** stop the dev server with Ctrl+C, not by killing the process. PGlite only writes its data to disk safely on a clean close. If the app logs `PGlite could not open ./.pglite`, rename that folder and run `npm run db:migrate` to start fresh. Use real Postgres for any data you care about.
+> **PGlite tip:** stop the dev server with Ctrl+C, not by killing the process. If the app logs `PGlite could not open ./.pglite`, rename that folder and re-run `npm run db:migrate`.
 
-| Script | Purpose |
+| Script | |
 |-|-|
-| `dims:check` | Validate dimension configs (schema, weights sum to 1, levels ascending, ids unique) |
-| `db:generate` / `db:migrate` | Generate SQL from `src/db/schema.ts` / apply it |
-| `db:studio` | Browse the database |
-| `typecheck`, `lint`, `build` | CI checks |
+| `npm test` | 88 unit tests (scoring, profiler calibration, selector, tasks, coach safety, collaboration score, plans, forecasts, affect) |
+| `npm run validate` | Validation study (500 simulated users); `-- --apply` refits level maps and noise into the YAML |
+| `npm run dims:check` | Validate all dimension configs |
+| `npm run new-dimension -- --id … --name "…" --from …` | Add a skill from an existing task type |
+| `npm run cards` | Regenerate `docs/measurement-cards.md` |
+| `npm run typecheck` · `lint` · `build` | CI (GitHub Actions runs all of these) |
 
-## Data model
+## Pages
 
-`src/db/schema.ts`. Every user-owned table cascades on user delete (one-click delete), and `deletion_log` keeps only a hash as proof.
+`/` onboarding · `/play` adaptive assessment (`?mode=training` for practice) · `/dashboard` · `/coach` · `/profile` · `/settings` · `/skills` measurement cards · `/try` play any task without an account · `/validation` the study.
 
-- **Ethics:** `users` (retention days), `consents` (append-only history; camera/mic off by default), `deletion_log`
-- **Assessment:** `sessions` (non-biometric by default) → `task_runs` (one block, with selection reason, metrics, observation, validity) → `trials` (stimulus, response, RT, outcome, behaviour)
-- **Brain Twin:** `profile_snapshots` (append-only history = the twin), `projections` (always with a band)
-- **Coach:** `coach_messages` (claims carry evidence trial and run ids; planted flaw; filtered clinical terms)
-- **AI Collaboration Score:** `collab_events` (raw signals per component) → `collab_scores` (0–100 + components + weights + formula version)
-- **Adaptive learning:** `plans` → `plan_items`, `goals`
+## Docs
 
-## Dashboard (`/dashboard`)
+- [Technical report](docs/technical-report.md)
+- [Validation study](docs/validation.md)
+- [Measurement cards](docs/measurement-cards.md)
+- [AI Collaboration Score](docs/collaboration-score.md)
+- [Ethics, consent and data](docs/ethics.md)
+- [Adding a dimension](docs/adding-a-dimension.md)
 
-- **Radar** of the current profile. The shaded ring between the low and high polygons is the 90% credible band, so the chart shows how sure the app is as well as the levels.
-- **Progress curves:** one small chart per skill on a shared 0–100% axis, with a stepped estimate line and a band wash. The band narrows with evidence and widens slowly between sessions.
-- **Practice heatmap:** skills × days, coloured by blocks played (one-hue sequential ramp), with a hover readout.
-- **Goals:** a score goal counts as reached only when the whole band is above the target. Until then the dashboard shows the probability the user is already there. Consistency goals count sessions.
-- **Weekly plan:** 12 blocks shared out by priority = 0.6 × uncertainty + 0.4 × room to grow (unmeasured skills first), each at the level where expected success is about 75%. It is regenerated each week, can be rebuilt on demand, and is traceable to the profile snapshots it was built from.
+## Stack
 
-Every chart has a table view. Skill colours are the validated categorical palette, with dark-mode steps chosen separately.
+Next.js 15 · TypeScript · Drizzle ORM · PostgreSQL / PGlite · Recharts · Zod · Anthropic SDK (Claude) · Vitest.
 
-**Demo data:** `npm run seed:demo` (with the dev server stopped when using PGlite) creates a demo user with about 2 weeks of simulated history through the real scoring pipeline, then prints a dev-only sign-in link (`/api/dev/login?uid=…`, which returns 404 in production).
-
-## AI coach
-
-`/coach` gives feedback in which every statement links to the exact blocks and trials behind it.
-
-1. **Evidence pack** (`src/lib/coach/evidence.ts`): skill estimates with bands, the last 6 blocks, and trial groups (e.g. "5 matches you caught"). Each item gets a short reference (`R1`, `T3`); database ids never reach the model.
-2. **Draft:** with the user's `llm_coaching` consent, Claude (`claude-opus-5-5`, structured JSON output, server-side refusal fallback) writes 2–4 claims, each citing references. Without consent or API access, a deterministic rule-based coach writes the draft from the same pack.
-3. **Checks** (`src/lib/coach/claims.ts`, `safety.ts`): references are resolved to database ids, and claims that cite nothing valid are dropped. Every text passes a clinical-term filter: diagnostic language drops the claim, and medical-sounding words are rewritten. Questions about health conditions always get a non-clinical answer first. Dropped claims and filtered terms are stored for auditing and shown to the user.
-
-Set `ANTHROPIC_API_KEY` to enable the AI coach (see `.env.example`).
-
-## AI Collaboration Score
-
-`score = round(100 × Σ w_c × s_c)`, where `s_c = (Σ signal values + 0.5 × 2) / (n_c + 2)` for each of five components: clarification 20%, critical verification 25%, iteration 20%, autonomy 20%, responsible use 15%. The signals come from real interactions: opening evidence, marking claims right or off, predicting before a debrief, follow-up questions, acting on advice. In the opt-in **spot-the-error mode**, some debriefs carry one deliberate number error that the user can catch by checking the evidence, and it is always revealed afterwards. Full formula, signal table and limitations: [docs/collaboration-score.md](docs/collaboration-score.md).
-
-## Privacy & data (`/settings`)
-
-Consents can be changed at any time; each change is stored as a new row, so there is a full history. Users can also choose how long data is kept (30, 90, 180 or 365 days; older data is purged when that setting changes and at every session start), download all their data as JSON, and delete everything with one click. Camera and microphone are never used.
-
-## Ethics
-
-Non-clinical by design: no diagnostic terms, and no decision is based on camera or voice alone. Users are only ever compared with themselves.
+*AI4Brain is a learning tool. It does not diagnose or assess any health condition.*

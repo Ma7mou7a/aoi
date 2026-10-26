@@ -61,7 +61,7 @@ const HAND_SET: Fit = {
 /** Same dimensions with fitted level maps and noise (in memory only). */
 function withFit(dims: Dimension[], fit: Fit | null): Dimension[] {
   if (!fit) return dims;
-  return dims.map((d) => ({
+  return dims.map((d) => !fit[d.id] ? d : ({
     ...d,
     tasks: d.tasks.map((t, i) =>
       i > 0 ? t : { ...t, difficulty: { ...t.difficulty, levels: t.difficulty.levels.map((l) => ({ ...l, ability_range: fit[d.id].levels[l.level] ?? l.ability_range })) } },

@@ -11,11 +11,24 @@ export default async function Home() {
   if (!user) {
     return (
       <div className="space-y-8">
-        <div className="mx-auto max-w-lg space-y-2 text-center">
-          <h1 className="text-3xl font-semibold tracking-tight">Meet your Brain Twin</h1>
-          <p className="text-slate-600 dark:text-slate-300">
-            Short science-based games build a living profile of six thinking skills, always showing how sure we are, and adapt to help you grow.
+        <div className="mx-auto max-w-2xl space-y-3 text-center">
+          <h1 className="text-4xl font-semibold tracking-tight">Meet your Brain Twin</h1>
+          <p className="text-lg text-slate-600 dark:text-slate-300">
+            Short games from cognitive science build a living profile of six thinking skills. It always shows how sure it is, and it adapts to help you grow.
           </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            ["Real science, not quizzes", "N-back, Stroop, Corsi, task switching, symbol coding and generated matrices: classic tasks with published references.", "/skills", "How each skill is measured"],
+            ["Honest about uncertainty", "Every estimate has a band that narrows as you play. Tested on 500 simulated users: the band holds the true level about 9 times in 10.", "/validation", "See the validation"],
+            ["A coach you can check", "Every claim links to the exact trials behind it. Optional spot-the-error mode trains you to verify AI.", "/try", "Try a task, no sign-up"],
+          ].map(([title, text, href, cta]) => (
+            <div key={title} className="space-y-2 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <p className="font-semibold">{title}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{text}</p>
+              <Link href={href} className="text-sm underline underline-offset-4">{cta} →</Link>
+            </div>
+          ))}
         </div>
         <Onboarding />
       </div>
