@@ -1,7 +1,7 @@
 import type { Paradigm } from "../dimensions/schema";
 
 /** Paradigms with a working renderer. The selector only schedules these. */
-export const AVAILABLE_PARADIGMS: readonly Paradigm[] = ["n_back", "stroop", "corsi"];
+export const AVAILABLE_PARADIGMS: readonly Paradigm[] = ["n_back", "stroop", "corsi", "symbol_digit", "task_switching", "matrices"];
 
 /** What the client needs to run one block (sent by the API, no server-only config). */
 export type BlockSpec = {

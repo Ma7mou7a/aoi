@@ -13,14 +13,24 @@ import { selectNext, type LastRun } from "../src/lib/selector";
 import { simulateCorsiBlock, type CorsiParams } from "../src/lib/tasks/corsi";
 import { generateNBack, simulateNBackResponses, type NBackParams } from "../src/lib/tasks/nback";
 import { AVAILABLE_PARADIGMS } from "../src/lib/tasks/registry";
+import { generateMatrices, simulateMatrices, type MatricesParams } from "../src/lib/tasks/matrices";
 import { generateStroop, simulateStroopResponses, type StroopParams } from "../src/lib/tasks/stroop";
+import { simulateSymbolDigit, type SymbolDigitParams } from "../src/lib/tasks/symbolDigit";
+import { generateTaskSwitching, simulateTaskSwitching, type TaskSwitchingParams } from "../src/lib/tasks/taskSwitching";
 
 const DAY = 86_400_000;
 const rng = createRng(2026);
 const dims = loadDimensions();
 
 /** True ability per skill on a given day: slow, noisy growth. */
-const TRUTH: Record<string, [number, number]> = { working_memory: [0.45, 0.63], attention_inhibition: [0.38, 0.52], visuospatial_memory: [0.52, 0.6] };
+const TRUTH: Record<string, [number, number]> = {
+  working_memory: [0.45, 0.63],
+  attention_inhibition: [0.38, 0.52],
+  visuospatial_memory: [0.52, 0.6],
+  processing_speed: [0.55, 0.66],
+  cognitive_flexibility: [0.4, 0.5],
+  reasoning: [0.6, 0.64],
+};
 const truthOn = (dimId: string, day: number) => {
   const [a, b] = TRUTH[dimId] ?? [0.5, 0.5];
   return a + ((b - a) * day) / 12;
@@ -36,7 +46,14 @@ function simulate(paradigm: string, params: Record<string, unknown>, ability: nu
     const p = params as unknown as StroopParams;
     return simulateStroopResponses(generateStroop(p, seed), p.colours, ability, r);
   }
-  return simulateCorsiBlock(params as unknown as CorsiParams, ability, r);
+  if (paradigm === "corsi") return simulateCorsiBlock(params as unknown as CorsiParams, ability, r);
+  if (paradigm === "symbol_digit") return simulateSymbolDigit(params as unknown as SymbolDigitParams, ability, seed, r);
+  if (paradigm === "task_switching") return simulateTaskSwitching(generateTaskSwitching(params as unknown as TaskSwitchingParams, seed), ability, r);
+  if (paradigm === "matrices") {
+    const p = params as unknown as MatricesParams;
+    return simulateMatrices(generateMatrices(p, seed), p, ability, r);
+  }
+  throw new Error(`no simulator for paradigm ${paradigm}`);
 }
 
 async function main() {

@@ -18,6 +18,9 @@ const METRIC_LABELS: Record<string, string> = {
   incongruent_accuracy: "Accuracy when word ≠ colour",
   span: "Longest sequence recalled",
   total_score: "Total blocks recalled",
+  correct_per_minute: "Correct per minute",
+  switch_cost_ms: "Slow-down after a rule switch",
+  switch_cost_errors: "Extra errors after a switch",
 };
 
 /** One extra plain-language line per paradigm. */
@@ -25,6 +28,9 @@ function detail(paradigm: string, m: Record<string, number>) {
   if (paradigm === "n_back") return `Matches caught ${fmt("hit_rate", m.hit_rate)}, false alarms ${fmt("false_alarm_rate", m.false_alarm_rate)}.`;
   if (paradigm === "stroop") return `Overall accuracy ${fmt("accuracy", m.accuracy)}. Conflicting words slowed you by ${fmt("interference_cost_ms", m.interference_cost_ms)}.`;
   if (paradigm === "corsi") return `You recalled sequences of up to ${m.span ?? 0} blocks.`;
+  if (paradigm === "symbol_digit") return `${fmt("correct_per_minute", m.correct_per_minute)} correct per minute at ${fmt("accuracy", m.accuracy)} accuracy.`;
+  if (paradigm === "task_switching") return `Switching rules slowed you by ${fmt("switch_cost_ms", m.switch_cost_ms)}; overall accuracy ${fmt("accuracy", m.accuracy)}.`;
+  if (paradigm === "matrices") return `You solved ${fmt("accuracy", m.accuracy)} of the puzzles.`;
   return "";
 }
 
@@ -41,7 +47,8 @@ function fmt(metric: string, v: number) {
   if (!Number.isFinite(v)) return "n/a";
   if (metric.endsWith("_ms")) return `${Math.round(v)} ms`;
   if (metric.endsWith("_rate") || metric.endsWith("accuracy")) return pct(v);
-  if (metric === "span" || metric === "total_score") return String(Math.round(v));
+  if (metric === "span" || metric === "total_score" || metric === "correct_per_minute") return String(Math.round(v));
+  if (metric === "switch_cost_errors") return `${Math.round(v * 100)} pts`;
   return v.toFixed(2);
 }
 

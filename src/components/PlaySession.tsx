@@ -6,6 +6,9 @@ import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { BlockResultCard } from "./BlockResultCard";
 import { CorsiTask } from "./tasks/CorsiTask";
+import { MatricesTask } from "./tasks/MatricesTask";
+import { SymbolDigitTask } from "./tasks/SymbolDigitTask";
+import { TaskSwitchingTask } from "./tasks/TaskSwitchingTask";
 import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
 import { StroopTask } from "./tasks/StroopTask";
 
@@ -84,6 +87,12 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
           return <StroopTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
         case "corsi":
           return <CorsiTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "symbol_digit":
+          return <SymbolDigitTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "task_switching":
+          return <TaskSwitchingTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "matrices":
+          return <MatricesTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
         default:
           return <p>Task “{state.spec.task.paradigm}” is not available yet.</p>;
       }

@@ -13,6 +13,12 @@ function describe(paradigm: string | null, t: EvidenceTrial): [string, string] {
   if (paradigm === "n_back") return [`${s.letter}${s.isTarget ? " (match)" : ""}`, t.response ? "pressed" : "no press"];
   if (paradigm === "stroop") return [`“${String(s.word).toUpperCase()}” in ${s.ink}${s.congruent ? "" : " (conflict)"}`, show(t.response)];
   if (paradigm === "corsi") return [`${s.span} blocks: ${show(t.expected)}`, show(t.response)];
+  if (paradigm === "symbol_digit") return [`${s.glyph} → ${t.expected}`, show(t.response)];
+  if (paradigm === "task_switching") return [`${s.digit}, ${s.rule === "parity" ? "odd/even" : "smaller/larger"}${s.switch ? " (switch)" : ""}`, show(t.response)];
+  if (paradigm === "matrices") {
+    const rules = Object.entries((s.rules ?? {}) as Record<string, string>).filter(([, r]) => r !== "constant").map(([a]) => a).join(" + ");
+    return [`Puzzle (${rules || "pattern"}): option ${Number(t.expected) + 1}`, t.response == null ? "—" : `option ${Number(t.response) + 1}`];
+  }
   return [JSON.stringify(s), show(t.response)];
 }
 

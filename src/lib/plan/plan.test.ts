@@ -13,8 +13,13 @@ describe("generateWeeklyPlan", () => {
   posteriors.working_memory = post(0.8, 0.05);
   posteriors.attention_inhibition = post(0.3, 0.08);
 
-  const plan = generateWeeklyPlan({ dimensions, posteriors, available: AVAILABLE_PARADIGMS, blocksPerWeek: 12 });
+  const plan = generateWeeklyPlan({ dimensions, posteriors, available: ["n_back", "stroop", "corsi"], blocksPerWeek: 12 });
 
+  it("covers all six skills when every task is playable", () => {
+    const all = generateWeeklyPlan({ dimensions, posteriors, available: AVAILABLE_PARADIGMS, blocksPerWeek: 12 });
+    expect(all.items).toHaveLength(6);
+    expect(all.items.reduce((s, i) => s + i.blocks, 0)).toBe(12);
+  });
   it("only schedules playable tasks and uses the whole budget", () => {
     expect(plan.items.map((i) => i.taskId).sort()).toEqual(["corsi_blocks", "n_back", "stroop"]);
     expect(plan.items.reduce((s, i) => s + i.blocks, 0)).toBe(12);

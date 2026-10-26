@@ -89,6 +89,17 @@ function factsFor(paradigm: string, trials: TrialRow[]): Array<{ label: string; 
     const best = ok.length ? Math.max(...ok.map((t) => Number(t.stimulus.span))) : 0;
     facts.push({ label: `longest sequence recalled (${best} blocks)`, trials: ok.filter((t) => Number(t.stimulus.span) === best) });
     facts.push({ label: "sequences you didn't get right", trials: by((t) => t.correct === false) });
+  } else if (paradigm === "symbol_digit") {
+    facts.push({ label: "symbols coded correctly", trials: by((t) => !!t.correct) });
+    facts.push({ label: "coding errors", trials: by((t) => t.correct === false) });
+    facts.push({ label: "your slowest correct answers", trials: slowest(by((t) => !!t.correct)) });
+  } else if (paradigm === "task_switching") {
+    facts.push({ label: "errors right after a rule switch", trials: by((t) => t.stimulus.switch === true && t.correct === false) });
+    facts.push({ label: "errors when the rule stayed the same", trials: by((t) => t.stimulus.switch === false && t.correct === false) });
+    facts.push({ label: "your slowest answers after a switch", trials: slowest(by((t) => t.stimulus.switch === true && !!t.correct)) });
+  } else if (paradigm === "matrices") {
+    facts.push({ label: "puzzles solved", trials: by((t) => !!t.correct) });
+    facts.push({ label: "puzzles missed", trials: by((t) => t.correct === false) });
   } else {
     facts.push({ label: "errors", trials: by((t) => t.correct === false) });
   }
