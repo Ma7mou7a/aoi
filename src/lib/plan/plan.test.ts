@@ -36,10 +36,12 @@ describe("generateWeeklyPlan", () => {
     expect(blocks.attention_inhibition).toBeGreaterThan(blocks.working_memory);
     expect(plan.items[0].dimensionId).toBe("visuospatial_memory");
   });
-  it("targets a harder level for a strong skill", () => {
-    const wm = plan.items.find((i) => i.dimensionId === "working_memory")!;
-    const att = plan.items.find((i) => i.dimensionId === "attention_inhibition")!;
-    expect(wm.targetLevel).toBeGreaterThan(att.targetLevel);
+  it("targets a harder level when the same skill is stronger", () => {
+    // Same skill, different estimate: comparing two different skills would depend on their fitted level ranges.
+    const at = (mean: number) =>
+      generateWeeklyPlan({ dimensions, posteriors: { ...posteriors, working_memory: post(mean, 0.08) }, available: ["n_back", "stroop", "corsi"], blocksPerWeek: 12 })
+        .items.find((i) => i.dimensionId === "working_memory")!.targetLevel;
+    expect(at(0.85)).toBeGreaterThan(at(0.2));
   });
   it("explains every item", () => {
     expect(plan.items.find((i) => i.dimensionId === "visuospatial_memory")!.reason).toMatch(/Not measured yet/);

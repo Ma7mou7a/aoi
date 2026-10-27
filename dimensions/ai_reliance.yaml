@@ -1,0 +1,65 @@
+id: ai_reliance
+name: AI reliance
+version: 1
+color: "#6250d6"
+
+card:
+  definition: >
+    How well you judge when to follow an AI helper and when to trust your own answer. You answer first, then see the helper's answer, then decide. Only the moments when the helper disagrees with you count: keeping your right answer when the helper is wrong, and switching when the helper is right.
+  what_it_is_not: >
+    Not a measure of intelligence, of arithmetic, or of how much you like or trust technology in general. Being good at the sums alone does not raise it, and neither does always agreeing or always disagreeing with the helper.
+  citations:
+    - "Schemmer, M. et al. (2023). Appropriate reliance on AI advice: conceptualization and the effect of explanations. Proc. IUI '23, 410-422."
+    - "Parasuraman, R. & Manzey, D. H. (2010). Complacency and bias in human use of automation: an attentional integration. Human Factors, 52(3), 381-410."
+    - "Lee, J. D. & See, K. A. (2004). Trust in automation: designing for appropriate reliance. Human Factors, 46(1), 50-80."
+    - "Vasconcelos, H. et al. (2023). Explanations can reduce overreliance on AI systems during decision-making. Proc. ACM Hum.-Comput. Interact. 7(CSCW1)."
+  biases:
+    - "Arithmetic speed: faster calculators get more initial answers right, but the score only counts disagreements, conditional on whether the first answer was right."
+    - "Strategy: always following or always ignoring the helper both score at chance by design."
+    - "Experience with AI tools: people who use AI daily may start with stronger habits either way; the band shows the uncertainty."
+    - "Few disagreements per block (about 8 of 20 trials), so single blocks are noisy and the band starts wide."
+
+tasks:
+  - id: trust_machine
+    name: Second opinion
+    paradigm: trust_machine
+    instructions: >
+      Decide quickly which total is larger. Then an AI helper gives its answer, and you make your final choice. The helper is right most of the time but sometimes wrong on purpose. Follow it when it's right, keep your own answer when it's wrong.
+    params:
+      trials_per_block: 20
+      practice_trials: 2
+      final_response_ms: 3000
+      ai_wrong_when_right: 0.3
+      ai_right_when_wrong: 0.9
+    difficulty:
+      target_success: 0.75
+      levels:
+        - {level: 1, params: {terms: 2, min_gap: 0.04, max_gap: 0.09, max_response_ms: 3500}, ability_range: [-1.421, 2.152]}
+        - {level: 2, params: {terms: 3, min_gap: 0.03, max_gap: 0.06, max_response_ms: 3000}, ability_range: [-0.58, 1.553]}
+        - {level: 3, params: {terms: 3, min_gap: 0.015, max_gap: 0.04, max_response_ms: 2500}, ability_range: [-0.782, 1.78]}
+    scoring:
+      components:
+        # Only the disagreement-based measure: final accuracy would mostly reward arithmetic.
+        # Floor at 0.3, below chance (0.5): noisy blocks can land under chance, and clipping them at 0 hid them from calibration.
+        - {metric: appropriate_reliance, weight: 1.0, normalise: {method: linear, min: 0.3, max: 1.0}}
+    validity:
+      min_rt_ms: 200
+      max_rt_ms: 3000
+      min_valid_trials: 12
+      chance_accuracy: 0.5
+      # Harder sums put honest low-arithmetic players near 60% final accuracy: a strict 95% test flagged 10% of them.
+      chance_margin_z: 1.0
+      max_same_response_streak: 10
+
+profile:
+  prior: {mean: 0.5, sd: 0.2}
+  uncertainty:
+    model: normal
+    obs_sd: 0.479
+    reference_trials: 20
+    invalid_block_sd_multiplier: 2.5
+    drift_sd_per_day: 0.02
+  calibration:
+    intercept: 0
+    slope: 1
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data

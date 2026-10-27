@@ -1,3 +1,4 @@
+import { inSentence } from "./text";
 /** Consecutive days (UTC) with at least one completed block, counting back from today or yesterday. */
 export function dayStreak(activeDays: string[], today = new Date()): number {
   const days = new Set(activeDays);
@@ -33,7 +34,7 @@ export function milestones(input: {
     out.push(`New personal best on ${input.taskName} level ${input.level}: ${Math.round(input.composite * 100)}% (was ${Math.round(input.bestPreviousComposite * 100)}%).`);
   }
   if (input.newMean != null && input.bestPreviousMean != null && input.newMean > input.bestPreviousMean + 0.01) {
-    out.push(`Your highest ${input.skillName.toLowerCase()} estimate so far: ${Math.round(input.newMean * 100)}%.`);
+    out.push(`Your highest ${inSentence(input.skillName)} estimate so far: ${Math.round(input.newMean * 100)}%.`);
   }
   if ([3, 5, 7, 14, 30].includes(input.streak)) out.push(`${input.streak}-day streak. Regular practice is what moves the estimates.`);
   return out;

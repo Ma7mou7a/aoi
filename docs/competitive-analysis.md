@@ -18,7 +18,7 @@ No public event matches "AI4Brain" or CISTAC directly; these are the nearest ana
 
 ## What the winners have in common
 
-1. **Uncertainty is part of the answer.** RASKA used Jackknife+ and TADPOLE scored interval calibration. → *We already lead here:* every estimate carries a 90% band validated at 90–94% coverage.
+1. **Uncertainty is part of the answer.** RASKA used Jackknife+ and TADPOLE scored interval calibration. → *We already lead here:* every estimate carries a 90% band validated at 89–94% coverage.
 2. **Generalisation and fairness are tested, not assumed.** RASKA won on cross-country fairness. → *We added this* (validation E6).
 3. **Explanations point at the evidence.** ExplainableAD highlights the segments behind a score. → *We already do this:* every coach claim links to its exact blocks and trials, plus the score breakdown per block.
 4. **Simple models win.** Frog beat complex models, and RASKA used gradient boosting rather than deep nets. → Supports our transparent Bayesian approach.
@@ -45,7 +45,7 @@ Both run with `npm run validate` and appear at `/validation` and in `docs/valida
 ## Where we already outperform the winners
 
 - **Calibrated uncertainty for every estimate, for every user, live.** The winners report uncertainty in a paper. We show it in the product and validate it.
-- **Adaptive measurement.** None of the winners chooses the next test to maximise information. Ours does, and it is 12% more accurate at equal effort.
+- **Adaptive measurement.** None of the winners chooses the next test to maximise information. Ours does, and it is 11% more accurate at equal effort.
 - **Explanations a user can check.** ExplainableAD highlights segments. Our coach's every sentence is verified against the evidence server-side, and unsupported claims are dropped.
 - **An AI-collaboration metric.** No comparable entry measures how people work with AI, or resists automation bias.
 - **Non-clinical by construction.** The dementia winners operate in clinical territory. We stay out of it, which the brief requires.

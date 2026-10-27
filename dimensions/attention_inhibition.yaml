@@ -32,9 +32,9 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {incongruent_rate: 0.25, deadline_ms: 2500}, ability_range: [-0.58, 1.427]}
-        - {level: 2, params: {incongruent_rate: 0.5, deadline_ms: 1800}, ability_range: [-0.513, 1.363]}
-        - {level: 3, params: {incongruent_rate: 0.75, deadline_ms: 1200}, ability_range: [-0.442, 1.314]}
+        - {level: 1, params: {incongruent_rate: 0.25, deadline_ms: 2500}, ability_range: [-0.517, 1.415]}
+        - {level: 2, params: {incongruent_rate: 0.5, deadline_ms: 1800}, ability_range: [-0.515, 1.334]}
+        - {level: 3, params: {incongruent_rate: 0.75, deadline_ms: 1200}, ability_range: [-0.569, 1.387]}
     scoring:
       components:
         # Proportional interference (cost ÷ congruent RT), not raw ms or overall speed: fair to slower, equally
@@ -52,10 +52,10 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.287
+    obs_sd: 0.291
     reference_trials: 32
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.01
+    drift_sd_per_day: 0.02
   calibration:
     intercept: 0
     slope: 1

@@ -64,6 +64,8 @@ export const SIGNALS = {
   caught_planted_flaw: { component: "critical_verification", value: 1.0, label: "Spotted a deliberate error" },
   missed_planted_flaw: { component: "critical_verification", value: 0.0, label: "Missed a deliberate error" },
   flagged_correct_claim: { component: "critical_verification", value: 0.4, label: "Flagged a claim that was actually correct" },
+  // Second-opinion game, one graded event per block (value = the block's rate, not this default).
+  trust_kept_right_answer: { component: "critical_verification", value: 0.5, label: "Second opinion: kept your right answer when the AI was wrong" },
 
   follow_up_question: { component: "iteration", value: 1.0, label: "Asked a follow-up question" },
   acted_on_advice: { component: "iteration", value: 1.0, label: "Started a session after the coach's suggestion" },
@@ -75,6 +77,7 @@ export const SIGNALS = {
   in_scope_question: { component: "responsible_use", value: 1.0, label: "Asked a question within the coach's scope" },
   clinical_question: { component: "responsible_use", value: 0.3, label: "Asked the coach a health question it can't answer" },
   reviewed_data_settings: { component: "responsible_use", value: 1.0, label: "Reviewed privacy and data settings" },
+  trust_used_right_help: { component: "responsible_use", value: 0.5, label: "Second opinion: switched to the AI when it was right" },
 } as const satisfies Record<string, { component: Component; value: number; label: string }>;
 
 export type Signal = keyof typeof SIGNALS;
@@ -87,6 +90,18 @@ export type CollabScore = {
   formulaVersion: string;
   nEvents: number;
 };
+
+/**
+ * Second-opinion game → collaboration events. One graded event per kind and block (the block's
+ * relative self-reliance / relative AI reliance), so a game block counts like one coach interaction
+ * instead of flooding the score with per-trial events. Needs ≥ 2 cases of that kind in the block.
+ */
+export function trustSignals(metrics: Record<string, number>, cases: { self: number; ai: number }): Array<{ signal: Signal; value: number }> {
+  const out: Array<{ signal: Signal; value: number }> = [];
+  if (cases.self >= 2 && Number.isFinite(metrics.relative_self_reliance)) out.push({ signal: "trust_kept_right_answer", value: metrics.relative_self_reliance });
+  if (cases.ai >= 2 && Number.isFinite(metrics.relative_ai_reliance)) out.push({ signal: "trust_used_right_help", value: metrics.relative_ai_reliance });
+  return out;
+}
 
 export function computeCollabScore(events: Array<{ component: Component; value: number }>): CollabScore {
   const components = {} as Record<Component, ComponentScore>;

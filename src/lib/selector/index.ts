@@ -1,6 +1,7 @@
 import type { Dimension, DimensionTask, Paradigm } from "../dimensions/schema";
 import { CENSORED_SD_MULTIPLIER, CENSOR_MARGIN } from "../scoring";
 import { expectedPosteriorSd, toPercent, Z90, type Posterior } from "../profiler";
+import { inSentence } from "../text";
 
 export type SelectionMode = "assessment" | "training";
 
@@ -88,7 +89,7 @@ export function selectNext(input: SelectorInput): Selection | null {
       reason: {
         rule: "max_expected_uncertainty_reduction",
         expectedSdReduction: best.reduction,
-        note: `Your ${best.dim.name.toLowerCase()} estimate is still ±${toPercent(Z90 * post.sd)}% wide, the most we can narrow right now. ` +
+        note: `Your ${inSentence(best.dim.name)} estimate is still ±${toPercent(Z90 * post.sd)}% wide, the most we can narrow right now. ` +
           `One ${best.task.name} block at level ${best.level} should narrow it to about ±${toPercent(Z90 * after)}%.`,
       },
     };

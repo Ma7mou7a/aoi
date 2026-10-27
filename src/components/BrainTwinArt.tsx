@@ -13,7 +13,7 @@ const LEFT = "M218,42 C170,34 112,44 82,86 C52,126 46,178 58,224 C70,270 102,300
 const RIGHT = "M222,42 C270,34 328,44 358,86 C388,126 394,178 382,224 C370,270 338,300 300,312 C270,321 240,318 222,312 Z";
 
 /** Skill node positions on the circuit hemisphere (fixed order = categorical slot order). */
-const NODES: Array<[number, number]> = [[268, 92], [326, 128], [262, 170], [348, 196], [292, 238], [252, 282]];
+const NODES: Array<[number, number]> = [[268, 92], [326, 128], [262, 170], [348, 196], [292, 238], [252, 282], [318, 276], [300, 60]];
 
 function rng(seed: number) {
   let a = seed >>> 0;

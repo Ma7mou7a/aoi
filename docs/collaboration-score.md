@@ -46,6 +46,8 @@ Every signal is emitted by a concrete action in the app and stored in `collab_ev
 | `in_scope_question` | Responsible use | 1.0 | Asked a question the coach can answer (about learning) |
 | `clinical_question` | Responsible use | 0.3 | Asked about a health condition, which is outside a non-clinical tool's scope |
 | `reviewed_data_settings` | Responsible use | 1.0 | Opened privacy & data settings (at most once a week) |
+| `trust_kept_right_answer` | Critical verification | graded | Second-opinion game: the block's relative self-reliance (kept a right answer when the AI was wrong). One event per block with ≥ 2 such cases |
+| `trust_used_right_help` | Responsible use | graded | Second-opinion game: the block's relative AI reliance (switched to the AI when it was right). One event per block with ≥ 2 such cases |
 
 ## Spot-the-error mode (planted flaws)
 

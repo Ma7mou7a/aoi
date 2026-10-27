@@ -45,6 +45,12 @@ To measure **critical verification** (25% of the AI Collaboration Score), the op
 - the API does not reveal which claim is planted until the user answers;
 - **every** planted error is revealed and corrected right after the user answers, or when they move on.
 
+## Second-opinion game (an AI helper that is sometimes wrong on purpose)
+
+- The instructions state it before every block: the helper is right most of the time but sometimes wrong on purpose.
+- Practice trials reveal whether the helper was right, and the result screen explains what the score measures.
+- It only uses arithmetic comparisons with no personal content, and its results are compared with the user's own history only.
+
 ## Emotion-aware features
 
 Fatigue and frustration are **inferred only from behaviour** (slowing responses, error streaks, session length, focus loss, abandoned blocks). The inference is shown with the cues behind it, labelled as a guess ("you know best"), can be dismissed, never changes a score, and only adjusts the next training block's difficulty by one level. No affect is ever inferred from face or voice.

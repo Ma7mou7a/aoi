@@ -23,6 +23,7 @@ const METRIC_LABELS: Record<string, string> = {
   switch_cost_ms: "Slow-down after a rule switch",
   switch_cost_ratio: "Slow-down after a switch (share of your usual speed)",
   switch_cost_errors: "Extra errors after a switch",
+  appropriate_reliance: "Right calls when the AI disagreed",
 };
 
 /** One extra plain-language line per paradigm. */
@@ -33,6 +34,8 @@ function detail(paradigm: string, m: Record<string, number>) {
   if (paradigm === "symbol_digit") return `${fmt("correct_per_minute", m.correct_per_minute)} correct per minute at ${fmt("accuracy", m.accuracy)} accuracy.`;
   if (paradigm === "task_switching") return `Switching rules slowed you by ${fmt("switch_cost_ms", m.switch_cost_ms)}; overall accuracy ${fmt("accuracy", m.accuracy)}.`;
   if (paradigm === "matrices") return `You solved ${fmt("accuracy", m.accuracy)} of the puzzles.`;
+  if (paradigm === "trust_machine")
+    return `The AI disagreed with you ${m.n_disagreements ?? 0} times. When it was wrong you kept your answer ${fmtShare(m.relative_self_reliance)}; when it was right you switched ${fmtShare(m.relative_ai_reliance)}. You followed its advice on ${fmt("accuracy", m.followed_advice_rate)} of trials.`;
   return "";
 }
 
@@ -45,11 +48,14 @@ const FLAG_TEXT: Record<ValidityFlag, string> = {
   focus_lost: "The window lost focus several times during the block.",
 };
 
+/** Share for the reliance rates (they use a small-sample correction, so show "about"). */
+const fmtShare = (v: number) => (Number.isFinite(v) ? `about ${pct(v)} of the time` : "(no such cases this block)");
+
 function fmt(metric: string, v: number) {
   if (!Number.isFinite(v)) return "n/a";
   if (metric.endsWith("_ms")) return `${Math.round(v)} ms`;
   if (metric.endsWith("_ratio")) return `+${Math.round(v * 100)}%`;
-  if (metric.endsWith("_rate") || metric.endsWith("accuracy")) return pct(v);
+  if (metric.endsWith("_rate") || metric.endsWith("accuracy") || metric === "appropriate_reliance") return pct(v);
   if (metric === "span" || metric === "total_score" || metric === "correct_per_minute") return String(Math.round(v));
   if (metric === "switch_cost_errors") return `${Math.round(v * 100)} pts`;
   return v.toFixed(2);

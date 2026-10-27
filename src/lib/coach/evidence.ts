@@ -109,6 +109,12 @@ function factsFor(paradigm: string, trials: TrialRow[]): Array<{ label: string; 
     facts.push({ label: "errors right after a rule switch", trials: by((t) => t.stimulus.switch === true && t.correct === false) });
     facts.push({ label: "errors when the rule stayed the same", trials: by((t) => t.stimulus.switch === false && t.correct === false) });
     facts.push({ label: "your slowest answers after a switch", trials: slowest(by((t) => t.stimulus.switch === true && !!t.correct)) });
+  } else if (paradigm === "trust_machine") {
+    const disagreed = (t: TrialRow) => t.stimulus.initial != null && t.stimulus.initial !== t.stimulus.advice;
+    facts.push({ label: "times you kept your right answer when the AI disagreed", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === false && !!t.correct) });
+    facts.push({ label: "times you switched to a wrong AI suggestion", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === false && t.correct === false) });
+    facts.push({ label: "times you switched to correct AI advice", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === true && !!t.correct) });
+    facts.push({ label: "times you kept your answer when the AI was right", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === true && t.correct === false) });
   } else if (paradigm === "matrices") {
     facts.push({ label: "puzzles solved", trials: by((t) => !!t.correct) });
     facts.push({ label: "puzzles missed", trials: by((t) => t.correct === false) });

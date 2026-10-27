@@ -40,7 +40,7 @@ export default function ValidationPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Band coverage" value={pct(avg((x) => x.coverage90))} note="average over 6 skills · target 90%" />
+        <Stat label="Band coverage" value={pct(avg((x) => x.coverage90))} note={`average over ${after.length} skills · target 90%`} />
         <Stat label="Mean error" value={`±${pct(avg((x) => x.mae))}`} note={`after ${data.meta.blocksPerUser} blocks`} />
         <Stat label="Adaptive vs random" value={`${Math.round(gain * 100)}% better`} note="error at equal budget" />
         <Stat label="Cheating caught" value={pct(cheatFlags.reduce((a, b) => a + b, 0) / cheatFlags.length)} note={`false alarms ${pct(genuineFlags.reduce((a, b) => a + b, 0) / genuineFlags.length)}`} />

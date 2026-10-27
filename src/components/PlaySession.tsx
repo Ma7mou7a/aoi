@@ -7,6 +7,7 @@ import type { BlockSpec } from "@/lib/tasks/registry";
 import { BlockResultCard } from "./BlockResultCard";
 import { CorsiTask } from "./tasks/CorsiTask";
 import { MatricesTask } from "./tasks/MatricesTask";
+import { TrustMachineTask } from "./tasks/TrustMachineTask";
 import { SymbolDigitTask } from "./tasks/SymbolDigitTask";
 import { TaskSwitchingTask } from "./tasks/TaskSwitchingTask";
 import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
@@ -93,6 +94,8 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
           return <TaskSwitchingTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
         case "matrices":
           return <MatricesTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
+        case "trust_machine":
+          return <TrustMachineTask key={state.spec.seed} spec={state.spec} onFinish={onFinish} />;
         default:
           return <p>Task “{state.spec.task.paradigm}” is not available yet.</p>;
       }

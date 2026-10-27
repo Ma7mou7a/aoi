@@ -9,6 +9,7 @@
  *   E4  Growth: does the twin track a user whose ability improves over a month?
  *   E5  Forecasts: are 7-day growth forecasts accurate and their bands honest? Scored like the TADPOLE
  *       challenge (mean absolute error + coverage probability accuracy), against a no-change baseline.
+ *   E7  Second-opinion game: does it measure reliance rather than arithmetic, and do blind strategies fail?
  *   E6  Fairness: are estimates equally accurate for players on a laggy device or with a slower,
  *       equally accurate response style? (bias and coverage per subgroup, as in the PREPARE winners)
  *
@@ -29,6 +30,8 @@ import { levelOf, scoreBlock } from "../src/lib/scoring";
 import { predictedComposite, selectNext } from "../src/lib/selector";
 import { simulateBlock, type Behaviour } from "../src/lib/sim";
 import { AVAILABLE_PARADIGMS } from "../src/lib/tasks/registry";
+import { generateTrustMachine, simulateTrustMachine, type TrustParams, type TrustStrategy } from "../src/lib/tasks/trustMachine";
+import { trustSignals } from "../src/lib/collab/score";
 
 const args = process.argv.slice(2);
 const N_USERS = Number(args[args.indexOf("--users") + 1]) || 500;
@@ -350,6 +353,80 @@ function fairnessStudy() {
 }
 const fairness = fairnessStudy();
 
+// ── E7: second-opinion game: does it measure reliance, and does it reward the right strategy? ─────
+/**
+ * (a) Discriminant check: 600 players with independent reliance skill and arithmetic play one level-2 block.
+ *     The score (appropriate reliance) should follow reliance, not arithmetic; the naive alternative
+ *     (final accuracy) is shown for comparison.
+ * (b) Strategies: blind "always follow the AI" and "always keep my answer" vs calibrated players,
+ *     scored on the dimension and on the collaboration components the game feeds (3 blocks each).
+ */
+function trustStudy() {
+  const dim = cal.find((d) => d.id === "ai_reliance");
+  if (!dim) return null;
+  const task = dim.tasks[0];
+  const p = { ...task.params, ...levelOf(task, 2).params } as unknown as TrustParams;
+  const rng = createRng(8);
+  const block = (reliance: number, arithmetic: number, strategy: TrustStrategy) => {
+    const seed = rng.int(2 ** 31);
+    const trials = simulateTrustMachine(generateTrustMachine(p, seed), p, reliance, createRng(seed ^ 0x5bd1e995), { arithmetic, strategy, blockSeed: seed });
+    return { trials, score: scoreBlock(dim, task, 2, trials) };
+  };
+  const rows = Array.from({ length: 600 }, () => {
+    const reliance = rng.next(), arithmetic = rng.next();
+    const { score } = block(reliance, arithmetic, "calibrated");
+    return { reliance, arithmetic, aor: score.metrics.appropriate_reliance, acc: score.metrics.accuracy };
+  }).filter((r) => Number.isFinite(r.aor));
+  const col = (k: keyof (typeof rows)[number]) => rows.map((r) => r[k]);
+  const discriminant = {
+    players: rows.length,
+    scoreVsReliance: round(pearson(col("aor"), col("reliance"))),
+    scoreVsArithmetic: round(pearson(col("aor"), col("arithmetic"))),
+    finalAccuracyVsReliance: round(pearson(col("acc"), col("reliance"))),
+    finalAccuracyVsArithmetic: round(pearson(col("acc"), col("arithmetic"))),
+  };
+  const strategies = ([["Always follow the AI", "always_follow", 0.5], ["Always keep my answer", "always_keep", 0.5], ["Calibrated, average skill", "calibrated", 0.5], ["Calibrated, high skill", "calibrated", 0.9]] as const).map(([label, strategy, reliance]) => {
+    const aor: number[] = [], verification: number[] = [], useOfHelp: number[] = [];
+    for (let u = 0; u < 300; u++) {
+      const arithmetic = rng.next();
+      const events: Array<{ signal: string; value: number }> = [];
+      for (let b = 0; b < 3; b++) {
+        const { trials, score } = block(reliance, arithmetic, strategy);
+        if (b === 0) aor.push(score.metrics.appropriate_reliance);
+        const dis = trials.filter((t) => !t.isPractice && t.stimulus.initial != null && t.stimulus.initial !== t.stimulus.advice);
+        events.push(...trustSignals(score.metrics, { self: dis.filter((t) => t.stimulus.aiCorrect === false).length, ai: dis.filter((t) => t.stimulus.aiCorrect === true).length }));
+      }
+      // Component score as the collaboration formula computes it (prior 0.5 with strength 2).
+      const comp = (sig: string) => { const vs = events.filter((e) => e.signal === sig).map((e) => e.value); return (vs.reduce((a, b) => a + b, 0) + 1) / (vs.length + 2); };
+      verification.push(comp("trust_kept_right_answer"));
+      useOfHelp.push(comp("trust_used_right_help"));
+    }
+    const f = aor.filter(Number.isFinite);
+    return { label, appropriateReliance: round(mean(f)), verification: round(mean(verification)), useOfHelp: round(mean(useOfHelp)) };
+  });
+  // (c) How many blocks of the game does the twin need? Users play only this game (adaptive level),
+  //     and the twin's estimate after k blocks is compared with their true reliance skill.
+  const byBlocks = [1, 3, 6, 10].map((k) => {
+    const truth: number[] = [], est: number[] = [], covered: number[] = [];
+    for (const t of evalUsers.slice(0, 200)) {
+      let post = priorFor(dim, T0);
+      for (let b = 0; b < k; b++) {
+        const s = selectNext({ dimensions: [dim], posteriors: { [dim.id]: post }, mode: "assessment", available: AVAILABLE_PARADIGMS, targetSd: 0 })!;
+        const params = { ...task.params, ...levelOf(task, s.level).params };
+        const sc = scoreBlock(dim, task, s.level, simulateBlock("trust_machine", params, clamp01(t[dim.id] + 0.03 * rng.normal()), rng.int(2 ** 31)));
+        post = updatePosterior(post, sc.observation, sc.observationSd, sc.validity.validTrials, T0);
+      }
+      const [lo, hi] = credibleInterval(post);
+      truth.push(t[dim.id]);
+      est.push(post.mean);
+      covered.push(t[dim.id] >= lo && t[dim.id] <= hi ? 1 : 0);
+    }
+    return { blocks: k, r: round(pearson(truth, est)), mae: round(mean(truth.map((x, i) => Math.abs(x - est[i])))), coverage90: round(mean(covered)) };
+  });
+  return { discriminant, strategies, byBlocks };
+}
+const trust = trustStudy();
+
 // ── Output ───────────────────────────────────────────────────────────────────
 const result = {
   meta: { users: N_USERS, fitUsers: fitUsers.length, evalUsers: evalUsers.length, blocksPerUser: BUDGET, generatedAt: new Date().toISOString(), truthDistribution: "N(0.5, 0.18) clamped to [0,1], independent per skill" },
@@ -360,6 +437,7 @@ const result = {
   e4: { ...growthSummary, sweep: growthSweep },
   e5: forecastSummary,
   e6: fairness,
+  e7: trust,
 };
 writeFileSync(path.join(process.cwd(), "public", "validation.json"), JSON.stringify(result));
 
@@ -425,7 +503,24 @@ ${baseDims.map((d) => `| ${names[d.id]} | ${fairness.map((g) => `bias ${g.bySkil
 
 Bias in points (estimate − truth); then 90% band coverage. Device type is logged with every session, so a per-device correction can be fitted once real data shows a shift.
 
-## Limitations
+${trust ? `## E7: The second-opinion game (AI reliance)
+
+Two-stage judge–advisor design (Schemmer et al. 2023): answer, see the AI helper's answer, decide. Only disagreements count, conditional on whether the first answer was right.
+
+**Does it measure reliance or arithmetic?** ${trust.discriminant.players} simulated players with *independent* reliance skill and arithmetic each played one block.
+
+| Measure | r with reliance skill | r with arithmetic |
+|-|-|-|
+| Appropriate reliance (our score) | **${trust.discriminant.scoreVsReliance}** | **${trust.discriminant.scoreVsArithmetic}** |
+| Final accuracy (naive alternative) | ${trust.discriminant.finalAccuracyVsReliance} | ${trust.discriminant.finalAccuracyVsArithmetic} |
+
+**Do blind strategies fail?** 300 players per strategy, 3 blocks each.
+
+| Strategy | Appropriate reliance (0.5 = chance) | Collaboration: verification | Collaboration: using AI help |
+|-|-|-|-|
+${trust.strategies.map((s) => `| ${s.label} | ${s.appropriateReliance} | ${s.verification} | ${s.useOfHelp} |`).join("\n")}
+
+` : ""}## Limitations
 
 - The abilities and task behaviour are simulated. The simulators encode plausible relations (e.g. higher ability means a higher n-back hit rate and smaller Stroop interference), not norms. The study shows the pipeline is internally consistent and calibratable, not that it measures cognition in real people.
 - The skills are simulated as independent. Real skills correlate, and a hierarchical model could share strength between them.
@@ -452,4 +547,4 @@ if (APPLY) {
   }
 }
 
-console.log(JSON.stringify({ calibration, before: before.summary, after: after.summary, e2_at_6: at(6), e2_at_18: at(18), e3: robustness, e4: growthSummary, e5: forecastSummary, e6: fairness, applied: APPLY }, null, 1));
+console.log(JSON.stringify({ calibration, before: before.summary, after: after.summary, e2_at_6: at(6), e2_at_18: at(18), e3: robustness, e4: growthSummary, e5: forecastSummary, e6: fairness, e7: trust, applied: APPLY }, null, 1));

@@ -33,9 +33,9 @@ tasks:
       target_success: 0.75
       # span is adapted inside the block (staircase); level sets the starting span
       levels:
-        - {level: 1, params: {start_span: 3, backward: false}, ability_range: [-0.101, 1.087]}
-        - {level: 2, params: {start_span: 4, backward: false}, ability_range: [-0.063, 1.135]}
-        - {level: 3, params: {start_span: 4, backward: true}, ability_range: [-0.026, 1.283]}
+        - {level: 1, params: {start_span: 3, backward: false}, ability_range: [-0.124, 1.122]}
+        - {level: 2, params: {start_span: 4, backward: false}, ability_range: [-0.081, 1.15]}
+        - {level: 3, params: {start_span: 4, backward: true}, ability_range: [-0.065, 1.319]}
     scoring:
       components:
         - {metric: span, weight: 0.7, normalise: {method: linear, min: 2, max: 8}}
@@ -51,10 +51,10 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.107
+    obs_sd: 0.109
     reference_trials: 10
     invalid_block_sd_multiplier: 2.5
-    drift_sd_per_day: 0.01
+    drift_sd_per_day: 0.02
   calibration:
     intercept: 0
     slope: 1

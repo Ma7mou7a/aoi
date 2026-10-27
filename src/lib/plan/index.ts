@@ -1,6 +1,7 @@
 import type { Dimension, Paradigm } from "../dimensions/schema";
 import { Z90, type Posterior } from "../profiler";
 import { predictedComposite } from "../selector";
+import { inSentence } from "../text";
 
 export type PlanItemDraft = {
   dimensionId: string;
@@ -45,7 +46,7 @@ export function generateWeeklyPlan(input: {
       Math.abs(predictedComposite(p.mean, l.ability_range) - target) < Math.abs(predictedComposite(p.mean, best.ability_range) - target) ? l : best,
     ).level;
     const reason = !measured
-      ? `Not measured yet: a first block gives your ${dim.name.toLowerCase()} estimate a starting point.`
+      ? `Not measured yet: a first block gives your ${inSentence(dim.name)} estimate a starting point.`
       : uncertainty > 0.6
         ? `The band is still ±${pct(Z90 * p.sd)}% wide: more blocks will sharpen the estimate.`
         : `About ${pct(p.mean)}% now: level ${level} keeps you in the growth zone (~${pct(target)}% success).`;
@@ -72,7 +73,7 @@ export function generateWeeklyPlan(input: {
 
   const top = scored.sort((a, b) => b.priority - a.priority)[0];
   return {
-    rationale: `${total} blocks this week, about 3 per session. Most go to ${top.dim.name.toLowerCase()}, where ${
+    rationale: `${total} blocks this week, about 3 per session. Most go to ${inSentence(top.dim.name)}, where ${
       top.priority >= 1.2 ? "nothing is measured yet" : "the estimate is least certain or has the most room to grow"
     }.`,
     items,

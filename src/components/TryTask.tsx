@@ -8,12 +8,13 @@ import { levelOf, scoreBlock, type BlockScore } from "@/lib/scoring";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { CorsiTask } from "./tasks/CorsiTask";
 import { MatricesTask } from "./tasks/MatricesTask";
+import { TrustMachineTask } from "./tasks/TrustMachineTask";
 import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
 import { StroopTask } from "./tasks/StroopTask";
 import { SymbolDigitTask } from "./tasks/SymbolDigitTask";
 import { TaskSwitchingTask } from "./tasks/TaskSwitchingTask";
 
-const RENDERERS = { n_back: NBackTask, stroop: StroopTask, corsi: CorsiTask, symbol_digit: SymbolDigitTask, task_switching: TaskSwitchingTask, matrices: MatricesTask } as const;
+const RENDERERS = { n_back: NBackTask, stroop: StroopTask, corsi: CorsiTask, symbol_digit: SymbolDigitTask, task_switching: TaskSwitchingTask, matrices: MatricesTask, trust_machine: TrustMachineTask } as const;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 /** Practice mode: play any task at any level; scored in the browser with the real pipeline, nothing stored. */

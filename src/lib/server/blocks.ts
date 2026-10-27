@@ -10,6 +10,8 @@ import { levelOf, scoreBlock, type BlockScore, type TrialRecord } from "../scori
 import { whatItWouldTake, type Counterfactual } from "../scoring/counterfactual";
 import { selectNext, type LastRun, type SelectionMode } from "../selector";
 import { AVAILABLE_PARADIGMS, type BlockSpec } from "../tasks/registry";
+import { trustSignals } from "../collab/score";
+import { recordSignals } from "./collab";
 import { getPosteriors } from "./profile";
 import { HttpError } from "./user";
 
@@ -199,6 +201,13 @@ export async function recordRun(input: {
 
   const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
   const whatIf = completed ? whatItWouldTake(task, input.trials) : [];
+  if (completed && task.paradigm === "trust_machine") {
+    const scoredTrials = input.trials.filter((t) => !t.isPractice && t.stimulus.initial != null);
+    const disagreed = scoredTrials.filter((t) => t.stimulus.initial !== t.stimulus.advice);
+    const cases = { self: disagreed.filter((t) => t.stimulus.aiCorrect === false).length, ai: disagreed.filter((t) => t.stimulus.aiCorrect === true).length };
+    const signals = trustSignals(score.metrics, cases);
+    if (signals.length) await recordSignals(input.userId, signals.map((s) => ({ ...s, details: { taskRunId, ...cases } })));
+  }
   return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf };
 }
 

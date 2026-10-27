@@ -68,6 +68,10 @@ function scenarios(paradigm: DimensionTask["paradigm"]): Scenario[] {
       ];
     case "matrices":
       return [{ label: "1 more puzzle solved", apply: fixOne(wrong, madeRight(() => true)) }];
+    case "trust_machine": {
+      const disagreed = (t: TrialRecord) => t.stimulus.initial != null && t.stimulus.initial !== t.stimulus.advice;
+      return [{ label: "1 more disagreement with the AI resolved correctly", apply: fixOne((t) => disagreed(t) && wrong(t), madeRight(disagreed)) }];
+    }
     default:
       // Corsi is adaptive inside the block (the staircase decides what comes next), so a single-trial
       // change has no well-defined outcome: no counterfactual rather than a made-up one.

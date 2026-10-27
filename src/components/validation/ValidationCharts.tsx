@@ -117,7 +117,7 @@ export function AdaptiveVsRandom({ data }: { data: ValidationData }) {
   const gain = Math.round((1 - last.adaptive / last.random) * 100);
   const table = <DataTable head={["Blocks", "Adaptive error", "Random error"]} rows={rows.map((r) => [r.blocks, `${r.adaptive}%`, `${r.random}%`])} />;
   return (
-    <ChartCard title="Does choosing the most informative block help?" subtitle={`Average error (RMSE across 6 skills) after each block. After ${last.blocks} blocks, adaptive selection is ${gain}% more accurate than random order.`} table={table}>
+    <ChartCard title="Does choosing the most informative block help?" subtitle={`Average error (RMSE across all skills) after each block. After ${last.blocks} blocks, adaptive selection is ${gain}% more accurate than random order.`} table={table}>
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 70, bottom: 12, left: -10 }}>

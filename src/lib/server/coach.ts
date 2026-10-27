@@ -15,6 +15,7 @@ import { getDimensions } from "../dimensions/loader";
 import { selectNext } from "../selector";
 import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { getPosteriors } from "./profile";
+import { inSentence } from "../text";
 
 /** How many recent blocks the coach can see and cite. */
 const RECENT_RUNS = 6;
@@ -103,7 +104,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
       predictionMeta = { guess: prediction, actual: outcome.actual };
       const word = { better: "better", same: "about the same", worse: "a bit lower" }[outcome.actual];
       prefix.push(
-        `You guessed “${prediction}”. Your ${outcome.skill.toLowerCase()} estimate went from ${outcome.from}% to ${outcome.to}%, so it came out ${word}${right ? ": well read!" : "."}`,
+        `You guessed “${prediction}”. Your ${inSentence(outcome.skill)} estimate went from ${outcome.from}% to ${outcome.to}%, so it came out ${word}${right ? ": well read!" : "."}`,
       );
     }
   }

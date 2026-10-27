@@ -7,6 +7,7 @@ import { generateNBack, simulateNBackResponses, type NBackParams } from "../task
 import { generateStroop, simulateStroopResponses, type StroopParams } from "../tasks/stroop";
 import { simulateSymbolDigit, type SymbolDigitParams } from "../tasks/symbolDigit";
 import { generateTaskSwitching, simulateTaskSwitching, type TaskSwitchingParams } from "../tasks/taskSwitching";
+import { generateTrustMachine, simulateTrustMachine, type TrustParams } from "../tasks/trustMachine";
 
 /** Synthetic player types: a genuine player with a latent ability, or one of four invalid behaviours. */
 export type Behaviour = "genuine" | "random" | "same_key" | "no_response" | "anticipate";
@@ -34,6 +35,10 @@ export function simulateBlock(paradigm: Paradigm, params: Record<string, unknown
         const p = params as unknown as MatricesParams;
         return simulateMatrices(generateMatrices(p, seed), p, ability, r);
       }
+      case "trust_machine": {
+        const p = params as unknown as TrustParams;
+        return simulateTrustMachine(generateTrustMachine(p, seed), p, ability, r, { blockSeed: seed });
+      }
     }
   })();
   return behaviour === "genuine" ? genuine : corrupt(paradigm, params, genuine, behaviour, createRng(seed ^ 0x9e3779b9));
@@ -47,6 +52,7 @@ function responses(paradigm: Paradigm, params: Record<string, unknown>, t: Trial
     case "symbol_digit": return Array.from({ length: Number(params.symbols) }, (_, i) => i + 1);
     case "task_switching": return ["left", "right"];
     case "matrices": return Array.from({ length: Number(params.options) }, (_, i) => i);
+    case "trust_machine": return ["left", "right"];
     case "corsi": {
       const span = (t.expected as number[]).length;
       return [rng.shuffle([...Array(Number(params.blocks)).keys()]).slice(0, span)];

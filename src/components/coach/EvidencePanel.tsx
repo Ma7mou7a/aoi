@@ -15,6 +15,10 @@ function describe(paradigm: string | null, t: EvidenceTrial): [string, string] {
   if (paradigm === "corsi") return [`${s.span} blocks: ${show(t.expected)}`, show(t.response)];
   if (paradigm === "symbol_digit") return [`${s.glyph} → ${t.expected}`, show(t.response)];
   if (paradigm === "task_switching") return [`${s.digit}, ${s.rule === "parity" ? "odd/even" : "smaller/larger"}${s.switch ? " (switch)" : ""}`, show(t.response)];
+  if (paradigm === "trust_machine") {
+    const side = (x: unknown) => (x == null ? "—" : String(x));
+    return [`${(s.left as number[]).join("+")} vs ${(s.right as number[]).join("+")}; AI said ${side(s.advice)}${s.aiCorrect ? "" : " (wrong)"}`, `first ${side(s.initial)}, final ${side(t.response)}`];
+  }
   if (paradigm === "matrices") {
     const rules = Object.entries((s.rules ?? {}) as Record<string, string>).filter(([, r]) => r !== "constant").map(([a]) => a).join(" + ");
     return [`Puzzle (${rules || "pattern"}): option ${Number(t.expected) + 1}`, t.response == null ? "—" : `option ${Number(t.response) + 1}`];

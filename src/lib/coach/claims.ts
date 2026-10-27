@@ -2,6 +2,7 @@ import { z } from "zod";
 import { packToPrompt, type EvidencePack } from "./evidence";
 import { filterClinical, NON_CLINICAL_NOTE } from "./safety";
 import { scienceToPrompt, type ScienceRef } from "./science";
+import { inSentence } from "../text";
 
 /** What the model (or the rule engine) produces: claims cite pack references, never raw ids. */
 export const coachDraftSchema = z.object({
@@ -243,7 +244,7 @@ export function ruleBasedDraft(pack: EvidencePack, nextNote?: string, science: S
   if (grown && grownRun && claims.length < 3) {
     const practice = sci("practice_effects");
     claims.push({
-      text: `Your ${grown.name.toLowerCase()} estimate is up ${grown.changePct} points since your first block.`,
+      text: `Your ${inSentence(grown.name)} estimate is up ${grown.changePct} points since your first block.`,
       why: practice.length
         ? `That's across ${grown.blocks} blocks. Part of early gains usually comes from getting used to the task itself, so the trend over the next sessions will tell you more.`
         : `That's across ${grown.blocks} blocks.`,
@@ -266,6 +267,6 @@ export function ruleBasedDraft(pack: EvidencePack, nextNote?: string, science: S
   return {
     summary: `Nice work: ${measured.length} skill${measured.length > 1 ? "s" : ""} measured so far. Here's what your results show.`,
     claims,
-    next_step: nextNote ?? `Another ${wide.name.toLowerCase()} block would narrow its band the most.`,
+    next_step: nextNote ?? `Another ${inSentence(wide.name)} block would narrow its band the most.`,
   };
 }

@@ -99,6 +99,34 @@ function corsi(trials: TrialRecord[]): Metrics {
   };
 }
 
+/**
+ * Appropriate reliance on AI advice (Schemmer et al., IUI 2023). Only trials where the helper DISAGREED
+ * with the initial answer are informative:
+ *   rsr  = share of (initial right, helper wrong) trials where the final answer stayed right,
+ *   rair = share of (initial wrong, helper right) trials where the final answer switched to right.
+ * Both use the log-linear correction (k + 0.5) / (n + 1), like d′, so 0/n and n/n stay finite.
+ * appropriate_reliance = their mean: "always follow" and "always keep" both land at 0.5, chance level.
+ */
+function trustMachine(trials: TrialRecord[]): Metrics {
+  const withInitial = trials.filter((t) => t.stimulus.initial != null && t.stimulus.aiCorrect != null);
+  const initialRight = (t: TrialRecord) => t.stimulus.initial === t.expected;
+  const selfCases = withInitial.filter((t) => initialRight(t) && t.stimulus.aiCorrect === false);
+  const aiCases = withInitial.filter((t) => !initialRight(t) && t.stimulus.aiCorrect === true);
+  const corrected = (ts: TrialRecord[]) => (ts.length ? (ts.filter((t) => t.correct).length + 0.5) / (ts.length + 1) : NaN);
+  const rsr = corrected(selfCases);
+  const rair = corrected(aiCases);
+  const both = [rsr, rair].filter(Number.isFinite);
+  return {
+    ...basic(trials),
+    appropriate_reliance: both.length ? both.reduce((a, b) => a + b, 0) / both.length : NaN,
+    relative_self_reliance: rsr,
+    relative_ai_reliance: rair,
+    initial_accuracy: rate(withInitial.filter(initialRight).length, withInitial.length),
+    followed_advice_rate: rate(trials.filter((t) => t.response != null && t.response === t.stimulus.advice).length, trials.length),
+    n_disagreements: selfCases.length + aiCases.length,
+  };
+}
+
 const METRIC_FNS: Record<Paradigm, (trials: TrialRecord[]) => Metrics> = {
   n_back: nBack,
   stroop: (ts) => conflictCost(ts, "congruent", "interference"),
@@ -106,6 +134,7 @@ const METRIC_FNS: Record<Paradigm, (trials: TrialRecord[]) => Metrics> = {
   symbol_digit: symbolDigit,
   corsi,
   matrices: basic,
+  trust_machine: trustMachine,
 };
 
 /**

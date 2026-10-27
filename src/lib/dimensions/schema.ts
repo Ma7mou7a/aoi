@@ -8,6 +8,7 @@ export const PARADIGMS = [
   "task_switching",
   "corsi",
   "matrices",
+  "trust_machine",
 ] as const;
 
 const id = z.string().regex(/^[a-z][a-z0-9_]*$/, "lower_snake_case id");

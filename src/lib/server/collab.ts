@@ -6,7 +6,8 @@ import { HttpError } from "./user";
 
 type CoachMessageRow = typeof schema.coachMessages.$inferSelect;
 
-export type SignalInput = { signal: Signal; coachMessageId?: string | null; details?: Record<string, unknown> };
+/** `value` overrides the signal's default for graded signals (e.g. a game block's rate). */
+export type SignalInput = { signal: Signal; coachMessageId?: string | null; details?: Record<string, unknown>; value?: number };
 
 /** Score from every event this user has, recomputed live (cheap: a few hundred rows at most). */
 export async function currentCollabScore(userId: string): Promise<CollabScore> {
@@ -26,7 +27,7 @@ export async function recordSignals(userId: string, inputs: SignalInput[]): Prom
         coachMessageId: i.coachMessageId ?? null,
         component: SIGNALS[i.signal].component,
         signal: i.signal,
-        value: SIGNALS[i.signal].value,
+        value: i.value ?? SIGNALS[i.signal].value,
         details: i.details ?? null,
       })),
     );
