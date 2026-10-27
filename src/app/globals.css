@@ -206,6 +206,10 @@ h1 { line-height: 1; }
 .bao[data-state="sleep"] .bao-all { animation: bao-breathe 5s ease-in-out infinite; }
 .bao-paw-left, .bao-paw-right { transition: transform 180ms ease-out; }
 
+/* Page transition (app/template.tsx): fade + small rise, transform/opacity only. */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.page-in { animation: page-in 200ms ease-out both; }
+
 /* Coach reply: words fade in; typing dots pulse. Transform/opacity only. */
 @keyframes word-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .word-in { display: inline-block; white-space: pre; animation: word-in 260ms ease-out both; }
@@ -215,7 +219,7 @@ h1 { line-height: 1; }
 .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .word-in, .typing-dots span { animation: none; opacity: 1; }
+  .word-in, .typing-dots span, .page-in { animation: none; opacity: 1; }
   .bao *, .bao .bao-all, .bao .bao-eyes, .bao .bao-zzz { animation: none !important; transition: none !important; }
   .bao[data-state="sleep"] .bao-zzz { opacity: 1; }
 }
