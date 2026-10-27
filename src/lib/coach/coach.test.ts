@@ -75,13 +75,12 @@ describe("finaliseDraft", () => {
   it("maps references to ids and drops unsupported or clinical claims", () => {
     const out = finaliseDraft(
       {
-        summary: "Good session!",
+        reply: "Good session!",
         claims: [
           { text: "You tracked letters well.", why: "High catch rate.", evidence: ["R1", factRef] },
           { text: "Made up claim.", why: "No evidence.", evidence: ["R9", "T99"] },
           { text: "This suggests ADHD.", why: "Errors.", evidence: ["R1"] },
-        ],
-        next_step: "Try 3-back next.",
+        ]
       },
       pack,
     );
@@ -91,9 +90,20 @@ describe("finaliseDraft", () => {
     expect(out.dropped.map((d) => d.reason)).toEqual(["no_valid_evidence", "clinical_language"]);
     expect(out.filteredTerms).toContain("ADHD");
   });
-  it("replaces a diagnosing summary with the non-clinical note", () => {
-    const out = finaliseDraft({ summary: "You might have dyslexia.", claims: [], next_step: "" }, pack);
+  it("replaces a diagnosing reply with the non-clinical note", () => {
+    const out = finaliseDraft({ reply: "You might have dyslexia.", claims: [] }, pack);
     expect(out.content).toMatch(/not a medical test/);
+  });
+});
+
+describe("chat replies", () => {
+  it("keep a reply with zero claims and resolve its actions", () => {
+    const out = finaliseDraft({ intent: "chat", reply: "Hi! Want to play?", claims: [], actions: [{ type: "play", skill: "working_memory", mode: "training" }], mood: "wave" }, pack, [], "", dims);
+    expect(out.content).toBe("Hi! Want to play?");
+    expect(out.claims).toEqual([]);
+    expect(out.mood).toBe("wave");
+    expect(out.actions[0].href).toBe("/play?focus=working_memory&mode=training");
+    expect(out.nextStep).toBe(out.actions[0].label);
   });
 });
 
@@ -134,12 +144,11 @@ describe("science cards", () => {
     const science = selectScience(pack);
     const out = finaliseDraft(
       {
-        summary: "Nice session.",
+        reply: "Nice session.",
         claims: [
           { text: "You caught most matches.", why: "Chunking helps.", evidence: ["R1"], science: ["S1", "S99"] },
           { text: "Practice makes perfect.", why: "Research says so.", evidence: ["S2"], science: [] },
-        ],
-        next_step: "",
+        ]
       },
       pack,
       science,
@@ -177,12 +186,11 @@ describe("number check", () => {
     const caught = pack.facts.find((f) => f.label === "matches you caught")!;
     const out = finaliseDraft(
       {
-        summary: "Good session. You beat 95% of your blocks.",
+        reply: "Good session. You beat 95% of your blocks.",
         claims: [
           { text: `You caught ${caught.count} matches.`, why: "Straight from the block.", evidence: ["R1", caught.ref] },
           { text: `You caught ${caught.count + 4} matches.`, why: "Invented.", evidence: ["R1", caught.ref] },
-        ],
-        next_step: "",
+        ]
       },
       pack,
     );
@@ -198,7 +206,7 @@ describe("what it would take", () => {
     for (const w of pack.whatIf) expect(w.toPct).toBeGreaterThan(w.fromPct);
     const w = pack.whatIf[0];
     const out = finaliseDraft(
-      { summary: "", claims: [{ text: `${w.label} would have made it ${w.toPct}%.`, why: `It was ${w.fromPct}%.`, evidence: [w.ref] }], next_step: "" },
+      { reply: "", claims: [{ text: `${w.label} would have made it ${w.toPct}%.`, why: `It was ${w.fromPct}%.`, evidence: [w.ref] }] },
       pack,
     );
     expect(out.claims).toHaveLength(1);
