@@ -12,6 +12,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { ClientAction } from "../lib/coach/actions";
+import type { Intent } from "../lib/coach/intent";
+import type { CoachMemory } from "../lib/coach/memory";
 
 // Dimension and task ids are plain text, not foreign keys: they come from
 // dimensions/*.yaml so a new dimension needs no migration.
@@ -28,7 +31,9 @@ export const users = pgTable("users", {
   locale: text("locale").notNull().default("en"),
   /** Data older than this is purged by the retention job. */
   retentionDays: integer("retention_days").notNull().default(180),
-  preferences: jsonb("preferences").$type<{ highContrast?: boolean; coachTone?: "warm" | "direct" }>().notNull().default({}),
+  preferences: jsonb("preferences").$type<{ highContrast?: boolean; coachTone?: "warm" | "direct"; researchMode?: boolean }>().notNull().default({}),
+  /** What the coach remembers between messages (goal, recent topics, lines used); see lib/coach/memory.ts. */
+  coachMemory: jsonb("coach_memory").$type<CoachMemory>().notNull().default({ recentTopics: [], recentLineIds: [], recentPlays: [], debriefsSinceBet: 0 }),
   /** SHA-256 of the user's sign-in key (the key itself is shown once and never stored). Null = no key yet. */
   signinKeyHash: text("signin_key_hash").unique(),
   createdAt: createdAt(),
@@ -202,6 +207,10 @@ export type CoachMeta = {
   prediction?: { guess: "better" | "same" | "worse" | "skip"; actual?: "better" | "same" | "worse" };
   /** S# references the model cited that were not in the science pack. */
   unknownScience?: string[];
+  /** What the user's message asked for (template coach or model). */
+  intent?: Intent;
+  /** True when this debrief offered the "Bet with Bao" card. */
+  bet?: boolean;
 };
 
 export type PlantedFlawRecord = {
@@ -226,6 +235,10 @@ export const coachMessages = pgTable("coach_messages", {
   plantedFlaw: jsonb("planted_flaw").$type<PlantedFlawRecord>(),
   /** Clinical terms removed by the safety filter, kept for auditing the filter. */
   filteredTerms: jsonb("filtered_terms").$type<string[]>().notNull().default([]),
+  /** Buttons under the reply (validated server-side). */
+  actions: jsonb("actions").$type<ClientAction[]>().notNull().default([]),
+  /** Bao's reaction shown with the reply. */
+  mood: text("mood"),
   model: text("model"),
   createdAt: createdAt(),
 }, (t) => [index("coach_messages_user_idx").on(t.userId, t.createdAt)]);
@@ -304,3 +317,19 @@ export const goals = pgTable("goals", {
   createdAt: createdAt(),
   achievedAt: timestamp("achieved_at", { withTimezone: true }),
 }, (t) => [index("goals_user_idx").on(t.userId, t.status)]);
+
+// ── Rewards: append-only bamboo ledger ───────────────────────────────────────
+
+export const rewardKind = pgEnum("reward_kind", ["daily_visit", "game_completed", "daily_plan_done", "daily_challenge", "streak_day", "badge"]);
+
+/** One row per award. The unique index makes every award idempotent (ref '' when there is none). */
+export const rewardEvents = pgTable("reward_events", {
+  id: id(),
+  userId: userRef(),
+  kind: rewardKind("kind").notNull(),
+  amount: integer("amount").notNull(),
+  /** UTC day the award belongs to. */
+  day: date("day").notNull(),
+  ref: text("ref").notNull().default(""),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex("reward_events_once_idx").on(t.userId, t.kind, t.day, t.ref)]);
