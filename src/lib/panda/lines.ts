@@ -38,7 +38,7 @@ export const LINES: Record<LineKey, string[]> = {
     "{skill} it is. I'll cheer quietly from the corner.",
     "Ready when you are. This one takes about a minute.",
     "Great choice, {name}. Your {skill} game is waiting.",
-    "Let's play! I picked the game that teaches us the most about you.",
+    "Let's play, {name}! Tap below and I'll keep you company.",
   ],
   progress: [
     "Here's where you are right now, {name}.",

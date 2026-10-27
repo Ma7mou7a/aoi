@@ -240,3 +240,11 @@ describe("pace forecasts (P#)", () => {
   });
   it("leave no P code in the text", () => expect(stripRefs("As P1 shows, keep going.")).toBe("As the forecast shows, keep going."));
 });
+
+describe("draft schema", () => {
+  it("parses a model draft whose unused action fields are empty", async () => {
+    const { coachDraftSchema } = await import("./claims");
+    const parsed = coachDraftSchema.safeParse({ intent: "play", reply: "Let's go.", claims: [], actions: [{ type: "show_progress", skill: "", mode: "", gamesPerWeek: 0 }], mood: "cheer" });
+    expect(parsed.success).toBe(true);
+  });
+});

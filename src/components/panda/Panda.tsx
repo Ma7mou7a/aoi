@@ -88,7 +88,7 @@ export function Panda({ state, size = 120, className = "" }: { state: PandaState
           <path d="M89 66 q8 -4 10 -10 q-8 1 -10 8" fill="var(--bamboo)" />
           <ellipse cx="85" cy="92" rx="8" ry="10" fill="var(--panda-ink)" />
         </g>
-        <g className="bao-zzz" fill="var(--brand)" fontFamily="var(--font-display-face), sans-serif" fontSize="12">
+        <g className="bao-zzz" aria-hidden fill="var(--brand)" fontFamily="var(--font-display-face), sans-serif" fontSize="12">
           <text x="92" y="20">z</text>
           <text x="100" y="10" fontSize="9">z</text>
         </g>

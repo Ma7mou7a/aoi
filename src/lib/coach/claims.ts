@@ -13,7 +13,7 @@ export const MAX_CLAIMS = 3;
 const rawActionSchema = z.object({
   type: z.enum(["play", "show_progress", "forecast", "set_goal", "daily_challenge"]),
   skill: z.string().optional(),
-  mode: z.enum(["training", "assessment"]).optional(),
+  mode: z.enum(["training", "assessment", ""]).optional(),
   gamesPerWeek: z.number().optional(),
 });
 
@@ -60,7 +60,7 @@ export const COACH_JSON_SCHEMA = {
         properties: {
           type: { type: "string", enum: ["play", "show_progress", "forecast", "set_goal", "daily_challenge"] },
           skill: { type: "string", description: "A skill id from the evidence pack, or empty." },
-          mode: { type: "string", enum: ["training", "assessment"] },
+          mode: { type: "string", enum: ["training", "assessment", ""], description: "training or assessment for play; empty otherwise." },
           gamesPerWeek: { type: "integer", description: "2, 4 or 7 for a forecast, else 0." },
         },
         required: ["type", "skill", "mode", "gamesPerWeek"],

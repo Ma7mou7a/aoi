@@ -246,6 +246,8 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   }
 
   const final = finaliseDraft(draft, pack, science, context, dims);
+  // A forecast answer shouldn't offer the pace that was just asked about.
+  if (classified.pace) final.actions = final.actions.filter((a) => a.forecast?.gamesPerWeek !== classified.pace);
   final.content = applyClinicalGuard(question, final.content);
   if (prefix.length) final.content = `${prefix.join(" ")} ${final.content}`;
 

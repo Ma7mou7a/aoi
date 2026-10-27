@@ -8,7 +8,7 @@ import type { Pace } from "./intent";
 export type RawAction = {
   type: "play" | "show_progress" | "forecast" | "set_goal" | "daily_challenge";
   skill?: string;
-  mode?: "training" | "assessment";
+  mode?: "training" | "assessment" | "";
   gamesPerWeek?: number;
 };
 

@@ -48,3 +48,10 @@ describe("resolveActions", () => {
   });
   it("returns nothing for nothing", () => expect(resolveActions([], dims)).toEqual([]));
 });
+
+describe("empty fields from strict structured output", () => {
+  it("accept an empty mode on non-play actions and reject it on play", () => {
+    expect(resolveActions([{ type: "show_progress", skill: "", mode: "", gamesPerWeek: 0 }], dims)).toHaveLength(1);
+    expect(resolveActions([{ type: "play", skill: "reasoning", mode: "", gamesPerWeek: 0 }], dims)).toEqual([]);
+  });
+});
