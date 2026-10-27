@@ -31,6 +31,28 @@ Then UI: panda components driven by a tiny event bus, the coach chat rebuilt fro
 - Tests are colocated as `*.test.ts` next to the module, in the style of `src/lib/motivation.test.ts`. Run one file with `npx vitest run <path>`.
 - Commit after each task, ending the message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
+## Design and craft rules (from the design-guide, frontend, plain-language, animation-performance, web-design-guidelines and design-taste-frontend skills)
+
+- **Anchor to the existing look.**
+  - Use the tokens in `src/app/globals.css` (`--brand`, `--brand-2`, `--brand-deep`, `--accent`, the tinted slate ramp, `font-display`). Don't invent a parallel palette.
+  - Bao's black and white come from new tokens `--panda-ink` / `--panda-fur`, defined for light and dark.
+  - Text contrast must meet WCAG AA. Body copy is at least 1rem.
+- **Status colours are fixed:** green = good, amber = in between, red = problem, grey = neutral. **Never use colour alone:** each state also has a word or icon. That covers the sure-o-meter, badges and validity notes.
+- **Every async surface has loading, empty and error states.** A failed user action (gift claim, forecast button, consent, Research mode switch, copy-share) shows an error toast. The only allowed silent skip is the background first-game carry-over (spec §6).
+- **Animate only `transform` and `opacity`.**
+  - Grow and shrink with `scale()`. The sure-o-meter narrows with `scaleX`, never `width`.
+  - Never use `transition: all`. List the properties.
+  - Never animate through React state per frame: count-ups write to a ref or a `motion` value, and 3D writes uniforms in `useFrame`.
+  - Keep animated `blur()` at 20 px or less.
+  - Add `will-change` only after a real stutter shows up.
+- **Avoid the "generated look" tells (taste skill) on pages we touch.**
+  - No emoji as UI icons: the bamboo counter, gift and badges use small inline SVG icons drawn in the panda's style. The daily share text may use emoji squares, because it's text people paste elsewhere.
+  - No new gradient headline text, glowing buttons or glass panels in new components.
+  - The landing hero gets one signature move (the 3D twin + Bao), not fade-and-rise on every section.
+- **Copy follows plain-language:** second person, active voice, words the user sees ("game", "score", "how sure we are"). Keep any technical aside in `<details>`.
+- **Verify visually in light AND dark**, with screenshots, at 1440×900 and 375×812, for every UI task. Exercise the interaction (click, type, submit); a page that merely renders isn't enough. Bao's poses are judged side by side on one test page (`/dev/panda`, dev-only), not guessed from the code.
+- **Run Vitest in parallel** (plain `npm test`), the way CI does.
+
 ## Review Focus
 
 1. **A brand-new user with zero games asks "how am I doing?" or "what if I play every day?"** The coach must answer warmly with a **Play** action and no forecast numbers, and must not crash on an empty pack. Test in Task 6.
@@ -371,7 +393,7 @@ it("caps the per-game gain at MAX_SLOPE_PER_DAY", () => { /* steep series → pe
   - `milestone` always gives `celebrate`, even when quiet (it's between blocks).
   - `on()` returns an unsubscribe that stops delivery.
 - [ ] **Step 2: Run** `npx vitest run src/lib/panda/bus.test.ts`. Expected: FAIL. Implement it, then run again. Expected: PASS.
-- [ ] **Step 3: Build `Panda.tsx`.**
+- [ ] **Step 3: Build `Panda.tsx`, plus a dev-only `/dev/panda` page** (it returns `notFound()` when `NODE_ENV === "production"`) that shows every state side by side in light and dark, for visual review.
   - An inline SVG on a 120×120 viewBox, with groups `body`, `head`, `ears`, `patches`, `eyes > pupils, lids`, `mouth`, `paws`, `bamboo`.
   - States are switched with a `data-state` attribute plus CSS keyframes in `globals.css`: breathing, blink every 3–6 s via a randomised `animation-delay`, wave, cheer hop, paws over eyes, Zs, celebrate jump.
   - For `watch`, the pupils translate toward `lookAt`, clamped to 3 px.
@@ -447,7 +469,7 @@ it("caps the per-game gain at MAX_SLOPE_PER_DAY", () => { /* steep series → pe
 - [ ] **Step 3: Install the dependencies.** Run `npm view motion version` and `npm view canvas-confetti version`, then `npm i -E motion@<v> canvas-confetti@<v>` and `npm i -E -D @types/canvas-confetti@<v>`.
 - [ ] **Step 4: Rebuild the top of `BlockResultCard`.**
   1. **What you did:** `plainDid`.
-  2. **What it means:** "Your <skill> score is now about <CountUp before→after>" + `sureText`, with a "sure-o-meter" bar. The bar is `BandBar` restyled: its width animates from the old band to the new. Caption: "<gamesToSure> more games and we'll be much surer".
+  2. **What it means:** "Your <skill> score is now about <CountUp before→after>" + `sureText`, with a "sure-o-meter" bar. The bar is `BandBar` restyled: an inner element scales with `scaleX` from the old band to the new one (transform only). Caption: "<gamesToSure> more games and we'll be much surer".
   3. **What's next:** the existing continue/end buttons, renamed "Next game" / "Finish", plus "Ask Bao about this game" → `/coach` with chip "Debrief my last game".
 
   Then:
@@ -557,7 +579,7 @@ it("caps the per-game gain at MAX_SLOPE_PER_DAY", () => { /* steep series → pe
   - `GET /api/rewards` → `getRewards`. `POST /api/rewards/gift` → `award(daily_visit)`, returns `{ awarded, rewards }`.
 - [ ] **Step 4: Idempotency check** (Review Focus 5). Add the script `scripts/check-rewards.ts` (run with `npx tsx scripts/check-rewards.ts`) against PGlite on a temporary user: call `award(daily_visit)` twice concurrently with `Promise.all`, and expect exactly one row and `[true, false]` in either order. Then delete the temporary user. Run it. Expected: it prints `ok`.
 - [ ] **Step 5: UI.**
-  - **`BambooCounter`** in the header (signed in): 🎋 + total, with a bump animation on change.
+  - **`BambooCounter`** in the header (signed in): an inline SVG bamboo icon (not an emoji) + total, with a `scale` bump on change.
   - **`DailyGift`** on home when `!giftClaimedToday`: a chest. Click → open animation + Bao `celebrate` + `RewardFloat` "+5".
   - **`BambooGarden`** on home: an SVG row of `gardenStalks` stalks with varied heights from a seeded rng. New stalks grow with a CSS scaleY transition.
   - **`BadgeShelf`** on the profile: earned in colour, others greyed with their `text` as a hint.
@@ -658,7 +680,11 @@ it("caps the per-game gain at MAX_SLOPE_PER_DAY", () => { /* steep series → pe
   Run `npm run seed:demo`. Expected: it prints a sign-in link; home shows the garden (12 stalks), streak 6 and the gift.
 - [ ] **Step 2: Write `docs/demo-script.md`.** It's the 5-minute path from spec §4.8, with the exact clicks and lines to type ("I want to improve my memory", "What if I play every day?"), what Bao does at each step, and a fallback note per step: no network → the template coach still answers and shows actions; WebGL missing → the SVG twin.
 - [ ] **Step 3: README.** Add one row to "What makes it different": **Experience layer**: Bao the panda, a coach that acts (play, forecast at your pace, goals), plain-words results, bamboo rewards for consistency, a daily challenge, and a 3D Brain Twin where fuzz = uncertainty. Also update the test count.
-- [ ] **Step 4: Full verification.**
+- [ ] **Step 4: UI audits.**
+  - Run the `web-design-guidelines` skill on the changed UI files (`src/components/{coach,panda,rewards,three,motion}`, `src/components/BlockResultCard.tsx`, `src/components/Onboarding.tsx`, `src/app/{page,start/page,daily/page}.tsx`) and fix every finding, or note why it doesn't apply.
+  - Run the `design-taste-frontend` critique on the signed-out landing page only (`scripts/inspect.mjs` against `http://localhost:3000/`), and fix the banned tells it reports on that page.
+  - Check the animations against `animation-performance` Phase 1–2: list every animated element with its driver and properties, and confirm transform/opacity only.
+- [ ] **Step 5: Full verification.**
   - Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` and `npm run dims:check`. Expected: all pass, with the test count printed.
   - Then walk through `docs/demo-script.md` in the browser at 1440×900 in light and dark, at 375×812, and with reduced motion. Fix anything broken before committing.
-- [ ] **Step 5: Commit** `docs: demo script, README experience row, demo seed with rewards and coach memory`.
+- [ ] **Step 6: Commit** `docs: demo script, README experience row, demo seed with rewards and coach memory`.
