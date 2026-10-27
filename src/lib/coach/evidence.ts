@@ -220,8 +220,9 @@ export function packToPrompt(pack: EvidencePack): string {
     .map((s) =>
       s.measured
         ? `- ${s.name}: estimate ${s.estimatePct}% (90% band ${s.bandPct[0]}–${s.bandPct[1]}%), ${s.blocks} block(s)` +
-          (s.changePct != null ? `, change since first measurement ${s.changePct >= 0 ? "+" : ""}${s.changePct} points` : "")
-        : `- ${s.name}: not measured yet`,
+          (s.changePct != null ? `, change since first measurement ${s.changePct >= 0 ? "+" : ""}${s.changePct} points` : "") +
+          ` [skill id: ${s.id}]`
+        : `- ${s.name}: not measured yet [skill id: ${s.id}]`,
     )
     .join("\n");
   const runs = pack.runs

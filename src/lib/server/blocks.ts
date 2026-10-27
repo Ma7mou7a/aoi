@@ -13,6 +13,7 @@ import { AVAILABLE_PARADIGMS, type BlockSpec } from "../tasks/registry";
 import { trustSignals } from "../collab/score";
 import { selfCheck, selfEstimateValue, type SelfCheck } from "../metacog";
 import { recordSignals } from "./collab";
+import { rememberPlayed } from "./coach";
 import { getPosteriors } from "./profile";
 import { HttpError } from "./user";
 
@@ -228,6 +229,7 @@ export async function recordRun(input: {
     const signals = trustSignals(score.metrics, cases);
     if (signals.length) await recordSignals(input.userId, signals.map((s) => ({ ...s, details: { taskRunId, ...cases } })));
   }
+  if (completed) await rememberPlayed(input.userId, dim.id);
   return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf, selfCheck: check };
 }
 

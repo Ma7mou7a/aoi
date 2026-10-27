@@ -335,3 +335,9 @@ export function ruleBasedDraft(pack: EvidencePack, nextNote?: string, science: S
     mood: "proud",
   };
 }
+
+/** A question about a health condition always gets the non-clinical answer first, whoever wrote the reply. */
+export function applyClinicalGuard(question: string | undefined, content: string): string {
+  if (!question || !filterClinical(question).blocked || content.startsWith(NON_CLINICAL_NOTE)) return content;
+  return `${NON_CLINICAL_NOTE} ${content}`;
+}
