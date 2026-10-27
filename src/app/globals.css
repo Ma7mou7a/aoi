@@ -206,6 +206,16 @@ h1 { line-height: 1; }
 .bao[data-state="sleep"] .bao-all { animation: bao-breathe 5s ease-in-out infinite; }
 .bao-paw-left, .bao-paw-right { transition: transform 180ms ease-out; }
 
+/* Rewards: counter bump, "+bamboo" float, garden stalks growing, gift lid. Transform/opacity only. */
+@keyframes bump { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.3); } }
+.bump { display: inline-block; animation: bump 380ms ease-out; }
+@keyframes reward-float { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.reward-float { animation: reward-float 420ms ease-out both; }
+@keyframes stalk-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.stalk-grow { transform-box: fill-box; transform-origin: 50% 100%; animation: stalk-grow 600ms ease-out both; }
+.gift-lid { transform-box: fill-box; transform-origin: 0% 100%; transition: transform 300ms ease-out; }
+.gift-lid-open, .group:hover .gift-lid { transform: rotate(-14deg) translateY(-3px); }
+
 /* Page transition (app/template.tsx): fade + small rise, transform/opacity only. */
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .page-in { animation: page-in 200ms ease-out both; }
@@ -219,7 +229,8 @@ h1 { line-height: 1; }
 .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .word-in, .typing-dots span, .page-in { animation: none; opacity: 1; }
+  .word-in, .typing-dots span, .page-in, .bump, .reward-float, .stalk-grow { animation: none; opacity: 1; }
+  .gift-lid { transition: none; }
   .bao *, .bao .bao-all, .bao .bao-eyes, .bao .bao-zzz { animation: none !important; transition: none !important; }
   .bao[data-state="sleep"] .bao-zzz { opacity: 1; }
 }

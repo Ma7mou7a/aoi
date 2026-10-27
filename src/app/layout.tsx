@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Geist_Mono, Source_Sans_3 } from "next/font/google";
 import Link from "next/link";
 import { LogoMark, SiteHeader } from "@/components/SiteHeader";
+import { getRewards } from "@/lib/server/rewards";
 import { getCurrentUser } from "@/lib/server/user";
 import "./globals.css";
 
@@ -34,13 +35,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getCurrentUser();
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className={`${display.variable} ${body.variable} ${geistMono.variable} antialiased`}>
-        <SiteHeader signedIn={(await getCurrentUser()) != null} />
+        <SiteHeader signedIn={user != null} bamboo={user ? (await getRewards(user.id)).total : undefined} />
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
         <footer className="mx-auto max-w-6xl px-4 pb-10">
           <div className="glass rounded-2xl p-6 text-sm text-slate-500 dark:text-slate-300">

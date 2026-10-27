@@ -5,6 +5,14 @@ import { BandBar } from "@/components/BandBar";
 import { BrainTwinArt, EkgLine } from "@/components/BrainTwinArt";
 import { Onboarding } from "@/components/Onboarding";
 import { Panda } from "@/components/panda/Panda";
+import { BambooGarden } from "@/components/rewards/BambooGarden";
+import { DailyGift } from "@/components/rewards/DailyGift";
+import { getDimensions } from "@/lib/dimensions/loader";
+import { pickLine } from "@/lib/panda/lines";
+import { selectNext } from "@/lib/selector";
+import { getPosteriors } from "@/lib/server/profile";
+import { getRewards } from "@/lib/server/rewards";
+import { AVAILABLE_PARADIGMS } from "@/lib/tasks/registry";
 import { getProfileView } from "@/lib/server/profile";
 import { getCurrentUser } from "@/lib/server/user";
 
@@ -102,18 +110,27 @@ export default async function Home() {
     { done: profile.dimensions.some((d) => d.id === "ai_reliance" && d.nObservations > 0), label: "Play Second opinion", hint: "how well do you trust an AI?", href: "/play?mode=training&focus=ai_reliance" },
   ];
   const open = steps.filter((x) => !x.done).length;
+  const rewards = await getRewards(user.id);
+  const greeting = pickLine("greeting", { name: user.displayName, streak: rewards.streak >= 2 ? rewards.streak : undefined }, [], Math.random).text;
+  const next = selectNext({ dimensions: getDimensions(), posteriors: await getPosteriors(user.id), mode: "assessment", available: AVAILABLE_PARADIGMS });
+  const nextSkill = next ? getDimensions().find((d) => d.id === next.dimensionId)?.name : undefined;
   const skills = profile.dimensions.map((d) => ({ id: d.id, name: d.name, mean: d.nObservations > 0 ? d.mean : 0, color: `var(--dim-${d.id}, ${d.color})` }));
   return (
     <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
       <div className="space-y-6">
+        <div className="flex items-end gap-3">
+          <Panda state="wave" size={88} className="shrink-0" />
+          <div>
+            <p className="text-lg text-slate-600 dark:text-slate-300" aria-live="polite">{greeting}</p>
+            <h1 className="text-6xl sm:text-7xl">Hi {user.displayName}</h1>
+          </div>
+        </div>
         <div>
-          <p className="font-display text-sm tracking-[0.25em] text-brand uppercase">Welcome back</p>
-          <h1 className="text-6xl sm:text-7xl">Hi <span className="text-gradient">{user.displayName}</span></h1>
           <p className="mt-3 text-slate-600 dark:text-slate-300">{measured.length} of {profile.dimensions.length} skills measured. Every game teaches your twin a little more about you.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Link href="/play" className="rounded-2xl bg-brand p-5 text-white dark:text-slate-950 shadow-[0_0_30px_rgba(0,181,226,0.3)] transition hover:bg-brand-2">
-            <p className="font-display text-2xl tracking-wide uppercase">{measured.length ? "Continue assessment" : "Start your first assessment"}</p>
+            <p className="font-display text-2xl tracking-wide uppercase">{measured.length && nextSkill ? `Your next game: ${nextSkill}` : "Start your first game"}</p>
             <p className="text-sm opacity-80">About 5 minutes. Bao picks the game that teaches him most about you.</p>
           </Link>
           <Link href="/play?mode=training" className="glass rounded-2xl p-5 transition hover:border-brand">
@@ -121,6 +138,8 @@ export default async function Home() {
             <p className="text-sm text-slate-500 dark:text-slate-300">Your weakest skill, at the level where you grow fastest.</p>
           </Link>
         </div>
+        <DailyGift claimed={rewards.giftClaimedToday} />
+        <BambooGarden stalks={rewards.gardenStalks} total={rewards.total} streak={rewards.streak} frozenDays={rewards.frozenDays} />
         {open > 0 && (
           <div className="glass rounded-2xl p-5">
             <p className="font-display text-sm tracking-[0.2em] text-brand uppercase">Getting started · {steps.length - open}/{steps.length}</p>

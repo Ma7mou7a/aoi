@@ -13,6 +13,7 @@ import { BandBar } from "./BandBar";
 import { CountUp } from "./motion/CountUp";
 import { celebrate } from "./motion/celebrate";
 import { SureMeter } from "./SureMeter";
+import { RewardFloat } from "./rewards/RewardFloat";
 
 /** Typical noise of one game in the skill configs (obs_sd ~ 0.2), for the "N more games" wording only. */
 const TYPICAL_OBS_SD = 0.2;
@@ -127,6 +128,8 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
           </div>
         </div>
       </section>
+
+      <RewardFloat rewards={result.rewards ?? []} />
 
       {result.wins.length > 0 && (
         <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-base text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">

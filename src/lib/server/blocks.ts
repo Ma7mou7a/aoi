@@ -14,6 +14,7 @@ import { trustSignals } from "../collab/score";
 import { selfCheck, selfEstimateValue, type SelfCheck } from "../metacog";
 import { recordSignals } from "./collab";
 import { rememberPlayed } from "./coach";
+import { awardForRun, type EarnedReward } from "./rewards";
 import { getPosteriors } from "./profile";
 import { HttpError } from "./user";
 
@@ -79,6 +80,8 @@ export type RunResult = {
   wins: string[];
   /** Guess vs actual score, with the running calibration over recent guesses (null when skipped). */
   selfCheck: SelfCheck | null;
+  /** Bamboo earned by this game (empty for an abandoned or unreliable game). */
+  rewards: EarnedReward[];
   /** Exact "what it would take" recalculations of this block (empty for Corsi and abandoned blocks). */
   whatIf: Counterfactual[];
 };
@@ -230,7 +233,8 @@ export async function recordRun(input: {
     if (signals.length) await recordSignals(input.userId, signals.map((s) => ({ ...s, details: { taskRunId, ...cases } })));
   }
   if (completed) await rememberPlayed(input.userId, dim.id);
-  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf, selfCheck: check };
+  const rewards = completed ? await awardForRun(input.userId, { id: taskRunId, valid: score.validity.valid }) : [];
+  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf, selfCheck: check, rewards };
 }
 
 /** JSON can't hold NaN/Infinity; store them as absent. */
