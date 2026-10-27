@@ -17,7 +17,7 @@ type CoachView = { messages: ClientCoachMessage[]; collab: CollabView; needsAiAs
 type AskBody = { question?: string; prediction?: string; forecast?: NonNullable<ClientAction["forecast"]>; consent?: boolean };
 
 /** The chat with Bao: replies with buttons, quick chips, an occasional bet, and the one-time AI question. */
-export function CoachChat({ initial, micOn }: { initial: CoachView; micOn: boolean }) {
+export function CoachChat({ initial, micOn, autoDebrief = false }: { initial: CoachView; micOn: boolean; autoDebrief?: boolean }) {
   const [view, setView] = useState(initial);
   const [question, setQuestion] = useState("");
   const [betting, setBetting] = useState(false);
@@ -75,6 +75,15 @@ export function CoachChat({ initial, micOn }: { initial: CoachView; micOn: boole
 
   // A debrief starts with Bao's bet when it's due (always in research mode, otherwise now and then).
   const debrief = () => (view.offerBet ? setBetting(true) : ask({}));
+
+  // Arriving from "Ask Bao about this game": start the debrief once.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoDebrief || autoStarted.current) return;
+    autoStarted.current = true;
+    debrief();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on arrival
+  }, [autoDebrief]);
 
   const onFeedback: FeedbackFn = (messageId, claimIndex, action) => {
     call("/api/coach/feedback", { messageId, claimIndex, action })

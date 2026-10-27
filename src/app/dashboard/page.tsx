@@ -43,11 +43,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Skills measured" value={`${measured.length}/${dims.length}`} />
-        <Stat label="Blocks this week" value={String(blocksThisWeek)} note={`plan: ${data.plan.items.reduce((s, i) => s + i.blocksTarget, 0)}`} />
+        <Stat label="Games this week" value={String(blocksThisWeek)} note={`plan: ${data.plan.items.reduce((s, i) => s + i.blocksTarget, 0)}`} />
         <Stat label="Day streak" value={String(data.streak)} note={`${data.goals.sessionsLast7Days} session${data.goals.sessionsLast7Days === 1 ? "" : "s"} in the last 7 days`} />
         <Stat label="AI collaboration" value={String(data.collabScore)} note="out of 100 · see Coach" />
         <Stat label="Self-knowledge" value={data.selfKnowledge ? `±${Math.round(data.selfKnowledge.meanAbsError * 100)}` : "–"}
-          note={data.selfKnowledge ? `points off when guessing your score · ${data.selfKnowledge.blocks} guesses, ${biasWord(data.selfKnowledge.bias)}` : "guess your score after a block to start"} />
+          note={data.selfKnowledge ? `points off when guessing your score · ${data.selfKnowledge.blocks} guesses, ${biasWord(data.selfKnowledge.bias)}` : "guess your score after a game to start"} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">

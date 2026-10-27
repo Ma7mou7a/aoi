@@ -7,7 +7,8 @@ import { getCurrentUser } from "@/lib/server/user";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoachPage() {
+export default async function CoachPage({ searchParams }: { searchParams: Promise<{ ask?: string }> }) {
+  const { ask } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
@@ -21,7 +22,7 @@ export default async function CoachPage() {
           Bao explains your games in plain words, starts the right game for you and looks ahead. Every number he says is checked against your own games.
         </p>
       </div>
-      <CoachChat initial={{ messages, collab, ...state }} micOn={consents.current.microphone} />
+      <CoachChat initial={{ messages, collab, ...state }} micOn={consents.current.microphone} autoDebrief={ask === "debrief"} />
     </div>
   );
 }

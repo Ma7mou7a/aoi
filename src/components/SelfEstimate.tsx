@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BlockSpec } from "@/lib/tasks/registry";
+import { Panda } from "./panda/Panda";
 
 /**
  * "How sure are you?": between the end of a block and its result, the user guesses the block score.
@@ -23,9 +24,10 @@ export function SelfEstimate({ spec, onDone }: { spec: BlockSpec; onDone: (guess
     <div className="mx-auto max-w-md space-y-6 text-center">
       <div>
         <p className="text-sm font-medium" style={{ color: spec.dimension.color }}>{spec.dimension.name}</p>
-        <h2 className="text-4xl">How do you think it went?</h2>
-        <p className="mt-2 text-slate-600 dark:text-slate-300">
-          Guess your block score before you see it. Knowing how well you did is a skill too, and it helps you judge when to trust an AI.
+        <div className="mt-2 flex justify-center"><Panda state="think" size={72} /></div>
+        <h2 className="text-4xl">Guess your score?</h2>
+        <p className="mt-2 text-base text-slate-600 dark:text-slate-300">
+          Bao wants your guess before he shows you. Knowing how well you did is a skill too, and it helps you judge when to trust an AI.
         </p>
       </div>
       <div className="glass space-y-3 rounded-2xl p-5">

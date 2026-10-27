@@ -17,8 +17,8 @@ const STATS: Array<[string, string]> = [
 ];
 
 const PILLARS: Array<[string, string, string, string, string]> = [
-  ["01", "Assess", "Six classic tasks from cognitive science (N-back, Stroop, Corsi, task switching, symbol coding, generated matrices), plus a second-opinion game that measures how well you rely on an AI helper. The agent picks whichever block teaches it most about you.", "/try", "Try a task, no sign-up"],
-  ["02", "Understand", "A Bayesian Brain Twin: every skill has an estimate and a 90% band that narrows as you play. Tested on 500 simulated users, the band holds the true level about 9 times in 10.", "/validation", "See the validation"],
+  ["01", "Assess", "Six classic tasks from cognitive science (N-back, Stroop, Corsi, task switching, symbol coding, generated matrices), plus a second-opinion game that measures how well you rely on an AI helper. Bao picks whichever game teaches him most about you.", "/try", "Try a task, no sign-up"],
+  ["02", "Understand", "A Bayesian Brain Twin: every skill has a score and a range that shows how sure we are, and it narrows as you play. Tested on 500 simulated users, the range holds the true level about 9 times in 10.", "/validation", "See the validation"],
   ["03", "Coach", "Every sentence the AI coach writes cites the exact trials behind it, and a filter keeps it non-clinical. Spot-the-error mode trains you to check AI instead of trusting it.", "/skills", "How each skill is measured"],
   ["04", "Grow", "Adaptive difficulty keeps you near 75% success, a weekly plan targets what matters, and forecasts with bands show where you are heading.", "/dashboard", "Open the dashboard"],
 ];

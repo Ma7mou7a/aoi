@@ -34,13 +34,13 @@ export function RadarBand({ dims }: { dims: Dim[] }) {
 
   const table = (
     <DataTable
-      head={["Skill", "Estimate", "90% band", "Blocks"]}
+      head={["Skill", "Score", "Likely range (90%)", "Games"]}
       rows={dims.map((d) => [d.name, d.nObservations ? `${pct(d.mean)}%` : "not measured", `${pct(d.ci[0])}–${pct(d.ci[1])}%`, d.nObservations])}
     />
   );
 
   return (
-    <ChartCard title="Your profile now" subtitle="Line: current estimate. Shaded ring: where your level most likely is (90%). Narrower = more certain." table={table}>
+    <ChartCard title="Your profile now" subtitle="Line: your score now. Shaded ring: where your level most likely is (90%). Narrower = we're more sure." table={table}>
       <div className="relative mx-auto w-full max-w-[580px]">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={dims.map((d) => `${d.name} ${pct(d.mean)}%, band ${pct(d.ci[0])} to ${pct(d.ci[1])}`).join("; ")}>
           {[0.25, 0.5, 0.75, 1].map((r) => (
@@ -92,7 +92,7 @@ export function RadarBand({ dims }: { dims: Dim[] }) {
         </svg>
         {h && (
           <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-lg border px-3 py-2 text-xs shadow-sm" style={{ background: "var(--chart-surface)", borderColor: "var(--chart-grid)", color: "var(--chart-ink)" }}>
-            <b>{h.name}</b>: {h.nObservations ? `${pct(h.mean)}%` : "not measured yet"} · band {pct(h.ci[0])}–{pct(h.ci[1])}% · {h.nObservations} block{h.nObservations === 1 ? "" : "s"}
+            <b>{h.name}</b>: {h.nObservations ? `${pct(h.mean)}%` : "not measured yet"} · likely {pct(h.ci[0])}–{pct(h.ci[1])}% · {h.nObservations} game{h.nObservations === 1 ? "" : "s"}
           </div>
         )}
       </div>

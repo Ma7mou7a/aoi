@@ -15,7 +15,7 @@ describe("assessment mode", () => {
     expect(s.dimensionId).toBe("visuospatial_memory");
     expect(s.reason.rule).toBe("max_expected_uncertainty_reduction");
     expect(s.reason.expectedSdReduction).toBeGreaterThan(0);
-    expect(s.reason.note).toMatch(/visuospatial memory estimate is still ±33% wide/);
+    expect(s.reason.note).toMatch(/least sure about your visuospatial memory so far \(±33%\)/);
   });
   it("only offers paradigms the front end can render", () => {
     const s = selectNext({ dimensions, posteriors: allAt(0.5, 0.2), mode: "assessment", available: ["n_back"] })!;

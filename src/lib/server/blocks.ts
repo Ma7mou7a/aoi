@@ -56,7 +56,7 @@ export async function nextBlock(userId: string, sessionId: string, mode: Selecti
   const levels = task.difficulty.levels.map((l) => l.level);
   if (last?.affect?.easeOff && last.taskId === task.id && level > levels[0]) {
     level = levels[levels.indexOf(level) - 1] ?? levels[0];
-    reason = { ...reason, rule: `${reason.rule}+ease_off`, note: `${reason.note} We're easing off one level after a tough block.` };
+    reason = { ...reason, rule: `${reason.rule}+ease_off`, note: `${reason.note} We're easing off one level after a tough game.` };
   }
   return {
     dimension: { id: dim.id, name: dim.name, color: dim.color },

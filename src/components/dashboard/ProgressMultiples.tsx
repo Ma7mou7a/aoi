@@ -52,9 +52,9 @@ function TooltipBody({ active, payload, name }: { active?: boolean; payload?: Ar
       {isForecast ? (
         <p><b>{name}</b>: likely {p.projBand![0]}–{p.projBand![1]}% <span style={{ color: "var(--chart-ink-2)" }}>(centre {p.proj}%, if your pace continues)</span></p>
       ) : (
-        <p><b>{name}</b>: {p.mean}% <span style={{ color: "var(--chart-ink-2)" }}>(band {p.band![0]}–{p.band![1]}%)</span></p>
+        <p><b>{name}</b>: {p.mean}% <span style={{ color: "var(--chart-ink-2)" }}>(likely {p.band![0]}–{p.band![1]}%)</span></p>
       )}
-      {!p.measured && !isForecast && <p style={{ color: "var(--chart-muted)" }}>Starting assumption, before any blocks</p>}
+      {!p.measured && !isForecast && <p style={{ color: "var(--chart-muted)" }}>Starting assumption, before any games</p>}
     </div>
   );
 }
@@ -74,7 +74,7 @@ function Multiple({ d, from, now, projection }: { d: Dim; from: number; now: num
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} aria-hidden /> {d.name}
         </p>
         <p className="text-xs tabular-nums" style={{ color: "var(--chart-ink-2)" }}>
-          {pct(d.mean)}% now{change !== 0 ? ` · ${change > 0 ? "+" : ""}${change} since first estimate` : ""}
+          {pct(d.mean)}% now{change !== 0 ? ` · ${change > 0 ? "+" : ""}${change} since your first game` : ""}
         </p>
       </div>
       {history.length ? (
@@ -125,7 +125,7 @@ export function ProgressMultiples({ dims, rangeDays, now, projections, track }: 
   const from = now - rangeDays * DAY;
   const table = (
     <DataTable
-      head={["When", "Skill", "Estimate", "90% band"]}
+      head={["When", "Skill", "Score", "Likely range (90%)"]}
       rows={[
         ...dims.flatMap((d) => seriesFor(d, from, now).slice(0, -1).map((p) => [fmtTime(p.t), d.name, `${p.mean}%`, `${p.band![0]}–${p.band![1]}%`])),
         ...dims.filter((d) => projections[d.id]).map((d) => {
@@ -140,7 +140,7 @@ export function ProgressMultiples({ dims, rangeDays, now, projections, track }: 
     <ChartCard title="Progress and forecast" subtitle={`Last ${rangeDays} days, then a dashed ${Object.values(projections).find(Boolean)?.horizonDays ?? 14}-day forecast. Bands narrow with evidence and widen with time.`} table={table}>
       {track.checks.length > 0 && (
         <div className="rounded-xl p-3 text-sm" style={{ background: "var(--chart-empty)", color: "var(--chart-ink)" }}>
-          <b>Twin track record:</b> {track.checks.filter((c) => c.hit).length} of {track.checks.length} past weekly forecasts came true (the real estimate landed inside the forecast band).
+          <b>Twin track record:</b> {track.checks.filter((c) => c.hit).length} of {track.checks.length} past weekly forecasts came true (the real score landed inside the forecast range).
           <span className="block text-xs" style={{ color: "var(--chart-ink-2)" }}>
             {track.checks.slice(0, 3).map((c) => `${c.skill}: forecast ${pct(c.forBand[0])}–${pct(c.forBand[1])}%, actual ${pct(c.actual)}% ${c.hit ? "✓" : "✗"}`).join(" · ")}
           </span>
