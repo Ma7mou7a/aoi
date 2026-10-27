@@ -139,6 +139,15 @@ export default async function Home() {
           </Link>
         </div>
         <DailyGift claimed={rewards.giftClaimedToday} />
+        {!rewards.dailyDoneToday && (
+          <Link href="/daily" className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-transform hover:border-brand active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900">
+            <span>
+              <span className="block text-lg font-semibold">Today&apos;s challenge</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">One game, the same puzzle for everyone today. +15 bamboo.</span>
+            </span>
+            <span aria-hidden className="font-display text-2xl text-brand">→</span>
+          </Link>
+        )}
         <BambooGarden stalks={rewards.gardenStalks} total={rewards.total} streak={rewards.streak} frozenDays={rewards.frozenDays} />
         {open > 0 && (
           <div className="glass rounded-2xl p-5">

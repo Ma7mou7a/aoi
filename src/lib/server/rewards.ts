@@ -40,6 +40,7 @@ export async function getRewards(userId: string) {
     badges: rows.filter((r) => r.kind === "badge").map((r) => r.ref),
     gardenStalks: gardenStalks(total),
     giftClaimedToday: rows.some((r) => r.kind === "daily_visit" && r.day === today),
+    dailyDoneToday: rows.some((r) => r.kind === "daily_challenge" && r.day === today),
   };
 }
 export type RewardsView = Awaited<ReturnType<typeof getRewards>>;

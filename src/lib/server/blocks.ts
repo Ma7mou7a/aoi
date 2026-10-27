@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { inferAffect, type AffectState } from "../affect";
 import { getDimension, getDimensions } from "../dimensions/loader";
 import { newSeed } from "../rng";
+import { dailyChallenge, isDailyRun, todayUtc } from "../daily";
 import { credibleInterval, priorFor, updatePosterior, type Posterior } from "../profiler";
 import { levelOf, scoreBlock, type BlockScore, type TrialRecord } from "../scoring";
 import { whatItWouldTake, type Counterfactual } from "../scoring/counterfactual";
@@ -23,7 +24,8 @@ export const MAX_BLOCKS_PER_SESSION = 6;
 
 /** Ask the selector for the next block of this session and package it for the client. */
 /** `focus` (a dimension id) makes the session's first block come from that skill, e.g. from the getting-started checklist. */
-export async function nextBlock(userId: string, sessionId: string, mode: SelectionMode, focus?: string): Promise<BlockSpec | null> {
+/** `daily` makes the session a single game: today's shared daily challenge. */
+export async function nextBlock(userId: string, sessionId: string, mode: SelectionMode, focus?: string, daily = false): Promise<BlockSpec | null> {
   const runs = await db
     .select()
     .from(schema.taskRuns)
@@ -31,6 +33,22 @@ export async function nextBlock(userId: string, sessionId: string, mode: Selecti
     .orderBy(asc(schema.taskRuns.startedAt));
   const completed = runs.filter((r) => r.status === "completed");
   if (mode === "assessment" && completed.length >= MAX_BLOCKS_PER_SESSION) return null;
+  // A daily-challenge session is exactly one game.
+  if (runs.some((r) => r.selectionReason?.rule === "daily")) return null;
+  if (daily) {
+    const all = getDimensions();
+    const c = dailyChallenge(todayUtc(), all);
+    const dim = getDimension(c.dimensionId)!;
+    const task = dim.tasks.find((t) => t.id === c.taskId)!;
+    return {
+      dimension: { id: dim.id, name: dim.name, color: dim.color },
+      task: { id: task.id, name: task.name, paradigm: task.paradigm, instructions: task.instructions.trim(), params: task.params, validity: { min_rt_ms: task.validity.min_rt_ms } },
+      level: c.level,
+      params: { ...task.params, ...levelOf(task, c.level).params },
+      seed: c.seed,
+      reason: { rule: "daily", expectedSdReduction: 0, note: "Bao's daily challenge: the same puzzle for everyone today." },
+    };
+  }
 
   const lastRuns: Record<string, LastRun> = {};
   for (const r of completed) {
@@ -233,7 +251,8 @@ export async function recordRun(input: {
     if (signals.length) await recordSignals(input.userId, signals.map((s) => ({ ...s, details: { taskRunId, ...cases } })));
   }
   if (completed) await rememberPlayed(input.userId, dim.id);
-  const rewards = completed ? await awardForRun(input.userId, { id: taskRunId, valid: score.validity.valid }) : [];
+  const daily = isDailyRun({ dimensionId: input.dimensionId, params: input.params }, todayUtc(), getDimensions());
+  const rewards = completed ? await awardForRun(input.userId, { id: taskRunId, valid: score.validity.valid, daily }) : [];
   return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf, selfCheck: check, rewards };
 }
 

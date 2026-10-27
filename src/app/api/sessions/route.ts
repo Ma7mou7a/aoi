@@ -10,6 +10,8 @@ const body = z.object({
   mode: z.enum(["assessment", "training"]),
   /** Optional dimension id for the first block (getting-started links). */
   focus: z.string().max(64).optional(),
+  /** Today's daily challenge: a one-game training session. */
+  daily: z.boolean().optional(),
   device: z
     .object({
       type: z.enum(["desktop", "tablet", "phone"]),
@@ -36,9 +38,10 @@ export const POST = handle(async (req: Request) => {
   const advice = await signalActedOnAdvice(user.id, previous?.startedAt ?? null);
   if (advice.length) await recordSignals(user.id, advice);
 
+  const mode = parsed.data.daily ? "training" : parsed.data.mode;
   const [session] = await db
     .insert(schema.sessions)
-    .values({ userId: user.id, mode: parsed.data.mode, device: parsed.data.device, biometric: false })
+    .values({ userId: user.id, mode, device: parsed.data.device, biometric: false })
     .returning();
-  return Response.json({ sessionId: session.id, next: await nextBlock(user.id, session.id, parsed.data.mode, parsed.data.focus) });
+  return Response.json({ sessionId: session.id, next: await nextBlock(user.id, session.id, mode, parsed.data.focus, parsed.data.daily) });
 });

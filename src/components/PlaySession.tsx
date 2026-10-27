@@ -39,7 +39,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; focus?: string }) {
+export function PlaySession({ mode, focus, daily = false }: { mode: "assessment" | "training"; focus?: string; daily?: boolean }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const sessionId = useRef<string | null>(null);
   const started = useRef(false);
@@ -47,13 +47,13 @@ export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; 
   useEffect(() => {
     if (started.current) return; // StrictMode double-invoke guard
     started.current = true;
-    post<{ sessionId: string; next: BlockSpec | null }>("/api/sessions", { mode, focus, device: device() })
+    post<{ sessionId: string; next: BlockSpec | null }>("/api/sessions", { mode, focus, daily, device: device() })
       .then(({ sessionId: id, next }) => {
         sessionId.current = id;
         setState(next ? { kind: "block", spec: next } : { kind: "done" });
       })
       .catch((e) => setState({ kind: "error", message: e.message }));
-  }, [mode, focus]);
+  }, [mode, focus, daily]);
 
   const submit = useCallback((spec: BlockSpec, { trials, status, startedAt }: Finished, selfEstimate: number | null) => {
     setState({ kind: "loading" });
