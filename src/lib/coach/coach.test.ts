@@ -213,3 +213,30 @@ describe("what it would take", () => {
     expect(out.claims[0].evidenceTaskRunIds).toEqual(["run-1"]);
   });
 });
+
+describe("pace forecasts (P#)", () => {
+  const paced = buildEvidencePack({
+    dimensions: dims,
+    posteriors,
+    firstMeans: { working_memory: 0.5 },
+    runs: [{ id: "run-1", dimensionId: "working_memory", taskId: "n_back", difficultyLevel: 2, metrics: { d_prime: 1.8, accuracy: 0.8, n_targets: 7 }, composite: 0.6, validity: { valid: true, flags: [] }, startedAt: now }],
+    trials,
+    pace: [{ skill: "working_memory", gamesPerWeek: 4, fromPct: 60, toPct: 64, lowPct: 57, highPct: 70, perGamePct: 1 }],
+  });
+  it("are numbered P1… and tied to the skill's latest block", () => {
+    expect(paced.pace).toEqual([expect.objectContaining({ ref: "P1", runRef: "R1", toPct: 64 })]);
+    expect(packToPrompt(paced)).toMatch(/P1 \(for R1\): Working memory at 4 games\/week → 64% \(likely 57–70%\) in 7 days, from 60%/);
+  });
+  it("can be cited with their numbers", () => {
+    const out = finaliseDraft({ reply: "Here's a look ahead.", claims: [{ text: "If your recent trend continues at 4 games a week, you could reach about 64% (likely 57–70%).", why: "Your own trend so far.", evidence: ["P1"] }] }, paced);
+    expect(out.claims).toHaveLength(1);
+    expect(out.claims[0].evidenceTaskRunIds).toEqual(["run-1"]);
+    expect(out.claims[0].evidenceLabels[0]).toMatch(/if you keep 4 games a week: 64% \(57–70%\)/);
+  });
+  it("drop a made-up forecast number", () => {
+    const out = finaliseDraft({ reply: "Look ahead.", claims: [{ text: "You will reach 99% next week.", why: "Trend.", evidence: ["P1"] }] }, paced);
+    expect(out.claims).toHaveLength(0);
+    expect(out.dropped[0].reason).toBe("unverified_number");
+  });
+  it("leave no P code in the text", () => expect(stripRefs("As P1 shows, keep going.")).toBe("As the forecast shows, keep going."));
+});

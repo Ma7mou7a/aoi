@@ -1,3 +1,4 @@
+import type { PaceForecast } from "../profiler/pace";
 import type { Dimension } from "../dimensions/schema";
 import { credibleInterval, type Posterior } from "../profiler";
 import { whatItWouldTake } from "../scoring/counterfactual";
@@ -67,7 +68,9 @@ export type TrialFact = { ref: string; runRef: string; label: string; count: num
 /** An exact "what it would take" recalculation of one block (W#), derived from the user's own trials. */
 export type WhatIf = { ref: string; runRef: string; label: string; fromPct: number; toPct: number };
 
-export type EvidencePack = { skills: SkillEvidence[]; runs: RunEvidence[]; facts: TrialFact[]; whatIf: WhatIf[] };
+/** "If you keep playing N games a week" forecast for one skill (see profiler/pace.ts); cite as P#. */
+export type PaceRef = PaceForecast & { ref: string; skill: string; skillName: string; runRef: string };
+export type EvidencePack = { skills: SkillEvidence[]; runs: RunEvidence[]; facts: TrialFact[]; whatIf: WhatIf[]; pace: PaceRef[] };
 
 /** Counterfactuals are computed for the most recent blocks only, to keep the pack focused. */
 const WHAT_IF_RUNS = 3;
@@ -137,6 +140,8 @@ export function buildEvidencePack(input: {
   firstMeans: Record<string, number>;
   runs: RunRow[];
   trials: TrialRow[];
+  /** Forecasts at a pace, per skill id; each is tied to that skill's latest block in the pack. */
+  pace?: Array<PaceForecast & { skill: string }>;
 }): EvidencePack {
   const dimById = new Map(input.dimensions.map((d) => [d.id, d]));
 
@@ -199,7 +204,14 @@ export function buildEvidencePack(input: {
     }
   });
 
-  return { skills, runs, facts, whatIf };
+  const pace: PaceRef[] = [];
+  for (const f of input.pace ?? []) {
+    const name = dimById.get(f.skill)?.name;
+    const latest = runs.find((r) => r.skill === name);
+    if (name && latest) pace.push({ ...f, ref: `P${pace.length + 1}`, skillName: name, runRef: latest.ref });
+  }
+
+  return { skills, runs, facts, whatIf, pace };
 }
 
 /** Compact text form of the pack for the model prompt (no database ids). */
@@ -224,8 +236,12 @@ export function packToPrompt(pack: EvidencePack): string {
     .join("\n");
   const facts = pack.facts.map((f) => `- ${f.ref} (in ${f.runRef}): ${f.count} ${f.label}`).join("\n");
   const whatIf = pack.whatIf.map((w) => `- ${w.ref} (for ${w.runRef}): ${w.label} would have made the block score ${w.toPct}% instead of ${w.fromPct}%`).join("\n");
+  const pace = pack.pace
+    .map((p) => `- ${p.ref} (for ${p.runRef}): ${p.skillName} at ${p.gamesPerWeek} games/week → ${p.toPct}% (likely ${p.lowPct}–${p.highPct}%) in 7 days, from ${p.fromPct}%`)
+    .join("\n");
   return (
     `SKILLS\n${skills}\n\nBLOCKS (R1 = most recent)\n${runs || "- none yet"}\n\nTRIAL FACTS\n${facts || "- none yet"}` +
-    `\n\nWHAT IT WOULD TAKE (exact recalculations with the real scoring; cite as W#)\n${whatIf || "- none"}`
+    `\n\nWHAT IT WOULD TAKE (exact recalculations with the real scoring; cite as W#)\n${whatIf || "- none"}` +
+    (pace ? `\n\nIF YOU KEEP PLAYING (forecasts at a pace, cite as P#; say "if your recent trend continues", never certain)\n${pace}` : "")
   );
 }

@@ -121,13 +121,14 @@ export function unverifiedNumbers(text: string, allowed: number[]): number[] {
 /** Remove reference codes the model leaked into user-facing text, e.g. "(S6)" or "(R2, T3)". */
 export const stripRefs = (s: string) =>
   s
-    .replace(/\s*\((?:[RTSW]\d+[,;\s]*(?:and\s+)?)+\)/g, "")
+    .replace(/\s*\((?:[RTSWP]\d+[,;\s]*(?:and\s+)?)+\)/g, "")
     // Bare codes in running text become plain words ("Blocks R2 and R4 show" → "Those blocks show").
     .replace(/\b(blocks?)\s+R\d+(?:\s*(?:,|and|&)\s*R\d+)*/gi, (_, b: string) => (b.toLowerCase() === "blocks" ? "those blocks" : "that block"))
     .replace(/\bR\d+(?:\s*(?:,|and|&)\s*R\d+)+/g, "those blocks")
     .replace(/\bR\d+\b/g, "that block")
     .replace(/\bW\d+\b/g, "the recalculation")
     .replace(/\bT\d+\b/g, "the trial details")
+    .replace(/\bP\d+\b/g, "the forecast")
     .replace(/\bS\d+\b/g, "the research")
     .replace(/\s{2,}/g, " ")
     .trim()
@@ -150,8 +151,8 @@ export function finaliseDraft(
   // Timestamps are dropped first: their digits (2026, 10, 14…) would otherwise "verify" almost any number.
   const noDates = (s: string) => s.replace(/\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?/g, " ");
   const promptLines = packToPrompt(pack).split("\n");
-  const lineOf = new Map(promptLines.flatMap((l) => (/^- ([RTW]\d+)\b/.exec(l) ? [[/^- ([RTW]\d+)\b/.exec(l)![1], l] as const] : [])));
-  const skillLines = promptLines.filter((l) => l.startsWith("- ") && !/^- [RTW]\d+\b/.test(l)).join("\n");
+  const lineOf = new Map(promptLines.flatMap((l) => (/^- ([RTWP]\d+)\b/.exec(l) ? [[/^- ([RTWP]\d+)\b/.exec(l)![1], l] as const] : [])));
+  const skillLines = promptLines.filter((l) => l.startsWith("- ") && !/^- [RTWP]\d+\b/.test(l)).join("\n");
   const shared = `${skillLines}\n${scienceToPrompt(science)}\n${context}`;
   // The summary may draw on the whole pack; a claim only on what it cites (plus the skill estimates).
   const allowed = numbersIn(noDates(`${packToPrompt(pack)}\n${shared}`));
@@ -205,6 +206,13 @@ export function finaliseDraft(
         if (w && parent) {
           runIds.add(parent.runId);
           labels.push(`what it would take: ${w.label} → ${w.toPct}% (was ${w.fromPct}%)`);
+        }
+      } else if (ref.startsWith("P")) {
+        const p = pack.pace.find((x) => x.ref === ref);
+        const parent = p && runByRef.get(p.runRef);
+        if (p && parent) {
+          runIds.add(parent.runId);
+          labels.push(`if you keep ${p.gamesPerWeek} games a week: ${p.toPct}% (${p.lowPct}–${p.highPct}%)`);
         }
       }
     }
