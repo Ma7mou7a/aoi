@@ -136,7 +136,7 @@ export function StroopTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Task
           Press the key for the <b>ink colour</b>, not the word. If <span className="font-bold" style={{ color: INK.blue }}>RED</span> appears,
           the answer is <b>blue</b>. Be fast but accurate.
         </p>
-        <div className="mt-4 flex justify-center gap-3 text-base">
+        <div className="mt-4 flex flex-wrap justify-center gap-3 text-base">
           {p.colours.map((c) => (
             <span key={c} className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-full" style={{ background: INK[c] }} /> {c} <Kbd>{p.keys[c].toUpperCase()}</Kbd>
