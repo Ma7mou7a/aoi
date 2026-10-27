@@ -45,7 +45,7 @@ Both run with `npm run validate` and appear at `/validation` and in `docs/valida
 ## Where we already outperform the winners
 
 - **Calibrated uncertainty for every estimate, for every user, live.** The winners report uncertainty in a paper. We show it in the product and validate it.
-- **Adaptive measurement.** None of the winners chooses the next test to maximise information. Ours does, and it is 11% more accurate at equal effort.
+- **Adaptive measurement.** None of the winners chooses the next test to maximise information. Ours does, and it is 10% more accurate at equal effort.
 - **Explanations a user can check.** ExplainableAD highlights segments. Our coach's every sentence is verified against the evidence server-side, and unsupported claims are dropped.
 - **An AI-collaboration metric.** No comparable entry measures how people work with AI, or resists automation bias.
 - **Non-clinical by construction.** The dementia winners operate in clinical territory. We stay out of it, which the brief requires.

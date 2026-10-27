@@ -13,9 +13,9 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 
 | Level | Settings | Ability range (fitted) |
 |-|-|-|
-| 1 | terms: 2, min_gap: 0.04, max_gap: 0.09, max_response_ms: 3500 | -1.42 → 2.15 |
-| 2 | terms: 3, min_gap: 0.03, max_gap: 0.06, max_response_ms: 3000 | -0.58 → 1.55 |
-| 3 | terms: 3, min_gap: 0.015, max_gap: 0.04, max_response_ms: 2500 | -0.78 → 1.78 |
+| 1 | terms: 2, min_gap: 0.04, max_gap: 0.09, max_response_ms: 3500 | -0.93 → 1.71 |
+| 2 | terms: 3, min_gap: 0.03, max_gap: 0.06, max_response_ms: 3000 | -0.67 → 1.59 |
+| 3 | terms: 3, min_gap: 0.015, max_gap: 0.04, max_response_ms: 2500 | -0.74 → 1.77 |
 
 **Scoring** (block score = weighted sum, each metric scaled to 0–100%):
 
@@ -24,7 +24,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 **Uncertainty.**
 
 - Starts at 50% ± 33 points (90% band) before any data.
-- One full block (20 valid trials) is a noisy reading with SD 0.479 on the 0–1 scale; fewer valid trials → noisier (√n rule).
+- One full block (20 valid trials) is a noisy reading with SD 0.468 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.02 per day, because ability can change.
 - Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).

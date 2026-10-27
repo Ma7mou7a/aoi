@@ -26,17 +26,17 @@ tasks:
     instructions: >
       Decide quickly which total is larger. Then an AI helper gives its answer, and you make your final choice. The helper is right most of the time but sometimes wrong on purpose. Follow it when it's right, keep your own answer when it's wrong.
     params:
-      trials_per_block: 20
+      trials_per_block: 28
       practice_trials: 2
-      final_response_ms: 3000
+      final_response_ms: 2500
       ai_wrong_when_right: 0.3
-      ai_right_when_wrong: 0.9
+      ai_right_when_wrong: 0.95
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {terms: 2, min_gap: 0.04, max_gap: 0.09, max_response_ms: 3500}, ability_range: [-1.421, 2.152]}
-        - {level: 2, params: {terms: 3, min_gap: 0.03, max_gap: 0.06, max_response_ms: 3000}, ability_range: [-0.58, 1.553]}
-        - {level: 3, params: {terms: 3, min_gap: 0.015, max_gap: 0.04, max_response_ms: 2500}, ability_range: [-0.782, 1.78]}
+        - {level: 1, params: {terms: 2, min_gap: 0.04, max_gap: 0.09, max_response_ms: 3500}, ability_range: [-0.929, 1.71]}
+        - {level: 2, params: {terms: 3, min_gap: 0.03, max_gap: 0.06, max_response_ms: 3000}, ability_range: [-0.674, 1.593]}
+        - {level: 3, params: {terms: 3, min_gap: 0.015, max_gap: 0.04, max_response_ms: 2500}, ability_range: [-0.737, 1.768]}
     scoring:
       components:
         # Only the disagreement-based measure: final accuracy would mostly reward arithmetic.
@@ -55,7 +55,7 @@ profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.479
+    obs_sd: 0.468
     reference_trials: 20
     invalid_block_sd_multiplier: 2.5
     drift_sd_per_day: 0.02
