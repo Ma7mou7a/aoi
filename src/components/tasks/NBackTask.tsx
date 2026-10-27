@@ -155,7 +155,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
         Match <span className="ml-2 text-sm font-normal text-slate-500">(SPACE)</span>
       </button>
       <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">
-        Stop this block
+        Stop this game
       </button>
     </div>
   );

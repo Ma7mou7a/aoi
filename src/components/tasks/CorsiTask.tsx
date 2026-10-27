@@ -161,7 +161,7 @@ export function CorsiTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
         })}
       </div>
       <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">
-        Stop this block
+        Stop this game
       </button>
     </div>
   );

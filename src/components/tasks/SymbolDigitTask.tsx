@@ -155,7 +155,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
           </button>
         ))}
       </div>
-      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this block</button>
+      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this game</button>
     </div>
   );
 }

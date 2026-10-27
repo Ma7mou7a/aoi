@@ -215,7 +215,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
           {stage === "advice" && <p className="text-sm text-slate-500">Press nothing to keep your first answer.</p>}
         </>
       )}
-      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this block</button>
+      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this game</button>
     </div>
   );
 }
