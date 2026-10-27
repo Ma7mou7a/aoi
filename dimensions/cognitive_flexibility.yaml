@@ -60,4 +60,4 @@ profile:
   calibration:
     intercept: 0
     slope: 1
-    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data

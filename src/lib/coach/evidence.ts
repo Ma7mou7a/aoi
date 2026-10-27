@@ -1,5 +1,7 @@
 import type { Dimension } from "../dimensions/schema";
 import { credibleInterval, type Posterior } from "../profiler";
+import { whatItWouldTake } from "../scoring/counterfactual";
+import type { TrialRecord } from "../scoring/types";
 
 // The evidence pack is everything the coach may talk about, with short references
 // (R1 = a block, T1 = a set of trials) that claims must cite. References are mapped back to
@@ -58,12 +60,19 @@ export type RunEvidence = {
 
 export type TrialFact = { ref: string; runRef: string; label: string; count: number; trialIds: string[] };
 
-export type EvidencePack = { skills: SkillEvidence[]; runs: RunEvidence[]; facts: TrialFact[] };
+/** An exact "what it would take" recalculation of one block (W#), derived from the user's own trials. */
+export type WhatIf = { ref: string; runRef: string; label: string; fromPct: number; toPct: number };
+
+export type EvidencePack = { skills: SkillEvidence[]; runs: RunEvidence[]; facts: TrialFact[]; whatIf: WhatIf[] };
+
+/** Counterfactuals are computed for the most recent blocks only, to keep the pack focused. */
+const WHAT_IF_RUNS = 3;
 
 const pct = (x: number) => Math.round(x * 100);
 
 function fmtMetric(key: string, v: number): string {
   if (key.endsWith("_ms")) return `${Math.round(v)} ms`;
+  if (key.endsWith("_ratio")) return `+${pct(v)}%`;
   if (key.endsWith("_rate") || key.endsWith("accuracy")) return `${pct(v)}%`;
   if (key === "d_prime") return v.toFixed(2);
   return String(Math.round(v * 100) / 100);
@@ -136,6 +145,7 @@ export function buildEvidencePack(input: {
 
   const runs: RunEvidence[] = [];
   const facts: TrialFact[] = [];
+  const whatIf: WhatIf[] = [];
   // Newest first, so R1 is the most recent block.
   const ordered = [...input.runs].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   ordered.forEach((r, i) => {
@@ -165,12 +175,18 @@ export function buildEvidencePack(input: {
       ],
     });
     const runTrials = input.trials.filter((t) => t.taskRunId === r.id).sort((a, b) => a.trialIndex - b.trialIndex);
+    if (i < WHAT_IF_RUNS) {
+      const records: TrialRecord[] = runTrials.map((t) => ({ trialIndex: t.trialIndex, isPractice: t.isPractice, stimulus: t.stimulus, response: t.response, outcome: t.outcome as TrialRecord["outcome"], correct: t.correct, rtMs: t.rtMs }));
+      for (const w of whatItWouldTake(task, records)) {
+        whatIf.push({ ref: `W${whatIf.length + 1}`, runRef: ref, label: w.label, fromPct: pct(w.from), toPct: pct(w.to) });
+      }
+    }
     for (const f of factsFor(task.paradigm, runTrials)) {
       facts.push({ ref: `T${facts.length + 1}`, runRef: ref, label: f.label, count: f.trials.length, trialIds: f.trials.map((t) => t.id) });
     }
   });
 
-  return { skills, runs, facts };
+  return { skills, runs, facts, whatIf };
 }
 
 /** Compact text form of the pack for the model prompt (no database ids). */
@@ -193,5 +209,9 @@ export function packToPrompt(pack: EvidencePack): string {
     )
     .join("\n");
   const facts = pack.facts.map((f) => `- ${f.ref} (in ${f.runRef}): ${f.count} ${f.label}`).join("\n");
-  return `SKILLS\n${skills}\n\nBLOCKS (R1 = most recent)\n${runs || "- none yet"}\n\nTRIAL FACTS\n${facts || "- none yet"}`;
+  const whatIf = pack.whatIf.map((w) => `- ${w.ref} (for ${w.runRef}): ${w.label} would have made the block score ${w.toPct}% instead of ${w.fromPct}%`).join("\n");
+  return (
+    `SKILLS\n${skills}\n\nBLOCKS (R1 = most recent)\n${runs || "- none yet"}\n\nTRIAL FACTS\n${facts || "- none yet"}` +
+    `\n\nWHAT IT WOULD TAKE (exact recalculations with the real scoring; cite as W#)\n${whatIf || "- none"}`
+  );
 }

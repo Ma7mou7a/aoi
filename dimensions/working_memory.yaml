@@ -35,9 +35,9 @@ tasks:
     difficulty:
       target_success: 0.75
       levels:
-        - {level: 1, params: {n: 1}, ability_range: [-0.725, 1.031]}
-        - {level: 2, params: {n: 2}, ability_range: [-0.253, 1.05]}
-        - {level: 3, params: {n: 3}, ability_range: [-0.188, 1.314]}
+        - {level: 1, params: {n: 1}, ability_range: [-0.664, 1.013]}
+        - {level: 2, params: {n: 2}, ability_range: [-0.187, 1.024]}
+        - {level: 3, params: {n: 3}, ability_range: [-0.089, 1.255]}
     scoring:
       # composite (0..1) = sum(weight * normalised metric); then mapped into the
       # level's ability_range to give one observation for the profiler.
@@ -49,17 +49,18 @@ tasks:
       max_rt_ms: 2500
       min_valid_trials: 16
       chance_accuracy: 0.5
-      max_same_response_streak: 12
+      chance_margin_z: 1.0
+      max_same_response_streak: 18
 
 profile:
   prior: {mean: 0.5, sd: 0.2}
   uncertainty:
     model: normal
-    obs_sd: 0.199
+    obs_sd: 0.192
     reference_trials: 24
     invalid_block_sd_multiplier: 2.5
     drift_sd_per_day: 0.01
   calibration:
     intercept: 0
     slope: 1
-    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data
+    source: level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data

@@ -7,6 +7,7 @@ import { getDimension, getDimensions } from "../dimensions/loader";
 import { newSeed } from "../rng";
 import { credibleInterval, priorFor, updatePosterior, type Posterior } from "../profiler";
 import { levelOf, scoreBlock, type BlockScore, type TrialRecord } from "../scoring";
+import { whatItWouldTake, type Counterfactual } from "../scoring/counterfactual";
 import { selectNext, type LastRun, type SelectionMode } from "../selector";
 import { AVAILABLE_PARADIGMS, type BlockSpec } from "../tasks/registry";
 import { getPosteriors } from "./profile";
@@ -69,6 +70,8 @@ export type RunResult = {
   affect: AffectState | null;
   /** Earned celebrations (personal best, highest estimate, streak); empty when nothing new. */
   wins: string[];
+  /** Exact "what it would take" recalculations of this block (empty for Corsi and abandoned blocks). */
+  whatIf: Counterfactual[];
 };
 
 /**
@@ -195,7 +198,8 @@ export async function recordRun(input: {
   await db.update(schema.users).set({ lastActiveAt: now }).where(eq(schema.users.id, input.userId));
 
   const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
-  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins };
+  const whatIf = completed ? whatItWouldTake(task, input.trials) : [];
+  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf };
 }
 
 /** JSON can't hold NaN/Infinity; store them as absent. */

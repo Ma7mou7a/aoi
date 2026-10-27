@@ -100,6 +100,20 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </p>
       </div>
 
+      {result.whatIf.length > 0 && (
+        <div className="glass rounded-2xl p-4">
+          <h3 className="mb-1 font-medium">What it would take</h3>
+          <ul className="space-y-1 text-sm">
+            {result.whatIf.map((w) => (
+              <li key={w.label}>
+                <b>{w.label[0].toUpperCase() + w.label.slice(1)}</b> → block score <b>{pct(w.to)}</b> <span className="text-slate-500">(now {pct(w.from)})</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-xs text-slate-500">Exact recalculations with the same scoring, changing just that one thing.</p>
+        </div>
+      )}
+
       {!score.validity.valid && (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
           <p className="font-medium">This block counts less toward your profile:</p>

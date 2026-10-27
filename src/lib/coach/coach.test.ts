@@ -3,7 +3,7 @@ import { loadDimensions } from "../dimensions/loader";
 import { priorFor, updatePosterior } from "../profiler";
 import { createRng } from "../rng";
 import { generateNBack, simulateNBackResponses } from "../tasks/nback";
-import { finaliseDraft, ruleBasedDraft, stripRefs } from "./claims";
+import { finaliseDraft, numbersIn, ruleBasedDraft, stripRefs, unverifiedNumbers } from "./claims";
 import { buildEvidencePack, packToPrompt, type TrialRow } from "./evidence";
 import { filterClinical } from "./safety";
 import { loadScience, MAX_SCIENCE_CARDS, scienceToPrompt, selectScience } from "./science";
@@ -159,5 +159,49 @@ describe("reference codes in text", () => {
   it("are stripped from what the user reads", () => {
     expect(stripRefs("Research (S6) says single blocks are noisy (R2, T3).")).toBe("Research says single blocks are noisy.");
     expect(stripRefs("Rows R and T stay put.")).toBe("Rows R and T stay put.");
+    expect(stripRefs("Blocks R2 and R4 scored 67% and 66%. W4 shows that one fewer error helps.")).toBe("Those blocks scored 67% and 66%. The recalculation shows that one fewer error helps.");
+  });
+});
+
+describe("number check", () => {
+  it("reads numbers but not reference codes", () => {
+    expect(numbersIn("You caught 5 of 7 matches (+16 points, 1,200 trials, d′ 1.8) in T3.")).toEqual([5, 7, 16, 1200, 1.8]);
+  });
+  it("accepts evidence numbers within rounding and differences of verified numbers", () => {
+    expect(unverifiedNumbers("Your score went from 60% to 68%, +8 points.", [60, 68])).toEqual([]);
+    expect(unverifiedNumbers("About 66.6% of matches.", [67])).toEqual([]);
+    expect(unverifiedNumbers("You caught 9 of 7 matches.", [5, 7])).toEqual([9]);
+    expect(unverifiedNumbers("You made zero errors after a switch.", [3, 2])).toEqual([0]);
+  });
+  it("drops a claim whose numbers don't match the evidence, keeps the honest one", () => {
+    const caught = pack.facts.find((f) => f.label === "matches you caught")!;
+    const out = finaliseDraft(
+      {
+        summary: "Good session. You beat 95% of your blocks.",
+        claims: [
+          { text: `You caught ${caught.count} matches.`, why: "Straight from the block.", evidence: ["R1", caught.ref] },
+          { text: `You caught ${caught.count + 4} matches.`, why: "Invented.", evidence: ["R1", caught.ref] },
+        ],
+        next_step: "",
+      },
+      pack,
+    );
+    expect(out.claims.map((c) => c.claim)).toEqual([`You caught ${caught.count} matches.`]);
+    expect(out.dropped).toEqual([{ text: `You caught ${caught.count + 4} matches.`, reason: "unverified_number", numbers: [caught.count + 4] }]);
+    expect(out.content).toBe("Good session.");
+  });
+});
+
+describe("what it would take", () => {
+  it("are exact recalculations that the coach can cite", () => {
+    expect(pack.whatIf.length).toBeGreaterThan(0);
+    for (const w of pack.whatIf) expect(w.toPct).toBeGreaterThan(w.fromPct);
+    const w = pack.whatIf[0];
+    const out = finaliseDraft(
+      { summary: "", claims: [{ text: `${w.label} would have made it ${w.toPct}%.`, why: `It was ${w.fromPct}%.`, evidence: [w.ref] }], next_step: "" },
+      pack,
+    );
+    expect(out.claims).toHaveLength(1);
+    expect(out.claims[0].evidenceTaskRunIds).toEqual(["run-1"]);
   });
 });

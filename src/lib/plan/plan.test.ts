@@ -5,7 +5,11 @@ import type { Posterior } from "../profiler";
 import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { generateWeeklyPlan, weekStartOf } from ".";
 
-const dimensions = loadDimensions();
+// The scenario below is written for the six shipped skills; extra skills (e.g. one added live with
+// `npm run new-dimension`) must not change it, so the fixture pins them. Coverage of every loaded skill is tested separately.
+const CORE = ["working_memory", "attention_inhibition", "processing_speed", "cognitive_flexibility", "visuospatial_memory", "reasoning"];
+const allDimensions = loadDimensions();
+const dimensions = allDimensions.filter((d) => CORE.includes(d.id));
 const post = (mean: number, sd: number, n = 3): Posterior => ({ mean, sd, nObservations: n, nTrials: n * 24, updatedAt: "2026-10-26T00:00:00Z" });
 
 describe("generateWeeklyPlan", () => {
@@ -15,9 +19,10 @@ describe("generateWeeklyPlan", () => {
 
   const plan = generateWeeklyPlan({ dimensions, posteriors, available: ["n_back", "stroop", "corsi"], blocksPerWeek: 12 });
 
-  it("covers all six skills when every task is playable", () => {
-    const all = generateWeeklyPlan({ dimensions, posteriors, available: AVAILABLE_PARADIGMS, blocksPerWeek: 12 });
-    expect(all.items).toHaveLength(6);
+  it("covers every configured skill when every task is playable", () => {
+    const priors = Object.fromEntries(allDimensions.map((d) => [d.id, posteriors[d.id] ?? post(0.5, 0.2, 0)]));
+    const all = generateWeeklyPlan({ dimensions: allDimensions, posteriors: priors, available: AVAILABLE_PARADIGMS, blocksPerWeek: 12 });
+    expect(all.items).toHaveLength(allDimensions.length);
     expect(all.items.reduce((s, i) => s + i.blocks, 0)).toBe(12);
   });
   it("only schedules playable tasks and uses the whole budget", () => {

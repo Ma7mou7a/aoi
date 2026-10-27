@@ -108,7 +108,7 @@ function CoachBubble({ m, onFeedback, voice }: { m: ClientCoachMessage; onFeedba
           </button>
         )}
         {m.meta?.source === "llm" ? `AI coach (${m.model})` : "Rule-based coach"} · <LocalTime at={m.createdAt} />
-        {dropped > 0 && ` · ${dropped} statement${dropped > 1 ? "s" : ""} removed for lacking evidence or using clinical language`}
+        {dropped > 0 && ` · ${dropped} statement${dropped > 1 ? "s" : ""} removed by the checks (no evidence, a number that did not match your data, or clinical language)`}
         {note && <><br />{note}</>}
       </p>
     </div>

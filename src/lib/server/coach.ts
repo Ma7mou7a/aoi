@@ -138,7 +138,7 @@ export async function generateCoachMessage(userId: string, opts: { question?: st
     } else fallbackReason = res.reason;
   }
 
-  const final = finaliseDraft(draft ?? ruleBasedDraft(pack, nextNote, science), pack, science);
+  const final = finaliseDraft(draft ?? ruleBasedDraft(pack, nextNote, science), pack, science, `${nextNote ?? ""}\n${question ?? ""}`);
   if (question && source === "rules" && pack.runs.length) {
     final.content = `I can only answer free-form questions when AI coaching is on, but here's what your results show. ${final.content}`;
   }

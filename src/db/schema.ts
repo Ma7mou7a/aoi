@@ -189,7 +189,7 @@ export type CoachMeta = {
   source: "llm" | "rules";
   /** Why the rule-based coach was used instead of the LLM (no consent, API error, ...). */
   fallbackReason?: string;
-  dropped?: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" }>;
+  dropped?: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" | "unverified_number"; numbers?: number[] }>;
   /** The user's verdict per claim index. */
   feedback?: Record<string, "looks_right" | "something_off">;
   /** Claim indexes whose evidence the user opened. */

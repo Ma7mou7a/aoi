@@ -28,7 +28,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - One full block (32 valid trials) is a noisy reading with SD 0.287 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
@@ -77,7 +77,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - One full block (40 valid trials) is a noisy reading with SD 0.287 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
@@ -123,7 +123,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - One full block (40 valid trials) is a noisy reading with SD 0.138 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
@@ -170,7 +170,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - One full block (8 valid trials) is a noisy reading with SD 0.133 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
@@ -217,7 +217,7 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 - One full block (10 valid trials) is a noisy reading with SD 0.107 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
@@ -248,9 +248,9 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 
 | Level | Settings | Ability range (fitted) |
 |-|-|-|
-| 1 | n: 1 | -0.72 → 1.03 |
-| 2 | n: 2 | -0.25 → 1.05 |
-| 3 | n: 3 | -0.19 → 1.31 |
+| 1 | n: 1 | -0.66 → 1.01 |
+| 2 | n: 2 | -0.19 → 1.02 |
+| 3 | n: 3 | -0.09 → 1.25 |
 
 **Scoring** (block score = weighted sum, each metric scaled to 0–100%):
 
@@ -259,17 +259,17 @@ Generated from `dimensions/*.yaml` by `npm run cards`. The app shows the same ca
 **Uncertainty.**
 
 - Starts at 50% ± 33 points (90% band) before any data.
-- One full block (24 valid trials) is a noisy reading with SD 0.199 on the 0–1 scale; fewer valid trials → noisier (√n rule).
+- One full block (24 valid trials) is a noisy reading with SD 0.192 on the 0–1 scale; fewer valid trials → noisier (√n rule).
 - Unreliable blocks (near chance, response streaks, too fast, timeouts) count 2.5× noisier; blocks at the floor/ceiling of a level count 1.5× noisier.
 - Between sessions the band widens by 0.01 per day, because ability can change.
-- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-26; refit on pilot data).
+- Each block's score is mapped to ability through its level's fitted range (level ranges and obs_sd fitted on 250 simulated users, 2026-10-27; refit on pilot data).
 
 **Data quality checks.**
 
 - Responses faster than 150 ms count as anticipations (errors); slower than 2500 ms as timeouts.
 - At least 16 valid trials needed.
-- Accuracy must beat chance (50%) by 1.645 binomial SDs.
-- More than 12 identical answers in a row is flagged.
+- Accuracy must beat chance (50%) by 1 binomial SDs.
+- More than 18 identical answers in a row is flagged.
 
 **Known biases.**
 

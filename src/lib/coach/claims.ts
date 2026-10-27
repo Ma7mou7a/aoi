@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { EvidencePack } from "./evidence";
+import { packToPrompt, type EvidencePack } from "./evidence";
 import { filterClinical, NON_CLINICAL_NOTE } from "./safety";
-import type { ScienceRef } from "./science";
+import { scienceToPrompt, type ScienceRef } from "./science";
 
 /** What the model (or the rule engine) produces: claims cite pack references, never raw ids. */
 export const coachDraftSchema = z.object({
@@ -54,13 +54,46 @@ export type FinalMessage = {
   claims: FinalClaim[];
   filteredTerms: string[];
   /** Claims removed because they cited nothing valid or used diagnostic language. */
-  dropped: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" }>;
+  dropped: Array<{ text: string; reason: "no_valid_evidence" | "clinical_language" | "unverified_number"; numbers?: number[] }>;
   /** S# references the model cited that were not in the science pack (ignored). */
   unknownScience: string[];
 };
 
+/** Numbers written in a text, as absolute values ("+16", "−0.4", "1,200" → 16, 0.4, 1200). Codes like "T3" are skipped. */
+export function numbersIn(s: string): number[] {
+  const digits = [...s.replace(/(\d),(\d{3})\b/g, "$1$2").matchAll(/(?<![A-Za-z\d.])\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
+  // Counts written as words ("zero errors", "three matches") are checked too; "one" is skipped (too common: "one more block").
+  const words = [...s.toLowerCase().matchAll(/\b(zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g)].map((m) => NUMBER_WORDS[m[1]]);
+  return [...digits, ...words];
+}
+const NUMBER_WORDS: Record<string, number> = { zero: 0, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+
+const close = (x: number, y: number) => Math.abs(x - y) <= (Math.max(x, y) >= 10 ? 1 : 0.05);
+
+/**
+ * Number check: every number in a sentence must come from the evidence (within rounding), or be the
+ * difference of two verified numbers in the same claim ("from 60% to 68%, +8"). Returns the numbers that fail.
+ */
+export function unverifiedNumbers(text: string, allowed: number[]): number[] {
+  const nums = numbersIn(text);
+  const ok = nums.filter((n) => allowed.some((a) => close(n, a)));
+  return nums.filter((n) => !allowed.some((a) => close(n, a)) && !ok.some((a) => ok.some((b) => a !== b && close(n, Math.abs(a - b)))));
+}
+
 /** Remove reference codes the model leaked into user-facing text, e.g. "(S6)" or "(R2, T3)". */
-export const stripRefs = (s: string) => s.replace(/\s*\((?:[RTS]\d+[,;\s]*(?:and\s+)?)+\)/g, "").replace(/\s{2,}/g, " ").trim();
+export const stripRefs = (s: string) =>
+  s
+    .replace(/\s*\((?:[RTSW]\d+[,;\s]*(?:and\s+)?)+\)/g, "")
+    // Bare codes in running text become plain words ("Blocks R2 and R4 show" → "Those blocks show").
+    .replace(/\b(blocks?)\s+R\d+(?:\s*(?:,|and|&)\s*R\d+)*/gi, (_, b: string) => (b.toLowerCase() === "blocks" ? "those blocks" : "that block"))
+    .replace(/\bR\d+(?:\s*(?:,|and|&)\s*R\d+)+/g, "those blocks")
+    .replace(/\bR\d+\b/g, "that block")
+    .replace(/\bW\d+\b/g, "the recalculation")
+    .replace(/\bT\d+\b/g, "the trial details")
+    .replace(/\bS\d+\b/g, "the research")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .replace(/(^|[.!?]\s+)([a-z])/g, (_, p: string, c: string) => p + c.toUpperCase());
 
 /**
  * Turn a draft into what we store and show: resolve references to database ids, drop claims
@@ -68,7 +101,24 @@ export const stripRefs = (s: string) => s.replace(/\s*\((?:[RTS]\d+[,;\s]*(?:and
  * Science references (S#) are resolved too, but they never count as evidence: "science explains,
  * your data decides", so a claim that cites only science is dropped like any unsupported claim.
  */
-export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: ScienceRef[] = []): FinalMessage {
+export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: ScienceRef[] = [], context = ""): FinalMessage {
+  // Everything the model was shown: the only legitimate source of numbers.
+  // Timestamps are dropped first: their digits (2026, 10, 14…) would otherwise "verify" almost any number.
+  const noDates = (s: string) => s.replace(/\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?/g, " ");
+  const promptLines = packToPrompt(pack).split("\n");
+  const lineOf = new Map(promptLines.flatMap((l) => (/^- ([RTW]\d+)\b/.exec(l) ? [[/^- ([RTW]\d+)\b/.exec(l)![1], l] as const] : [])));
+  const skillLines = promptLines.filter((l) => l.startsWith("- ") && !/^- [RTW]\d+\b/.test(l)).join("\n");
+  const shared = `${skillLines}\n${scienceToPrompt(science)}\n${context}`;
+  // The summary may draw on the whole pack; a claim only on what it cites (plus the skill estimates).
+  const allowed = numbersIn(noDates(`${packToPrompt(pack)}\n${shared}`));
+  const allowedFor = (refs: string[]) => {
+    const own = refs.flatMap((r) => {
+      const line = lineOf.get(r) ?? "";
+      const parent = /\((?:in|for) (R\d+)\)/.exec(line)?.[1];
+      return [line, parent ? lineOf.get(parent) ?? "" : ""];
+    });
+    return numbersIn(noDates(`${own.join("\n")}\n${shared}`));
+  };
   const runByRef = new Map(pack.runs.map((r) => [r.ref, r]));
   const factByRef = new Map(pack.facts.map((f) => [f.ref, f]));
   const sciByRef = new Map(science.map((s) => [s.ref, s]));
@@ -105,10 +155,22 @@ export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: Sc
         if (parent) runIds.add(parent.runId);
         fact.trialIds.forEach((id) => trialIds.add(id));
         labels.push(`${fact.count} ${fact.label}`);
+      } else if (ref.startsWith("W")) {
+        const w = pack.whatIf.find((x) => x.ref === ref);
+        const parent = w && runByRef.get(w.runRef);
+        if (w && parent) {
+          runIds.add(parent.runId);
+          labels.push(`what it would take: ${w.label} → ${w.toPct}% (was ${w.fromPct}%)`);
+        }
       }
     }
     if (!runIds.size) {
       dropped.push({ text: c.text, reason: "no_valid_evidence" });
+      continue;
+    }
+    const badNumbers = unverifiedNumbers(`${stripRefs(c.text)} ${stripRefs(c.why)}`, allowedFor(c.evidence.map((e) => e.trim().toUpperCase())));
+    if (badNumbers.length) {
+      dropped.push({ text: c.text, reason: "unverified_number", numbers: badNumbers });
       continue;
     }
     const text = clean(c.text);
@@ -127,8 +189,10 @@ export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: Sc
     });
   }
 
-  const summary = clean(draft.summary);
-  const next = clean(draft.next_step);
+  // Summary and next step: keep only sentences whose numbers check out.
+  const verified = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => !unverifiedNumbers(stripRefs(x), allowed).length).join(" ");
+  const summary = clean(verified(draft.summary) || "Here's what your results show.");
+  const next = clean(verified(draft.next_step));
   const content = summary.blocked ? NON_CLINICAL_NOTE : summary.text;
   return { content, nextStep: next.blocked ? "" : next.text, claims, filteredTerms, dropped, unknownScience };
 }

@@ -10,7 +10,7 @@ Partly, and we say so. The simulation tests the *pipeline*: given behaviour that
 **"Are these tasks valid measures of anything?"**
 They are standard paradigms with decades of literature (N-back, Stroop, Corsi, task switching, symbol-digit, Raven-style matrices; references on every measurement card). Our claim is narrower than "measures intelligence": each score describes performance on that task compared with the user's own history. We never compare with norms; the coach filter even removes sentences that do.
 
-**"Why is cognitive flexibility weaker (r = 0.68)?"**
+**"Why is cognitive flexibility weaker (r = 0.69)?"**
 Switch costs are a difference of two noisy reaction times, so they are noisy by nature: the "reliability paradox" (Hedge et al. 2018). The band is correspondingly wider (we show it), and more trials per block or adding mixing cost would tighten it.
 
 ## Design choices
@@ -36,7 +36,7 @@ It is the simplest model that gives both an estimate and an honest uncertainty, 
 ## The AI coach
 
 **"How do you stop the LLM from hallucinating?"**
-It can only speak through references (R1, T3) to an evidence pack we build. The server resolves every reference and drops any claim without valid evidence before the user sees it. Every claim opens its exact trials.
+It can only speak through references (R1, T3) to an evidence pack we build. The server resolves every reference and drops any claim without valid evidence before the user sees it. Then every number in the claim, digits and number words alike, must match the evidence that claim cites. In a live test, the model wrote that the user made "virtually no errors after a switch" with a number not in the evidence; the claim was removed automatically. Every claim opens its exact trials.
 
 **"Why not RAG with LangChain over a document store?"**
 Our corpus is 13 reviewed findings, not thousands of papers, so retrieval adds risk without benefit. The server picks the relevant cards deterministically (skills played, the situation, the question). The model cites them as S#, and the rule is "science explains, your data decides": a claim citing only science is dropped. One model call plus checks in our own code is easier to explain, test and demo than an orchestration framework.
@@ -63,16 +63,25 @@ Ours uses no face or voice. It infers fatigue or frustration only from behaviour
 **"Add a new dimension now."**
 `npm run new-dimension -- --id <id> --name "<Name>" --from <existing>`, then restart: the selector, profiler, coach, dashboard, plan, validation and cards all pick it up (`docs/adding-a-dimension.md`). A new task *type* needs a generator, metrics, a simulator case and a renderer, each following an existing example (about 1–2 hours).
 
+*Dry run (27 Oct):* `--id selective_attention --from attention_inhibition` took 0.8 s; `npm run dims:check` reported 7 dimensions valid; all 115 tests and `npm run validate` passed unchanged (the new skill got 92% band coverage). **Still to do by the team:** rehearse it live once under time pressure, including restarting the server and playing one block of the new skill.
+
+**Rehearsal script (about 5 minutes):**
+1. `npm run new-dimension -- --id <id> --name "<Name>" --from <closest skill>`
+2. Edit the YAML: definition, "what it is not", levels and references (the measurement card is generated from it).
+3. `npm run dims:check`, then restart `npm run dev`.
+4. Show it in `/skills` (card), `/play` (the selector offers it), the dashboard radar (new axis) and the plan.
+5. Optional: `npm run validate -- --users 100` to show the new skill's band coverage.
+
 ## Numbers to know by heart
 
 | | |
 |-|-|
-| Band coverage (target 90%) | 89–96% per skill, 92% average |
-| Mean error after 18 blocks | ±5–11%, ~7% average |
+| Band coverage (target 90%) | 90–94% per skill, 92% average |
+| Mean error after 18 blocks | ±5–10%, ~7% average |
 | Adaptive vs random | 9.2% vs 10.4% RMSE after 18 blocks (−12%) |
-| Invalid play caught | 93–100% (random), 100% (same key, silent, too fast); false alarms 0–11% (2% average) |
-| Forecast calibration | 90% bands hold 91%, 50% bands 48% (TADPOLE CPA 0.007 / 0.02) |
+| Invalid play caught | 99% overall: 81–100% of random play, 100% of same key, silent, too fast; false alarms 0–4% (1% average) |
+| Forecast calibration | 90% bands hold 91%, 50% bands 48% (TADPOLE CPA 0.01 / 0.02) |
 | Fairness | slower, equally accurate users: bias < 2 points (was −14 for attention before the fix) |
-| Unit tests | 104 |
+| Unit tests | 114 |
 | Science cards | 13 reviewed findings, cited only next to the user's own evidence |
 | Collaboration score weights | 25 verification · 20 clarification · 20 iteration · 20 autonomy · 15 responsible use |

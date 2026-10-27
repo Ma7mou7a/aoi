@@ -18,7 +18,7 @@ No public event matches "AI4Brain" or CISTAC directly; these are the nearest ana
 
 ## What the winners have in common
 
-1. **Uncertainty is part of the answer.** RASKA used Jackknife+ and TADPOLE scored interval calibration. → *We already lead here:* every estimate carries a 90% band validated at 89–96% coverage.
+1. **Uncertainty is part of the answer.** RASKA used Jackknife+ and TADPOLE scored interval calibration. → *We already lead here:* every estimate carries a 90% band validated at 90–94% coverage.
 2. **Generalisation and fairness are tested, not assumed.** RASKA won on cross-country fairness. → *We added this* (validation E6).
 3. **Explanations point at the evidence.** ExplainableAD highlights the segments behind a score. → *We already do this:* every coach claim links to its exact blocks and trials, plus the score breakdown per block.
 4. **Simple models win.** Frog beat complex models, and RASKA used gradient boosting rather than deep nets. → Supports our transparent Bayesian approach.
