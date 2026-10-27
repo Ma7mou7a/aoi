@@ -150,7 +150,10 @@ for (const d of baseDims) {
     levels[l.level] = [round(-a / b), round((1 - a) / b)];
   }
   const ref = d.profile.uncertainty.reference_trials;
-  const rows = fitBlocks.filter((b) => b.dim === d.id && b.valid && b.composite > 0.05 && b.composite < 0.95 && levels[b.level]);
+  // Noise is estimated on the levels assessment uses: a training-only level (e.g. one with an extra cue) has its own range but
+  // must not inflate the noise that sets every assessment band.
+  const assessed = new Set(d.tasks[0].difficulty.levels.filter((l) => !l.training_only).map((l) => l.level));
+  const rows = fitBlocks.filter((b) => b.dim === d.id && b.valid && b.composite > 0.05 && b.composite < 0.95 && levels[b.level] && assessed.has(b.level));
   const resid = rows.map((r) => {
     const [lo, hi] = levels[r.level];
     return ((lo + (hi - lo) * r.composite - r.truth) ** 2) * (Math.max(1, r.validTrials) / ref);
@@ -404,11 +407,31 @@ function trustStudy() {
     const f = aor.filter(Number.isFinite);
     return { label, appropriateReliance: round(mean(f)), verification: round(mean(verification)), useOfHelp: round(mean(useOfHelp)) };
   });
+  // (d) Confident-helper level: does the honest confidence cue get used, and does using it pay off?
+  const lv4 = task.difficulty.levels.find((l) => l.params.show_confidence === true);
+  const confidence = lv4
+    ? ([["Always follow the AI", "always_follow", 0.5], ["Always keep my answer", "always_keep", 0.5], ["Follow only when it is very sure", "confidence_only", 0.5], ["Calibrated, average skill", "calibrated", 0.5], ["Calibrated, high skill", "calibrated", 0.9]] as const).map(([label, strategy, reliance]) => {
+        const p4 = { ...task.params, ...lv4.params } as unknown as TrustParams;
+        const aor: number[] = [], use: number[] = [];
+        for (let u = 0; u < 300; u++) {
+          const seed = rng.int(2 ** 31);
+          const trials = simulateTrustMachine(generateTrustMachine(p4, seed), p4, reliance, createRng(seed ^ 0x2545f491), { arithmetic: rng.next(), strategy, blockSeed: seed });
+          const m = scoreBlock(dim, task, lv4.level, trials).metrics;
+          aor.push(m.appropriate_reliance);
+          use.push(m.confidence_use);
+        }
+        const f = (xs: number[]) => round(mean(xs.filter(Number.isFinite)));
+        return { label, appropriateReliance: f(aor), confidenceUse: f(use) };
+      })
+    : null;
+
   // (c) How many blocks of the game does the twin need? Users play only this game (adaptive level),
   //     and the twin's estimate after k blocks is compared with their true reliance skill.
   const byBlocks = [1, 3, 6, 10].map((k) => {
     const truth: number[] = [], est: number[] = [], covered: number[] = [];
-    for (const t of evalUsers.slice(0, 200)) {
+    // 600 fresh users (not the 250 held-out ones): a single 200-user run varies by about ±0.04 in r.
+    for (let u = 0; u < 600; u++) {
+      const t = drawTruth(rng);
       let post = priorFor(dim, T0);
       for (let b = 0; b < k; b++) {
         const s = selectNext({ dimensions: [dim], posteriors: { [dim.id]: post }, mode: "assessment", available: AVAILABLE_PARADIGMS, targetSd: 0 })!;
@@ -423,7 +446,7 @@ function trustStudy() {
     }
     return { blocks: k, r: round(pearson(truth, est)), mae: round(mean(truth.map((x, i) => Math.abs(x - est[i])))), coverage90: round(mean(covered)) };
   });
-  return { discriminant, strategies, byBlocks };
+  return { discriminant, strategies, byBlocks, confidence };
 }
 const trust = trustStudy();
 
@@ -519,6 +542,18 @@ Two-stage judge–advisor design (Schemmer et al. 2023): answer, see the AI help
 | Strategy | Appropriate reliance (0.5 = chance) | Collaboration: verification | Collaboration: using AI help |
 |-|-|-|-|
 ${trust.strategies.map((s) => `| ${s.label} | ${s.appropriateReliance} | ${s.verification} | ${s.useOfHelp} |`).join("\n")}
+
+${trust.confidence ? `**Confident-helper level.** The helper honestly says "very sure" 80% of the time when it is right and 30% when it is wrong. *Confidence use* = how much more often the player went with the helper when it said it was very sure (disagreements only).
+
+| Strategy | Appropriate reliance | Confidence use |
+|-|-|-|
+${trust.confidence.map((c) => `| ${c.label} | ${c.appropriateReliance} | ${c.confidenceUse} |`).join("\n")}
+
+` : ""}**How many blocks does the twin need?** 600 users played only this game; the twin's estimate after *k* blocks vs their true reliance skill. Only disagreements are informative, so this skill needs several blocks; the band says so meanwhile.
+
+| Blocks of the game | r | Mean abs. error | 90% band coverage |
+|-|-|-|-|
+${trust.byBlocks.map((b) => `| ${b.blocks} | ${b.r} | ${pct(b.mae)} | ${pct(b.coverage90)} |`).join("\n")}
 
 ` : ""}## Limitations
 

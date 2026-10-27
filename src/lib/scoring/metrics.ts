@@ -116,7 +116,12 @@ function trustMachine(trials: TrialRecord[]): Metrics {
   const rsr = corrected(selfCases);
   const rair = corrected(aiCases);
   const both = [rsr, rair].filter(Number.isFinite);
+  // Confident-helper level: how much more often you went with the helper when it said it was very sure.
+  const disagreed = withInitial.filter((t) => t.stimulus.initial !== t.stimulus.advice && typeof t.stimulus.aiConfident === "boolean");
+  const followRate = (ts: TrialRecord[]) => rate(ts.filter((t) => t.response === t.stimulus.advice).length, ts.length);
+  const confidenceUse = followRate(disagreed.filter((t) => t.stimulus.aiConfident)) - followRate(disagreed.filter((t) => !t.stimulus.aiConfident));
   return {
+    confidence_use: confidenceUse,
     ...basic(trials),
     appropriate_reliance: both.length ? both.reduce((a, b) => a + b, 0) / both.length : NaN,
     relative_self_reliance: rsr,

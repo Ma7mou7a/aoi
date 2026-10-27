@@ -10,6 +10,7 @@ import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { currentCollabScore } from "./collab";
 import { getPosteriors, getProfileView, type ProfileView } from "./profile";
 import { HttpError } from "./user";
+import { RECENT_GUESSES } from "../metacog";
 
 export const RANGE_OPTIONS = [7, 14, 28] as const;
 export type RangeDays = (typeof RANGE_OPTIONS)[number];
@@ -218,7 +219,18 @@ export async function getDashboard(userId: string, rangeDays: RangeDays) {
     .from(schema.taskRuns)
     .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed")));
   const streak = dayStreak(days.map((d) => d.day));
-  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays, forecast, streak };
+  // "How sure are you?" calibration over the most recent guesses.
+  const guesses = await db
+    .select({ guess: schema.taskRuns.selfEstimate, actual: schema.taskRuns.composite })
+    .from(schema.taskRuns)
+    .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed"), sql`${schema.taskRuns.selfEstimate} is not null`))
+    .orderBy(desc(schema.taskRuns.startedAt))
+    .limit(RECENT_GUESSES);
+  const pairs = guesses.filter((g) => g.actual != null).map((g) => ({ guess: g.guess!, actual: g.actual! }));
+  const selfKnowledge = pairs.length
+    ? { blocks: pairs.length, meanAbsError: pairs.reduce((s, p) => s + Math.abs(p.guess - p.actual), 0) / pairs.length, bias: pairs.reduce((s, p) => s + p.guess - p.actual, 0) / pairs.length }
+    : null;
+  return { profile, plan, goals, heat, collabScore: collab.score, rangeDays, forecast, streak, selfKnowledge };
 }
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
 

@@ -43,6 +43,7 @@ Every signal is emitted by a concrete action in the app and stored in `collab_ev
 | `prediction_correct` | Autonomy | 1.0 | Predicted better / same / worse before a debrief, and was right (±2 points counts as "same") |
 | `prediction_wrong` | Autonomy | 0.6 | Made a prediction that turned out wrong (still thought first) |
 | `prediction_skipped` | Autonomy | 0.2 | Skipped the prediction |
+| `self_estimate` | Autonomy | graded | Guessed a block's score before seeing it: 1 for a perfect guess, 0 when 40 points off (one event per block with a guess; skipping records nothing) |
 | `in_scope_question` | Responsible use | 1.0 | Asked a question the coach can answer (about learning) |
 | `clinical_question` | Responsible use | 0.3 | Asked about a health condition, which is outside a non-clinical tool's scope |
 | `reviewed_data_settings` | Responsible use | 1.0 | Opened privacy & data settings (at most once a week) |

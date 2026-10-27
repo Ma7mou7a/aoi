@@ -94,3 +94,27 @@ describe("second opinion in the pipeline", () => {
     expect(flagged).toBeGreaterThan(60);
   });
 });
+
+describe("confident-helper level", () => {
+  const lv4 = task.difficulty.levels.find((l) => l.params.show_confidence === true)!;
+  const P4 = { ...task.params, ...lv4.params } as unknown as TrustParams;
+  it("keeps the helper's answers identical and makes its confidence honest", () => {
+    const items = Array.from({ length: 40 }, (_, s) => generateTrustMachine(P4, s)).flat();
+    const a = items.map((it, i) => adviceFor(it, it.answer, P4, adviceSeed(3, i)));
+    const b = items.map((it, i) => adviceFor(it, it.answer, P, adviceSeed(3, i)));
+    expect(a.map((x) => x.advice)).toEqual(b.map((x) => x.advice));
+    const sure = (xs: typeof a) => mean(xs.map((x) => Number(x.confident)));
+    expect(sure(a.filter((x) => x.aiCorrect))).toBeGreaterThan(sure(a.filter((x) => !x.aiCorrect)) + 0.3);
+  });
+  it("records the cue and rewards using it", () => {
+    const run = (strategy: TrustStrategy, reliance = 0.5) =>
+      Array.from({ length: 200 }, (_, s) => computeMetrics("trust_machine", simulateTrustMachine(generateTrustMachine(P4, s), P4, reliance, createRng(s + 5), { strategy, blockSeed: s })));
+    const use = (ms: ReturnType<typeof run>) => mean(ms.map((m) => m.confidence_use).filter(Number.isFinite));
+    const aor = (ms: ReturnType<typeof run>) => mean(ms.map((m) => m.appropriate_reliance).filter(Number.isFinite));
+    expect(use(run("always_follow"))).toBeCloseTo(0, 5);
+    expect(use(run("calibrated", 0.9))).toBeGreaterThan(0.3);
+    expect(aor(run("confidence_only"))).toBeGreaterThan(aor(run("always_follow")) + 0.1);
+    // Without the confidence display the metric is absent, not zero.
+    expect(Number.isNaN(computeMetrics("trust_machine", simulateTrustMachine(generateTrustMachine(P, 1), P, 0.5, createRng(1), { blockSeed: 1 })).confidence_use)).toBe(true);
+  });
+});

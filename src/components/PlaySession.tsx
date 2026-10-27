@@ -5,18 +5,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { BlockResultCard } from "./BlockResultCard";
+import { SelfEstimate } from "./SelfEstimate";
 import { CorsiTask } from "./tasks/CorsiTask";
 import { MatricesTask } from "./tasks/MatricesTask";
 import { TrustMachineTask } from "./tasks/TrustMachineTask";
 import { SymbolDigitTask } from "./tasks/SymbolDigitTask";
 import { TaskSwitchingTask } from "./tasks/TaskSwitchingTask";
 import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
+
+type Finished = Parameters<TaskFinish>[0];
 import { StroopTask } from "./tasks/StroopTask";
 
 type State =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "block"; spec: BlockSpec }
+  | { kind: "guess"; spec: BlockSpec; finished: Finished }
   | { kind: "result"; spec: BlockSpec; result: RunResult; next: BlockSpec | null }
   | { kind: "done" };
 
@@ -49,25 +53,31 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
       .catch((e) => setState({ kind: "error", message: e.message }));
   }, [mode]);
 
+  const submit = useCallback((spec: BlockSpec, { trials, status, startedAt }: Finished, selfEstimate: number | null) => {
+    setState({ kind: "loading" });
+    post<{ result: RunResult; next: BlockSpec | null }>(`/api/sessions/${sessionId.current}/runs`, {
+      dimensionId: spec.dimension.id,
+      taskId: spec.task.id,
+      level: spec.level,
+      params: { ...spec.params, seed: spec.seed },
+      reason: spec.reason,
+      startedAt,
+      status,
+      trials,
+      selfEstimate,
+    })
+      .then(({ result, next }) => setState(status === "abandoned" ? (next ? { kind: "block", spec: next } : { kind: "done" }) : { kind: "result", spec, result, next }))
+      .catch((e) => setState({ kind: "error", message: e.message }));
+  }, []);
+
+  // A finished block first asks "How sure are you?" (the guess must come before the score is shown).
   const onFinish = useCallback<TaskFinish>(
-    ({ trials, status, startedAt }) => {
+    (finished) => {
       if (state.kind !== "block") return;
-      const spec = state.spec;
-      setState({ kind: "loading" });
-      post<{ result: RunResult; next: BlockSpec | null }>(`/api/sessions/${sessionId.current}/runs`, {
-        dimensionId: spec.dimension.id,
-        taskId: spec.task.id,
-        level: spec.level,
-        params: { ...spec.params, seed: spec.seed },
-        reason: spec.reason,
-        startedAt,
-        status,
-        trials,
-      })
-        .then(({ result, next }) => setState(status === "abandoned" ? (next ? { kind: "block", spec: next } : { kind: "done" }) : { kind: "result", spec, result, next }))
-        .catch((e) => setState({ kind: "error", message: e.message }));
+      if (finished.status === "completed") setState({ kind: "guess", spec: state.spec, finished });
+      else submit(state.spec, finished, null);
     },
-    [state],
+    [state, submit],
   );
 
   switch (state.kind) {
@@ -99,6 +109,8 @@ export function PlaySession({ mode }: { mode: "assessment" | "training" }) {
         default:
           return <p>Task “{state.spec.task.paradigm}” is not available yet.</p>;
       }
+    case "guess":
+      return <SelfEstimate spec={state.spec} onDone={(guess) => submit(state.spec, state.finished, guess)} />;
     case "result":
       return (
         <BlockResultCard

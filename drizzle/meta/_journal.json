@@ -22,6 +22,13 @@
       "when": 1793035109367,
       "tag": "0002_zippy_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793106239399,
+      "tag": "0003_self_estimate",
+      "breakpoints": true
     }
   ]
 }

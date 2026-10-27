@@ -15,6 +15,10 @@ import type { TrialRecord } from "../scoring/types";
  * ai_right_when_wrong), so both kinds of disagreement occur in every block and neither "always follow"
  * nor "always keep my answer" can score well. The instructions say plainly that the helper is
  * sometimes wrong on purpose.
+ *
+ * Confident-helper level (show_confidence): the helper also says whether it is "very sure" or "not sure",
+ * and that confidence is honest (calibrated): it is "very sure" far more often when it is right. Using it
+ * well is calibrated trust (Lee & See 2004): follow a confident helper, double-check an unsure one.
  */
 
 export type Side = "left" | "right";
@@ -33,6 +37,11 @@ export type TrustParams = {
   max_gap: number;
   ai_wrong_when_right: number;
   ai_right_when_wrong: number;
+  /** Confident-helper level: the helper states its confidence. */
+  show_confidence?: boolean;
+  /** P(helper says "very sure" | it is right) and P(... | it is wrong). Defaults 0.8 / 0.3. */
+  conf_high_when_right?: number;
+  conf_high_when_wrong?: number;
 };
 
 export type TrustItem = { practice: boolean; left: number[]; right: number[]; answer: Side; gap: number };
@@ -77,18 +86,20 @@ export function generateTrustMachine(p: TrustParams, seed: number): TrustItem[] 
 }
 
 /** The helper's advice for one trial, given the initial answer (null = no initial answer in time). Deterministic per seed. */
-export function adviceFor(item: TrustItem, initial: Side | null, p: TrustParams, seed: number): { advice: Side; aiCorrect: boolean } {
+export function adviceFor(item: TrustItem, initial: Side | null, p: TrustParams, seed: number): { advice: Side; aiCorrect: boolean; confident: boolean } {
   const rng = createRng(seed);
   const pRight = initial == null ? (p.ai_right_when_wrong + 1 - p.ai_wrong_when_right) / 2 : initial === item.answer ? 1 - p.ai_wrong_when_right : p.ai_right_when_wrong;
   const aiCorrect = rng.next() < pRight;
+  // Second draw, so the helper's answers are the same with or without the confidence display.
+  const confident = rng.next() < (aiCorrect ? p.conf_high_when_right ?? 0.8 : p.conf_high_when_wrong ?? 0.3);
   const other: Side = item.answer === "left" ? "right" : "left";
-  return { advice: aiCorrect ? item.answer : other, aiCorrect };
+  return { advice: aiCorrect ? item.answer : other, aiCorrect, confident };
 }
 
 /** Per-trial seed for the advice, shared by the renderer and the simulator (replayable blocks). */
 export const adviceSeed = (blockSeed: number, trialIndex: number) => (blockSeed * 1009 + trialIndex * 7919) >>> 0;
 
-export type TrustStrategy = "calibrated" | "always_follow" | "always_keep";
+export type TrustStrategy = "calibrated" | "always_follow" | "always_keep" | "confidence_only";
 
 /**
  * Synthetic player. `reliance` (the dimension's ability) is how well they tell good advice from bad when
@@ -112,14 +123,18 @@ export function simulateTrustMachine(
     const inTime = initialRt <= p.max_response_ms;
     const other = (s: Side): Side => (s === "left" ? "right" : "left");
     const initial: Side | null = inTime ? (rng.next() < pInit ? it.answer : other(it.answer)) : null;
-    const { advice, aiCorrect } = adviceFor(it, initial, p, adviceSeed(blockSeed, i));
+    const { advice, aiCorrect, confident } = adviceFor(it, initial, p, adviceSeed(blockSeed, i));
 
     let final: Side;
     if (strategy === "always_follow") final = advice;
     else if (strategy === "always_keep") final = initial ?? advice;
+    else if (strategy === "confidence_only") final = initial == null || initial === advice ? advice : confident ? advice : initial;
     else if (initial == null) final = rng.next() < 0.5 + 0.3 * reliance ? advice : other(advice);
     else if (initial === advice) final = rng.next() < 0.97 ? initial : other(initial);
-    else {
+    else if (p.show_confidence && rng.next() < 0.7 * reliance) {
+      // Calibrated trust: a skilled player often lets the helper's (honest) confidence decide.
+      final = confident ? advice : initial;
+    } else {
       // Disagreement: pick whoever is right with a probability that grows with reliance skill,
       // a little with arithmetic (rechecking), and with how clear-cut the item is.
       const certainty = Math.min(1, 0.6 + 0.4 * ease);
@@ -131,7 +146,7 @@ export function simulateTrustMachine(
     return {
       trialIndex: i,
       isPractice: it.practice,
-      stimulus: { left: it.left, right: it.right, gap: it.gap, initial, initialRtMs: inTime ? initialRt : null, advice, aiCorrect },
+      stimulus: { left: it.left, right: it.right, gap: it.gap, initial, initialRtMs: inTime ? initialRt : null, advice, aiCorrect, ...(p.show_confidence ? { aiConfident: confident } : {}) },
       expected: it.answer,
       response: final,
       outcome: "response",

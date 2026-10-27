@@ -73,6 +73,8 @@ export const SIGNALS = {
   prediction_correct: { component: "autonomy", value: 1.0, label: "Predicted how a session went, correctly" },
   prediction_wrong: { component: "autonomy", value: 0.6, label: "Predicted how a session went (not quite right)" },
   prediction_skipped: { component: "autonomy", value: 0.2, label: "Skipped the self-prediction" },
+  // "How sure are you?", graded per block: 1 for a perfect guess of the block score, 0 when off by 40 points.
+  self_estimate: { component: "autonomy", value: 0.5, label: "Guessed your block score before seeing it" },
 
   in_scope_question: { component: "responsible_use", value: 1.0, label: "Asked a question within the coach's scope" },
   clinical_question: { component: "responsible_use", value: 0.3, label: "Asked the coach a health question it can't answer" },

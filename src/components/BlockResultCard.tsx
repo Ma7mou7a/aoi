@@ -3,6 +3,7 @@
 import type { ValidityFlag } from "@/lib/scoring/types";
 import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
+import { biasWord } from "@/lib/metacog";
 import { BandBar } from "./BandBar";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -35,7 +36,7 @@ function detail(paradigm: string, m: Record<string, number>) {
   if (paradigm === "task_switching") return `Switching rules slowed you by ${fmt("switch_cost_ms", m.switch_cost_ms)}; overall accuracy ${fmt("accuracy", m.accuracy)}.`;
   if (paradigm === "matrices") return `You solved ${fmt("accuracy", m.accuracy)} of the puzzles.`;
   if (paradigm === "trust_machine")
-    return `The AI disagreed with you ${m.n_disagreements ?? 0} times. When it was wrong you kept your answer ${fmtShare(m.relative_self_reliance)}; when it was right you switched ${fmtShare(m.relative_ai_reliance)}. You followed its advice on ${fmt("accuracy", m.followed_advice_rate)} of trials.`;
+    return `The AI disagreed with you ${m.n_disagreements ?? 0} times. When it was wrong you kept your answer ${fmtShare(m.relative_self_reliance)}; when it was right you switched ${fmtShare(m.relative_ai_reliance)}. You followed its advice on ${fmt("accuracy", m.followed_advice_rate)} of trials.${Number.isFinite(m.confidence_use) ? ` You went with it ${Math.round(m.confidence_use * 100)} points more often when it said it was very sure${m.confidence_use > 0.2 ? ": good use of its confidence." : "; its confidence is honest, so it's worth using."}` : ""}`;
   return "";
 }
 
@@ -82,7 +83,26 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
-      <div className="glass rounded-2xl p-4 ">
+      {result.selfCheck && (() => {
+        const c = result.selfCheck;
+        const off = Math.round(Math.abs(c.error) * 100);
+        return (
+          <div className="glass rounded-2xl p-4">
+            <h3 className="mb-1 font-medium">How sure were you?</h3>
+            <p className="text-sm">
+              You guessed <b>{pct(c.guess)}</b>; the block scored <b>{pct(c.actual)}</b>.{" "}
+              {off <= 5 ? "Spot on!" : `You were ${off} points ${c.error > 0 ? "too high" : "too low"}.`}
+            </p>
+            {c.recent && (
+              <p className="mt-1 text-xs text-slate-500">
+                Over your last {c.recent.blocks} guesses you were off by {Math.round(c.recent.meanAbsError * 100)} points on average, {biasWord(c.recent.bias)}.
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
+      <div className="glass rounded-2xl p-4">
         <h3 className="mb-2 font-medium">How this block was scored</h3>
         <table className="w-full text-sm">
           <tbody>

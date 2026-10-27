@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { dayStreak, milestones } from "../motivation";
 import { db, schema } from "@/db";
 import { inferAffect, type AffectState } from "../affect";
@@ -11,6 +11,7 @@ import { whatItWouldTake, type Counterfactual } from "../scoring/counterfactual"
 import { selectNext, type LastRun, type SelectionMode } from "../selector";
 import { AVAILABLE_PARADIGMS, type BlockSpec } from "../tasks/registry";
 import { trustSignals } from "../collab/score";
+import { selfCheck, selfEstimateValue, type SelfCheck } from "../metacog";
 import { recordSignals } from "./collab";
 import { getPosteriors } from "./profile";
 import { HttpError } from "./user";
@@ -72,6 +73,8 @@ export type RunResult = {
   affect: AffectState | null;
   /** Earned celebrations (personal best, highest estimate, streak); empty when nothing new. */
   wins: string[];
+  /** Guess vs actual score, with the running calibration over recent guesses (null when skipped). */
+  selfCheck: SelfCheck | null;
   /** Exact "what it would take" recalculations of this block (empty for Corsi and abandoned blocks). */
   whatIf: Counterfactual[];
 };
@@ -94,6 +97,8 @@ export async function recordRun(input: {
   /** behavioural_signals consent: enables the affect inference. */
   behaviourOk?: boolean;
   sessionStartedAt?: Date;
+  /** "How sure are you?" guess of the block score before seeing it (0..1); null/undefined = skipped. */
+  selfEstimate?: number | null;
 }): Promise<RunResult> {
   const dim = getDimension(input.dimensionId);
   const task = dim?.tasks.find((t) => t.id === input.taskId);
@@ -161,6 +166,7 @@ export async function recordRun(input: {
         observationSd: score.observationSd,
         validity: score.validity,
         affect,
+        selfEstimate: input.selfEstimate ?? null,
         startedAt: input.startedAt,
         endedAt: now,
       })
@@ -201,6 +207,17 @@ export async function recordRun(input: {
 
   const view = (p: Posterior) => ({ mean: p.mean, sd: p.sd, ci: credibleInterval(p) });
   const whatIf = completed ? whatItWouldTake(task, input.trials) : [];
+  let check: SelfCheck | null = null;
+  if (completed && input.selfEstimate != null) {
+    const earlier = await db
+      .select({ guess: schema.taskRuns.selfEstimate, actual: schema.taskRuns.composite })
+      .from(schema.taskRuns)
+      .where(and(eq(schema.taskRuns.userId, input.userId), eq(schema.taskRuns.status, "completed"), sql`${schema.taskRuns.selfEstimate} is not null`, sql`${schema.taskRuns.id} <> ${taskRunId}`))
+      .orderBy(desc(schema.taskRuns.startedAt))
+      .limit(9);
+    check = selfCheck(input.selfEstimate, score.composite, earlier.filter((e) => e.actual != null).map((e) => ({ guess: e.guess!, actual: e.actual! })));
+    await recordSignals(input.userId, [{ signal: "self_estimate", value: selfEstimateValue(input.selfEstimate, score.composite), details: { taskRunId, guess: input.selfEstimate, actual: score.composite } }]);
+  }
   if (completed && task.paradigm === "trust_machine") {
     const scoredTrials = input.trials.filter((t) => !t.isPractice && t.stimulus.initial != null);
     const disagreed = scoredTrials.filter((t) => t.stimulus.initial !== t.stimulus.advice);
@@ -208,7 +225,7 @@ export async function recordRun(input: {
     const signals = trustSignals(score.metrics, cases);
     if (signals.length) await recordSignals(input.userId, signals.map((s) => ({ ...s, details: { taskRunId, ...cases } })));
   }
-  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf };
+  return { taskRunId, score, before: view(before), after: after && view(after), affect, wins, whatIf, selfCheck: check };
 }
 
 /** JSON can't hold NaN/Infinity; store them as absent. */

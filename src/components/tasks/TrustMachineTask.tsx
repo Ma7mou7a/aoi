@@ -29,7 +29,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
   const [idx, setIdx] = useState(0);
   const [stage, setStage] = useState<Stage>("blank");
   const [initial, setInitial] = useState<Side | null>(null);
-  const [advice, setAdvice] = useState<{ advice: Side; aiCorrect: boolean } | null>(null);
+  const [advice, setAdvice] = useState<{ advice: Side; aiCorrect: boolean; confident: boolean } | null>(null);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
 
   const startedAt = useRef("");
@@ -89,7 +89,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
       records.current.push({
         trialIndex: idx,
         isPractice: it.practice,
-        stimulus: { left: it.left, right: it.right, gap: it.gap, initial, initialRtMs: initialRt.current, advice: advice.advice, aiCorrect: advice.aiCorrect },
+        stimulus: { left: it.left, right: it.right, gap: it.gap, initial, initialRtMs: initialRt.current, advice: advice.advice, aiCorrect: advice.aiCorrect, ...(p.show_confidence ? { aiConfident: advice.confident } : {}) },
         expected: it.answer,
         response: final,
         outcome: final == null ? "timeout" : rt != null && rt < spec.task.validity.min_rt_ms ? "anticipation" : "response",
@@ -103,7 +103,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
         setStage("feedback");
       } else advance();
     },
-    [stage, advice, items, idx, initial, spec.task.validity.min_rt_ms, advance],
+    [stage, advice, items, idx, initial, p.show_confidence, spec.task.validity.min_rt_ms, advance],
   );
 
   useEffect(() => {
@@ -158,6 +158,9 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
         <p>Two sums appear. Press <Kbd>F</Kbd> if the <b>left</b> total is larger, <Kbd>J</Kbd> if the <b>right</b> one is. Be quick: you won&apos;t have time to add everything up.</p>
         <p className="mt-3">Then an <b>AI helper</b> gives its answer. Press <Kbd>F</Kbd> or <Kbd>J</Kbd> for your final choice, or press nothing to keep your first answer.</p>
         <p className="mt-3 text-base">The helper is right most of the time but <b>sometimes wrong on purpose</b>. Follow it when it&apos;s right, keep your answer when it&apos;s wrong.</p>
+        {p.show_confidence && (
+          <p className="mt-3 text-base">At this level the helper also tells you <b>how sure it is</b>, and it&apos;s honest: when it says <i>very sure</i> it&apos;s usually right; when it says <i>not sure</i>, check its answer.</p>
+        )}
       </TaskIntro>
     );
   }
@@ -177,7 +180,11 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
         <span className="font-mono text-xs text-slate-500">{side === "left" ? "F" : "J"}</span>
         <span className="absolute -top-3 flex gap-1">
           {mine && <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-slate-100 dark:text-slate-900">your answer</span>}
-          {ai && <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-white dark:text-slate-950">AI helper</span>}
+          {ai && (
+            <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-white dark:text-slate-950">
+              AI helper{p.show_confidence && advice ? (advice.confident ? " · very sure" : " · not sure") : ""}
+            </span>
+          )}
         </span>
       </button>
     );
@@ -197,7 +204,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
               ? "The AI helper agrees with you. Final answer?"
               : initial == null
                 ? `Time's up. The AI helper says the ${label(advice!.advice)} total is larger. Final answer?`
-                : `The AI helper says the ${label(advice!.advice)} total is larger. Keep yours or switch?`)}
+                : `The AI helper${p.show_confidence ? (advice!.confident ? " is very sure and" : " is not sure, but") : ""} says the ${label(advice!.advice)} total is larger. Keep yours or switch?`)}
             {stage === "feedback" && (
               <span className={lastCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
                 {lastCorrect ? "Right!" : "Not quite."} The {label(it.answer)} total is larger. The helper was {advice?.aiCorrect ? "right" : "wrong"} this time.

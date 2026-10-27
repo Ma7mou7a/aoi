@@ -106,6 +106,8 @@ export const taskRuns = pgTable("task_runs", {
   validity: jsonb("validity").$type<BlockValidity>(),
   /** Behaviour-only fatigue/frustration inference (src/lib/affect); only with behavioural_signals consent. */
   affect: jsonb("affect").$type<{ fatigue: string; frustration: string; cues: string[]; suggestion: string | null; easeOff: boolean }>(),
+  /** "How sure are you?": the user's guess of this block's score before seeing it (0..1); null = skipped. */
+  selfEstimate: real("self_estimate"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
 }, (t) => [

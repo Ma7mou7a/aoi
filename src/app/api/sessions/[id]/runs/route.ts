@@ -29,6 +29,8 @@ const body = z.object({
   startedAt: z.string().datetime(),
   status: z.enum(["completed", "abandoned"]),
   trials: z.array(trial).max(500),
+  /** "How sure are you?" guess of the block score (0..1), made before the result is shown. */
+  selfEstimate: z.number().min(0).max(1).nullable().optional(),
 });
 
 /** Submit one block: stores trials, scores it, updates the Brain Twin, and returns the next block. */

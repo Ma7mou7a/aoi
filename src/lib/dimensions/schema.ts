@@ -36,6 +36,8 @@ const difficultyLevel = z.object({
    */
   ability_range: z.tuple([z.number().min(-2).max(3), z.number().min(-2).max(3)])
     .refine(([lo, hi]) => hi > lo, "ability_range must be [lo, hi] with hi > lo"),
+  /** Offered in training only, never in assessment (e.g. a level whose extra cue makes it a weaker measure). */
+  training_only: z.boolean().default(false),
 });
 
 const task = z.object({

@@ -52,6 +52,7 @@ function candidates(input: SelectorInput): Candidate[] {
     for (const task of dim.tasks) {
       if (!input.available.includes(task.paradigm)) continue;
       for (const l of task.difficulty.levels) {
+        if (input.mode === "assessment" && l.training_only) continue;
         const reduction = post.sd - expectedPosteriorSd(post.sd, expectedObsSd(dim, post.mean, l.ability_range));
         out.push({ dim, task, level: l.level, reduction, c: predictedComposite(post.mean, l.ability_range) });
       }

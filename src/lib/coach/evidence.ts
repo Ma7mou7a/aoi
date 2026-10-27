@@ -16,6 +16,8 @@ export type RunRow = {
   composite: number | null;
   validity: { valid: boolean; flags: string[] } | null;
   affect?: { fatigue: string; frustration: string } | null;
+  /** "How sure are you?" guess of the block score (0..1), if the user made one. */
+  selfEstimate?: number | null;
   startedAt: Date;
 };
 
@@ -56,6 +58,8 @@ export type RunEvidence = {
   reliabilityNotes: string[];
   /** e.g. "fatigue high" (behaviour-only inference), empty when calm or not consented. */
   engagement: string[];
+  /** The user's own guess of the block score before seeing it, in %, or null. */
+  yourGuessPct: number | null;
 };
 
 export type TrialFact = { ref: string; runRef: string; label: string; count: number; trialIds: string[] };
@@ -115,6 +119,8 @@ function factsFor(paradigm: string, trials: TrialRow[]): Array<{ label: string; 
     facts.push({ label: "times you switched to a wrong AI suggestion", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === false && t.correct === false) });
     facts.push({ label: "times you switched to correct AI advice", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === true && !!t.correct) });
     facts.push({ label: "times you kept your answer when the AI was right", trials: by((t) => disagreed(t) && t.stimulus.aiCorrect === true && t.correct === false) });
+    facts.push({ label: "times you went with the AI when it said it was very sure", trials: by((t) => disagreed(t) && t.stimulus.aiConfident === true && t.response === t.stimulus.advice) });
+    facts.push({ label: "times you went with the AI when it said it was not sure", trials: by((t) => disagreed(t) && t.stimulus.aiConfident === false && t.response === t.stimulus.advice) });
   } else if (paradigm === "matrices") {
     facts.push({ label: "puzzles solved", trials: by((t) => !!t.correct) });
     facts.push({ label: "puzzles missed", trials: by((t) => t.correct === false) });
@@ -175,6 +181,7 @@ export function buildEvidencePack(input: {
       metrics,
       reliable: r.validity?.valid ?? true,
       reliabilityNotes: r.validity?.flags ?? [],
+      yourGuessPct: r.selfEstimate == null ? null : pct(r.selfEstimate),
       engagement: [
         ...(r.affect && r.affect.fatigue !== "low" ? [`fatigue ${r.affect.fatigue}`] : []),
         ...(r.affect && r.affect.frustration !== "low" ? [`frustration ${r.affect.frustration}`] : []),
@@ -210,6 +217,7 @@ export function packToPrompt(pack: EvidencePack): string {
       (r) =>
         `- ${r.ref}: ${r.skill}, ${r.task}, level ${r.level}, ${r.when} UTC, block score ${r.blockScorePct ?? "n/a"}%, ` +
         `${Object.entries(r.metrics).map(([k, v]) => `${k}=${v}`).join(", ")}` +
+        (r.yourGuessPct != null ? `, the user's own guess before seeing it: ${r.yourGuessPct}%` : "") +
         (r.reliable ? "" : ` [LOW RELIABILITY: ${r.reliabilityNotes.join(", ")}]`) +
         (r.engagement.length ? ` [BEHAVIOUR SIGNALS (timing/errors only, a guess): ${r.engagement.join(", ")}]` : ""),
     )

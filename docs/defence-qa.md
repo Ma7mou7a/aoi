@@ -56,7 +56,13 @@ The instructions say exactly that before every block: "the helper is right most 
 No, and we tested it. The score only uses disagreements, conditional on whether your first answer was right (Schemmer et al. 2023). In simulation it correlates with reliance skill (r = 0.61) and not with arithmetic (r = 0.07). Final accuracy, the naive alternative, leans on arithmetic (r = 0.26). Always following the AI or always ignoring it both score at chance.
 
 **"Why is AI reliance so uncertain?"**
-Only about 13 of 28 trials are disagreements, so one block carries limited information. The twin knows it: the band stays wide (coverage 90–95%), and the estimate firms up over about 6–10 blocks (r = 0.70 → 0.84). We tested seven block designs in simulation and kept the one that gave the most disagreements without making the helper worse than the player. The weekly plan gives it blocks because its band is the widest.
+Only about 13 of 28 trials are disagreements, so one block carries limited information. The twin knows it: the band stays wide (coverage 90–95%), and the estimate firms up over about 6–10 blocks (r = 0.76 → 0.81). We tested seven block designs in simulation and kept the one that gave the most disagreements without making the helper worse than the player. The weekly plan gives it blocks because its band is the widest.
+
+**"Why ask people to guess their own score?"**
+Knowing how well you did is the skill that tells you when to trust yourself and when to trust an AI. Feedback on such self-judgements improved them, and the gain carried over to a different task (Carpenter et al. 2019). It takes five seconds, it's optional, and it happens before the score is shown, so the guess isn't anchored on it.
+
+**"The helper says how sure it is. Isn't that making the game easy?"**
+That's the point of that level: using an AI's honest confidence is calibrated trust (Lee & See 2004). It is a training level, though. We tested letting assessment pick it, and recovery after 10 blocks fell from r 0.84 to 0.78, because following an honest cue is a shortcut. As training-only it leaves measurement unchanged.
 
 **"What data leaves the device?"**
 Only with consent, and only an anonymous evidence pack (skill names, estimates, block metrics, trial-group counts) to the LLM provider. No name, user ID or raw trials. Voice dictation, if enabled, uses the browser's speech service, which is disclosed in Settings.
@@ -91,7 +97,7 @@ Ours uses no face or voice. It infers fatigue or frustration only from behaviour
 | Invalid play caught | 98% overall: 82–100% of random play, 100% of same key, silent, too fast; false alarms 0–2% (under 1% average) |
 | Forecast calibration | 90% bands hold 94%, 50% bands 55% (TADPOLE CPA 0.04 / 0.05) |
 | Fairness | slower, equally accurate users: bias < 2 points (was −14 for attention before the fix) |
-| Unit tests | 124 |
-| Second-opinion game | blind strategies 0.49–0.51 (chance 0.5) vs 0.79 for skilled; score vs reliance r = 0.61, vs arithmetic r = 0.07; twin r = 0.84 after 10 blocks |
+| Unit tests | 129 |
+| Second-opinion game | blind strategies 0.49–0.51 (chance 0.5) vs 0.79 for skilled; score vs reliance r = 0.61, vs arithmetic r = 0.07; twin r = 0.81 after 10 blocks (0.82 over five seeds) |
 | Science cards | 13 reviewed findings, cited only next to the user's own evidence |
 | Collaboration score weights | 25 verification · 20 clarification · 20 iteration · 20 autonomy · 15 responsible use |

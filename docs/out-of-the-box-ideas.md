@@ -33,7 +33,7 @@ The user asks a question about themselves, for example: "Do I focus better in th
 - *Guardrails:* only everyday, non-health conditions (time of day, music, device, a short break), and results are only ever about yourself.
 - *Why it wins:* it turns the Brain Twin from a mirror into a scientific instrument the user controls. That is AI *for* the brain in the most literal sense, and it shows off the uncertainty model.
 
-### 4. Metacognition score (half a day)
+### 4. Metacognition score: built as "How sure are you?"
 Ask "how sure are you?" after each block, and track how well confidence matches performance (calibration, Brier score) as a seventh, opt-in metric.
 - *Research:* feedback on confidence judgements improved metacognitive calibration, and the gain transferred to an untrained task (Carpenter et al. 2019, *J. Exp. Psychol.: General*). A 2020 follow-up suggests part of the gain is a change in confidence habits, so claim it modestly.
 - It also feeds the AI Collaboration Score: people who know when they're right are better at judging when the AI is wrong.
