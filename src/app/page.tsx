@@ -1,4 +1,6 @@
+import { and, count, eq } from "drizzle-orm";
 import Link from "next/link";
+import { db, schema } from "@/db";
 import { BandBar } from "@/components/BandBar";
 import { BrainTwinArt, EkgLine } from "@/components/BrainTwinArt";
 import { Onboarding } from "@/components/Onboarding";
@@ -48,6 +50,9 @@ export default async function Home() {
             <a href="#start" className="rounded-lg bg-brand px-6 py-3 font-display text-lg tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_30px_rgba(0,181,226,0.4)] transition hover:bg-brand-2">Create my twin</a>
             <Link href="/try" className="glass rounded-lg px-6 py-3 font-display text-lg tracking-wider uppercase transition hover:border-brand">Try a task first</Link>
           </div>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">
+            Already have a twin? <Link href="/signin" className="font-semibold text-brand hover:underline">Sign in with your key</Link>
+          </p>
           <div className="relative mx-auto mt-6 max-w-xl">
             <BrainTwinArt decor className="w-full drop-shadow-[0_30px_60px_rgba(0,98,155,0.45)]" />
             <span className="absolute top-1/3 left-0 hidden -translate-x-1/2 font-display text-sm tracking-[0.2em] text-slate-500 uppercase sm:block dark:text-slate-300">You</span>
@@ -87,6 +92,16 @@ export default async function Home() {
 
   const profile = await getProfileView(user.id);
   const measured = profile.dimensions.filter((d) => d.nObservations > 0);
+  const [{ n: coachMessages }] = await db.select({ n: count() }).from(schema.coachMessages)
+    .where(and(eq(schema.coachMessages.userId, user.id), eq(schema.coachMessages.role, "coach")));
+  // First-run checklist: each step ticks itself off from real data, and the card disappears when all are done.
+  const steps = [
+    { done: user.signinKeyHash != null, label: "Save your sign-in key", hint: "so you can come back on another device", href: "/settings" },
+    { done: measured.length >= 3, label: "Measure three skills", hint: "about 5 minutes of assessment", href: "/play" },
+    { done: coachMessages > 0, label: "Get a coach debrief", hint: "every claim links to your trials", href: "/coach" },
+    { done: profile.dimensions.some((d) => d.id === "ai_reliance" && d.nObservations > 0), label: "Play Second opinion", hint: "how well do you trust an AI?", href: "/play?mode=training&focus=ai_reliance" },
+  ];
+  const open = steps.filter((x) => !x.done).length;
   const skills = profile.dimensions.map((d) => ({ id: d.id, name: d.name, mean: d.nObservations > 0 ? d.mean : 0, color: `var(--dim-${d.id}, ${d.color})` }));
   return (
     <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
@@ -106,6 +121,22 @@ export default async function Home() {
             <p className="text-sm text-slate-500 dark:text-slate-300">Your weakest skill, at the level where you grow fastest.</p>
           </Link>
         </div>
+        {open > 0 && (
+          <div className="glass rounded-2xl p-5">
+            <p className="font-display text-sm tracking-[0.2em] text-brand uppercase">Getting started · {steps.length - open}/{steps.length}</p>
+            <ol className="mt-2 space-y-2">
+              {steps.map((x) => (
+                <li key={x.label} className="flex items-start gap-3">
+                  <span aria-hidden className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs ${x.done ? "bg-emerald-600 text-white" : "border border-slate-400"}`}>{x.done ? "✓" : ""}</span>
+                  {x.done
+                    ? <span className="text-slate-500 line-through">{x.label}</span>
+                    : <Link href={x.href} className="hover:text-brand"><b>{x.label}</b> <span className="text-sm text-slate-500 dark:text-slate-300">· {x.hint}</span></Link>}
+                  <span className="sr-only">{x.done ? "(done)" : "(to do)"}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
         {measured.length > 0 && (
           <div className="glass space-y-3 rounded-2xl p-5">
             {measured.map((d) => <BandBar key={d.id} label={d.name.split(" ")[0]} mean={d.mean} ci={d.ci} color={`var(--dim-${d.id}, ${d.color})`} />)}

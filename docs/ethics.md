@@ -15,6 +15,7 @@ AI4Brain is a **non-clinical learning tool**. It helps people practise and under
 | Data | Purpose | Consent | Kept |
 |-|-|-|-|
 | Display name (any nickname) | Greeting | Required (data processing) | Until deletion |
+| Sign-in key **hash** (SHA-256; the key itself is shown once and never stored) | Signing back in on another browser or device, without email or password | Created at signup | Until replaced or deleted |
 | Task trials: stimulus, response, correct, response time | Scoring, evidence for the coach | Required | Retention window |
 | Block scores, validity flags, profile snapshots, forecasts | Brain Twin, dashboard | Required | Retention window |
 | Behaviour signals: window focus loss, timing-based fatigue/frustration inference | Down-weighting unreliable blocks; break suggestions | `behavioural_signals` (opt-in) | Retention window; dropped before storage if not granted |

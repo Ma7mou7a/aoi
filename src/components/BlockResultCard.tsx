@@ -83,6 +83,12 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
+      {result.wins.length > 0 && (
+        <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+          {result.wins.map((w) => <li key={w}><span aria-hidden>★ </span>{w}</li>)}
+        </ul>
+      )}
+
       {result.selfCheck && (() => {
         const c = result.selfCheck;
         const off = Math.round(Math.abs(c.error) * 100);
@@ -102,29 +108,6 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         );
       })()}
 
-      <div className="glass rounded-2xl p-4">
-        <h3 className="mb-2 font-medium">How this block was scored</h3>
-        <table className="w-full text-sm">
-          <tbody>
-            {score.components.map((c) => (
-              <tr key={c.metric} className="border-t border-slate-100 dark:border-slate-800">
-                <td className="py-1.5">{METRIC_LABELS[c.metric] ?? c.metric}</td>
-                <td className="py-1.5 text-right font-mono">{fmt(c.metric, c.raw)}</td>
-                <td className="py-1.5 text-right text-slate-500">× {Math.round(c.weight * 100)}% weight</td>
-                <td className="py-1.5 text-right font-mono">{pct(c.contribution)}</td>
-              </tr>
-            ))}
-            <tr className="border-t-2 border-slate-200 font-medium dark:border-slate-700">
-              <td className="py-1.5" colSpan={3}>Block score at level {spec.level}</td>
-              <td className="py-1.5 text-right font-mono">{pct(score.composite)}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="mt-2 text-xs text-slate-500">
-          {detail(spec.task.paradigm, score.metrics)}
-          {score.censored && " The score hit the edge of this level, so it counts a little less."}
-        </p>
-      </div>
 
       {result.whatIf.length > 0 && (
         <div className="glass rounded-2xl p-4">
@@ -149,12 +132,6 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
-      {result.wins.length > 0 && (
-        <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-          {result.wins.map((w) => <li key={w}><span aria-hidden>★ </span>{w}</li>)}
-        </ul>
-      )}
-
       {result.affect?.suggestion && (
         <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
           <p className="font-medium">{result.affect.suggestion}</p>
@@ -169,6 +146,31 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
           )}
         </div>
       )}
+
+      {/* The detailed breakdown stays one click away: the screen leads with what matters to the player. */}
+      <details className="glass rounded-2xl p-4">
+        <summary className="cursor-pointer font-medium">How this block was scored <span className="font-normal text-slate-500">· {pct(score.composite)}</span></summary>
+        <table className="mt-3 w-full text-sm">
+          <tbody>
+            {score.components.map((c) => (
+              <tr key={c.metric} className="border-t border-slate-100 dark:border-slate-800">
+                <td className="py-1.5">{METRIC_LABELS[c.metric] ?? c.metric}</td>
+                <td className="py-1.5 text-right font-mono">{fmt(c.metric, c.raw)}</td>
+                <td className="py-1.5 text-right text-slate-500">× {Math.round(c.weight * 100)}% weight</td>
+                <td className="py-1.5 text-right font-mono">{pct(c.contribution)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-slate-200 font-medium dark:border-slate-700">
+              <td className="py-1.5" colSpan={3}>Block score at level {spec.level}</td>
+              <td className="py-1.5 text-right font-mono">{pct(score.composite)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="mt-2 text-xs text-slate-500">
+          {detail(spec.task.paradigm, score.metrics)}
+          {score.censored && " The score hit the edge of this level, so it counts a little less."}
+        </p>
+      </details>
 
       {next && <p className="text-sm text-slate-600 dark:text-slate-300"><b>Next:</b> {next.reason.note}</p>}
       <button onClick={onContinue} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white dark:bg-brand dark:text-slate-900">

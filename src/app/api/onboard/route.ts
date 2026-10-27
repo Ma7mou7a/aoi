@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { db, schema } from "@/db";
+import { generateSigninKey, hashSigninKey, normaliseSigninKey } from "@/lib/signinKey";
 import { handle, HttpError, POLICY_VERSION, USER_COOKIE } from "@/lib/server/user";
 
 const body = z.object({
@@ -21,8 +22,10 @@ export const POST = handle(async (req: Request) => {
   if (!parsed.success) throw new HttpError(400, parsed.error.issues.map((i) => i.message).join("; "));
   const { displayName, consents, retentionDays } = parsed.data;
 
+  // The sign-in key is shown once, right after signup; only its hash is stored.
+  const signinKey = generateSigninKey();
   const user = await db.transaction(async (tx) => {
-    const [u] = await tx.insert(schema.users).values({ displayName, retentionDays }).returning();
+    const [u] = await tx.insert(schema.users).values({ displayName, retentionDays, signinKeyHash: hashSigninKey(normaliseSigninKey(signinKey)!) }).returning();
     await tx.insert(schema.consents).values(
       (Object.entries(consents) as [keyof typeof consents, boolean][]).map(([kind, granted]) => ({
         userId: u.id,
@@ -35,5 +38,5 @@ export const POST = handle(async (req: Request) => {
   });
 
   (await cookies()).set(USER_COOKIE, user.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: retentionDays * 86_400 });
-  return Response.json({ id: user.id, displayName: user.displayName });
+  return Response.json({ id: user.id, displayName: user.displayName, signinKey });
 });

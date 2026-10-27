@@ -29,6 +29,13 @@
       "when": 1793106239399,
       "tag": "0003_self_estimate",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793107002171,
+      "tag": "0004_signin_key",
+      "breakpoints": true
     }
   ]
 }

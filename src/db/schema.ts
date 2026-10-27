@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   /** Data older than this is purged by the retention job. */
   retentionDays: integer("retention_days").notNull().default(180),
   preferences: jsonb("preferences").$type<{ highContrast?: boolean; coachTone?: "warm" | "direct" }>().notNull().default({}),
+  /** SHA-256 of the user's sign-in key (the key itself is shown once and never stored). Null = no key yet. */
+  signinKeyHash: text("signin_key_hash").unique(),
   createdAt: createdAt(),
   lastActiveAt: timestamp("last_active_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -64,6 +64,9 @@ Knowing how well you did is the skill that tells you when to trust yourself and 
 **"The helper says how sure it is. Isn't that making the game easy?"**
 That's the point of that level: using an AI's honest confidence is calibrated trust (Lee & See 2004). It is a training level, though. We tested letting assessment pick it, and recovery after 10 blocks fell from r 0.84 to 0.78, because following an honest cue is a shortcut. As training-only it leaves measurement unchanged.
 
+**"How do people log in? There's no email."**
+On purpose. At signup you get a private 16-character sign-in key (copy it or save it as a file); we store only its hash. The key opens your Brain Twin on any browser or device, you can replace it in Settings, and sign-out is one click. No email or password means nothing personal to leak.
+
 **"What data leaves the device?"**
 Only with consent, and only an anonymous evidence pack (skill names, estimates, block metrics, trial-group counts) to the LLM provider. No name, user ID or raw trials. Voice dictation, if enabled, uses the browser's speech service, which is disclosed in Settings.
 
@@ -97,7 +100,7 @@ Ours uses no face or voice. It infers fatigue or frustration only from behaviour
 | Invalid play caught | 98% overall: 82–100% of random play, 100% of same key, silent, too fast; false alarms 0–2% (under 1% average) |
 | Forecast calibration | 90% bands hold 94%, 50% bands 55% (TADPOLE CPA 0.04 / 0.05) |
 | Fairness | slower, equally accurate users: bias < 2 points (was −14 for attention before the fix) |
-| Unit tests | 129 |
+| Unit tests | 132 |
 | Second-opinion game | blind strategies 0.49–0.51 (chance 0.5) vs 0.79 for skilled; score vs reliance r = 0.61, vs arithmetic r = 0.07; twin r = 0.81 after 10 blocks (0.82 over five seeds) |
 | Science cards | 13 reviewed findings, cited only next to the user's own evidence |
 | Collaboration score weights | 25 verification · 20 clarification · 20 iteration · 20 autonomy · 15 responsible use |

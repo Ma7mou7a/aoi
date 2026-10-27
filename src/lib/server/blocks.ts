@@ -20,7 +20,8 @@ import { HttpError } from "./user";
 export const MAX_BLOCKS_PER_SESSION = 6;
 
 /** Ask the selector for the next block of this session and package it for the client. */
-export async function nextBlock(userId: string, sessionId: string, mode: SelectionMode): Promise<BlockSpec | null> {
+/** `focus` (a dimension id) makes the session's first block come from that skill, e.g. from the getting-started checklist. */
+export async function nextBlock(userId: string, sessionId: string, mode: SelectionMode, focus?: string): Promise<BlockSpec | null> {
   const runs = await db
     .select()
     .from(schema.taskRuns)
@@ -34,8 +35,10 @@ export async function nextBlock(userId: string, sessionId: string, mode: Selecti
     lastRuns[r.taskId] = { taskId: r.taskId, level: r.difficultyLevel, accuracy: r.metrics?.accuracy ?? 0 };
   }
 
+  const all = getDimensions();
+  const focused = focus && !completed.length ? all.filter((d) => d.id === focus) : [];
   const selection = selectNext({
-    dimensions: getDimensions(),
+    dimensions: focused.length ? focused : all,
     posteriors: await getPosteriors(userId),
     mode,
     available: AVAILABLE_PARADIGMS,

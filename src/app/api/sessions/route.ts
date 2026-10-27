@@ -8,6 +8,8 @@ import { handle, HttpError, requireUser } from "@/lib/server/user";
 
 const body = z.object({
   mode: z.enum(["assessment", "training"]),
+  /** Optional dimension id for the first block (getting-started links). */
+  focus: z.string().max(64).optional(),
   device: z
     .object({
       type: z.enum(["desktop", "tablet", "phone"]),
@@ -38,5 +40,5 @@ export const POST = handle(async (req: Request) => {
     .insert(schema.sessions)
     .values({ userId: user.id, mode: parsed.data.mode, device: parsed.data.device, biometric: false })
     .returning();
-  return Response.json({ sessionId: session.id, next: await nextBlock(user.id, session.id, parsed.data.mode) });
+  return Response.json({ sessionId: session.id, next: await nextBlock(user.id, session.id, parsed.data.mode, parsed.data.focus) });
 });

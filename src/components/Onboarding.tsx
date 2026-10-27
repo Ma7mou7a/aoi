@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SigninKeyCard } from "./SigninKeyCard";
 
 export function Onboarding() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export function Onboarding() {
   const [consents, setConsents] = useState({ data_processing: false, behavioural_signals: false, llm_coaching: false });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signinKey, setSigninKey] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,8 +20,11 @@ export function Onboarding() {
     const res = await fetch("/api/onboard", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName: name, consents }) });
     setBusy(false);
     if (!res.ok) return setError((await res.json()).error);
-    router.refresh();
+    setSigninKey((await res.json()).signinKey);
   }
+
+  // Right after signup: show the sign-in key once, then enter the app.
+  if (signinKey) return <SigninKeyCard signinKey={signinKey} onDone={() => router.refresh()} />;
 
   const box = (key: keyof typeof consents, title: string, text: string, required = false) => (
     <label className="flex gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">

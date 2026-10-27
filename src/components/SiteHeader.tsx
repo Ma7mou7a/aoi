@@ -4,6 +4,13 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+/** Signed-out visitors see the public pages; the app pages would only send them back home. */
+const PUBLIC_LINKS = [
+  { href: "/try", label: "Try the tasks" },
+  { href: "/skills", label: "Science" },
+  { href: "/validation", label: "Validation" },
+];
+
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/play", label: "Assess" },
@@ -27,7 +34,7 @@ export function LogoMark({ className = "h-8 w-8" }: { className?: string }) {
   );
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ onNavigate, signedIn }: { onNavigate?: () => void; signedIn: boolean }) {
   const path = usePathname();
   const mode = useSearchParams().get("mode");
   const active = (href: string) => {
@@ -37,7 +44,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   };
   return (
     <>
-      {LINKS.map((l) => (
+      {(signedIn ? LINKS : PUBLIC_LINKS).map((l) => (
         <Link key={l.href} href={l.href} onClick={onNavigate} aria-current={active(l.href) ? "page" : undefined}
           className={`relative px-1 py-1 font-display text-[15px] tracking-wider uppercase transition-colors after:absolute after:inset-x-1 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-transform ${
             active(l.href) ? "text-foreground after:scale-x-100 after:bg-brand" : "text-slate-500 hover:text-foreground after:scale-x-0 dark:text-slate-300"
@@ -70,7 +77,7 @@ export function ThemeToggle() {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-3 z-40 mx-auto mt-3 max-w-6xl px-4">
@@ -82,12 +89,17 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className="hidden items-center gap-5 lg:flex" aria-label="Main">
-          <Suspense><NavLinks /></Suspense>
+          <Suspense><NavLinks signedIn={signedIn} /></Suspense>
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/play" className="hidden rounded-lg bg-brand px-4 py-2 font-display text-[15px] tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_24px_rgba(0,181,226,0.35)] transition hover:bg-brand-2 sm:block">
-            Start playing
+          {!signedIn && (
+            <Link href="/signin" className="glass hidden rounded-lg px-3 py-2 font-display text-[15px] tracking-wider uppercase transition hover:border-brand sm:block">
+              Sign in
+            </Link>
+          )}
+          <Link href={signedIn ? "/play" : "/#start"} className="hidden rounded-lg bg-brand px-4 py-2 font-display text-[15px] tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_24px_rgba(0,181,226,0.35)] transition hover:bg-brand-2 sm:block">
+            {signedIn ? "Start playing" : "Get started"}
           </Link>
           <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Menu" className="glass grid h-9 w-9 place-items-center rounded-lg lg:hidden">
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d={open ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
@@ -96,7 +108,8 @@ export function SiteHeader() {
       </div>
       {open && (
         <nav className="glass mt-2 flex flex-col gap-2 rounded-2xl p-4 lg:hidden" aria-label="Main">
-          <Suspense><NavLinks onNavigate={() => setOpen(false)} /></Suspense>
+          <Suspense><NavLinks signedIn={signedIn} onNavigate={() => setOpen(false)} /></Suspense>
+          {!signedIn && <Link href="/signin" onClick={() => setOpen(false)} className="px-1 py-1 font-display text-[15px] tracking-wider text-brand uppercase">Sign in</Link>}
         </nav>
       )}
     </header>

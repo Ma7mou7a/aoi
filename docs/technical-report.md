@@ -119,13 +119,14 @@ Each skill has a **measurement card** (definition, what it is *not*, task, level
 
 - **Non-clinical:** clinical-term filter, fixed answer to health questions, "what it is not" on every card, no norms, comparisons only with the user's own history.
 - **Consent and data:** opt-in, granular consents with an append-only history; user-chosen retention (30/90/180/365 days) enforced by purges; JSON export; one-click deletion that cascades through every table and leaves only a salted hash as proof. No email, password, real name, audio or images are collected. Only an evidence pack, with no identifiers, goes to the LLM, and only with consent.
+- **Accounts without personal data:** no email or password. A random 80-bit sign-in key is shown once at signup (copy or save as a file) and only its SHA-256 is stored; it opens the profile on another browser or device, can be replaced in Settings (the old key stops working), and sign-in attempts are rate-limited. Sign out is one click and warns if no key has been saved.
 - **No decision from face or voice:** there is no camera; voice is only an input method for questions.
 - **Robustness:** cold start from an explicit prior; invalid, abandoned and too-fast blocks are flagged and down-weighted; the posterior SD has a floor; the coach falls back to rules if the API is unavailable.
 - Full details: `docs/ethics.md`.
 
 ## 10. Engineering
 
-Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **129 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
+Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **132 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
 
 ## 11. Limitations and next steps
 

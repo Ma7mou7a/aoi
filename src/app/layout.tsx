@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Geist_Mono, Source_Sans_3 } from "next/font/google";
 import Link from "next/link";
 import { LogoMark, SiteHeader } from "@/components/SiteHeader";
+import { getCurrentUser } from "@/lib/server/user";
 import "./globals.css";
 
 const display = Bebas_Neue({
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 /** Apply the saved theme before first paint (dark by default). */
 const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){}`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -39,7 +40,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className={`${display.variable} ${body.variable} ${geistMono.variable} antialiased`}>
-        <SiteHeader />
+        <SiteHeader signedIn={(await getCurrentUser()) != null} />
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
         <footer className="mx-auto max-w-6xl px-4 pb-10">
           <div className="glass rounded-2xl p-6 text-sm text-slate-500 dark:text-slate-300">
