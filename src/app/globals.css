@@ -42,6 +42,24 @@
   --dim-cognitive_flexibility: #eda100;
   --dim-visuospatial_memory: #e87ba4;
   --dim-reasoning: #008300;
+
+  /* Bao the panda */
+  --panda-fur: #ffffff;
+  --panda-belly: #eef3f6;
+  --panda-ink: #1d2733;
+  --panda-line: rgba(3, 20, 38, 0.22);
+  --panda-eye: #ffffff;
+  --panda-blush: #f39aa9;
+  --panda-mouth: #c2455b;
+  --bamboo: #3f9b4f;
+  --bamboo-dark: #2c7039;
+}
+
+[data-theme="light"] {
+  --panda-fur: #ffffff;
+  --panda-belly: #eef3f6;
+  --panda-ink: #1d2733;
+  --panda-line: rgba(3, 20, 38, 0.22);
 }
 
 [data-theme="dark"] {
@@ -76,6 +94,12 @@
   --dim-cognitive_flexibility: #c98500;
   --dim-visuospatial_memory: #d55181;
   --dim-reasoning: #008300;
+  --panda-fur: #f4f9fc;
+  --panda-belly: #dfe9f0;
+  --panda-ink: #18212c;
+  --panda-line: rgba(244, 249, 252, 0.45);
+  --bamboo: #4cb05d;
+  --bamboo-dark: #2f7a3c;
   color-scheme: dark;
 }
 
@@ -151,4 +175,38 @@ h1 { line-height: 1; }
 @media (prefers-reduced-motion: reduce) {
   .bt-signal, .bt-halo, .ekg-line { animation: none; stroke-dashoffset: 0; }
   .bt-signal { opacity: 0; }
+}
+
+/* Bao the panda: every pose moves only transform/opacity (see components/panda/Panda.tsx). */
+.bao { overflow: visible; }
+.bao g, .bao-closed { transform-box: fill-box; transform-origin: center; }
+.bao-pupils { transition: transform 120ms ease-out; }
+.bao-closed, .bao-mouth-open, .bao-zzz { opacity: 0; }
+.bao-eyes { animation: bao-blink 5s infinite; }
+@keyframes bao-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes bao-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.2px); } }
+@keyframes bao-hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-9px); } }
+@keyframes bao-jump { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-14px) rotate(-6deg); } 60% { transform: translateY(-6px) rotate(5deg); } }
+@keyframes bao-wave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-22deg); } 75% { transform: rotate(14deg); } }
+@keyframes bao-float { 0% { transform: translateY(4px); opacity: 0; } 30%, 70% { opacity: 1; } 100% { transform: translateY(-6px); opacity: 0; } }
+.bao[data-state="idle"] .bao-all, .bao[data-state="watch"] .bao-all, .bao[data-state="calm"] .bao-all { animation: bao-breathe 3.6s ease-in-out infinite; }
+.bao[data-state="wave"] .bao-paw-right { transform-origin: 50% 100%; animation: bao-wave 1.1s ease-in-out 2; }
+.bao[data-state="cheer"] .bao-all { animation: bao-hop 0.4s ease-out; }
+.bao[data-state="cheer"] .bao-mouth, .bao[data-state="celebrate"] .bao-mouth, .bao[data-state="proud"] .bao-mouth { opacity: 0; }
+.bao[data-state="cheer"] .bao-mouth-open, .bao[data-state="celebrate"] .bao-mouth-open, .bao[data-state="proud"] .bao-mouth-open { opacity: 1; }
+.bao[data-state="proud"] .bao-eyes, .bao[data-state="celebrate"] .bao-eyes { opacity: 0; animation: none; }
+.bao[data-state="proud"] .bao-closed, .bao[data-state="celebrate"] .bao-closed { opacity: 1; transform: scaleY(-1); }
+.bao[data-state="celebrate"] .bao-all { animation: bao-jump 0.75s ease-out 2; }
+.bao[data-state="oops"] .bao-paw-left { transform: translate(10px, -40px); transition: transform 180ms ease-out; }
+.bao[data-state="oops"] .bao-paw-right { transform: translate(-10px, -40px); transition: transform 180ms ease-out; }
+.bao[data-state="think"] .bao-paw-left { transform: translate(14px, -22px); transition: transform 200ms ease-out; }
+.bao[data-state="sleep"] .bao-eyes { opacity: 0; animation: none; }
+.bao[data-state="sleep"] .bao-closed { opacity: 1; }
+.bao[data-state="sleep"] .bao-zzz { animation: bao-float 2.4s ease-in-out infinite; }
+.bao[data-state="sleep"] .bao-all { animation: bao-breathe 5s ease-in-out infinite; }
+.bao-paw-left, .bao-paw-right { transition: transform 180ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bao *, .bao .bao-all, .bao .bao-eyes, .bao .bao-zzz { animation: none !important; transition: none !important; }
+  .bao[data-state="sleep"] .bao-zzz { opacity: 1; }
 }

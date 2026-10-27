@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { pandaBus } from "@/lib/panda/bus";
+import { PandaCorner } from "./panda/PandaCorner";
 import { useCallback, useEffect, useState } from "react";
 import type { Dimension } from "@/lib/dimensions/schema";
 import { newSeed } from "@/lib/rng";
@@ -41,9 +43,14 @@ export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
   }, [dim, task, level]);
 
   const Renderer = RENDERERS[task.paradigm];
+  useEffect(() => {
+    if (result) pandaBus.emit({ type: "block:end" });
+    else if (seed != null) pandaBus.emit({ type: "block:start" });
+  }, [result, seed]);
 
   return (
     <div className="space-y-6">
+      <PandaCorner mode="lively" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500">Practice mode: nothing is stored and your profile doesn&apos;t change.</p>
         <div className="flex items-center gap-2 text-sm">

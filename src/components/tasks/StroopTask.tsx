@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { generateStroop, INK, type StroopParams } from "@/lib/tasks/stroop";
-import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "running" | "transition";
@@ -68,7 +68,7 @@ export function StroopTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Task
       const s = seq[idx];
       const rt = response == null ? null : performance.now() - onset.current;
       const correct = response === s.ink;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         isPractice: s.practice,
         stimulus: { word: s.word, ink: s.ink, congruent: s.congruent },

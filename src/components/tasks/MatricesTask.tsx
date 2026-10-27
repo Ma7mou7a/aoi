@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { generateMatrices, type Cell, type MatricesParams } from "@/lib/tasks/matrices";
 import type { BlockSpec } from "@/lib/tasks/registry";
-import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 const SIZE = [0.42, 0.62, 0.82];
@@ -79,7 +79,7 @@ export function MatricesTask({ spec, onFinish }: { spec: BlockSpec; onFinish: Ta
     (choice: number | null) => {
       const it = items[idx];
       const rt = performance.now() - onset.current;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         stimulus: { rules: it.rules, grid: it.grid.slice(0, 8), options: it.options },
         expected: it.answer,

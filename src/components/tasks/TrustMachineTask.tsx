@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { adviceFor, adviceSeed, generateTrustMachine, type Side, type TrustParams } from "@/lib/tasks/trustMachine";
-import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "running" | "transition";
@@ -86,7 +86,7 @@ export function TrustMachineTask({ spec, onFinish }: { spec: BlockSpec; onFinish
       const final = side ?? initial;
       const rt = side == null ? null : Math.round(performance.now() - adviceOnset.current);
       const correct = final === it.answer;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         isPractice: it.practice,
         stimulus: { left: it.left, right: it.right, gap: it.gap, initial, initialRtMs: initialRt.current, advice: advice.advice, aiCorrect: advice.aiCorrect, ...(p.show_confidence ? { aiConfident: advice.confident } : {}) },
