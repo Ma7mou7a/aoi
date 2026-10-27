@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { generateTaskSwitching, type Rule, type TaskSwitchingParams } from "@/lib/tasks/taskSwitching";
-import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { Kbd, ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "running" | "transition";
@@ -71,7 +71,7 @@ export function TaskSwitchingTask({ spec, onFinish }: { spec: BlockSpec; onFinis
       const s = seq[idx];
       const rt = side == null ? null : performance.now() - onset.current;
       const correct = side === s.expected;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         isPractice: s.practice,
         stimulus: { digit: s.digit, rule: s.rule, switch: s.switch },
@@ -171,7 +171,7 @@ export function TaskSwitchingTask({ spec, onFinish }: { spec: BlockSpec; onFinis
           </button>
         ))}
       </div>
-      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this block</button>
+      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this game</button>
     </div>
   );
 }

@@ -4,6 +4,15 @@ import { db, schema } from "@/db";
 import { BandBar } from "@/components/BandBar";
 import { BrainTwinArt, EkgLine } from "@/components/BrainTwinArt";
 import { Onboarding } from "@/components/Onboarding";
+import { Panda } from "@/components/panda/Panda";
+import { BambooGarden } from "@/components/rewards/BambooGarden";
+import { DailyGift } from "@/components/rewards/DailyGift";
+import { getDimensions } from "@/lib/dimensions/loader";
+import { pickLine } from "@/lib/panda/lines";
+import { selectNext } from "@/lib/selector";
+import { getPosteriors } from "@/lib/server/profile";
+import { getRewards } from "@/lib/server/rewards";
+import { AVAILABLE_PARADIGMS } from "@/lib/tasks/registry";
 import { getProfileView } from "@/lib/server/profile";
 import { getCurrentUser } from "@/lib/server/user";
 
@@ -17,8 +26,8 @@ const STATS: Array<[string, string]> = [
 ];
 
 const PILLARS: Array<[string, string, string, string, string]> = [
-  ["01", "Assess", "Six classic tasks from cognitive science (N-back, Stroop, Corsi, task switching, symbol coding, generated matrices), plus a second-opinion game that measures how well you rely on an AI helper. The agent picks whichever block teaches it most about you.", "/try", "Try a task, no sign-up"],
-  ["02", "Understand", "A Bayesian Brain Twin: every skill has an estimate and a 90% band that narrows as you play. Tested on 500 simulated users, the band holds the true level about 9 times in 10.", "/validation", "See the validation"],
+  ["01", "Play", "Six classic tasks from cognitive science (N-back, Stroop, Corsi, task switching, symbol coding, generated matrices), plus a second-opinion game that measures how well you rely on an AI helper. Bao picks whichever game teaches him most about you.", "/try", "Try a task, no sign-up"],
+  ["02", "Understand", "A Bayesian Brain Twin: every skill has a score and a range that shows how sure we are, and it narrows as you play. Tested on 500 simulated users, the range holds the true level about 9 times in 10.", "/validation", "See the validation"],
   ["03", "Coach", "Every sentence the AI coach writes cites the exact trials behind it, and a filter keeps it non-clinical. Spot-the-error mode trains you to check AI instead of trusting it.", "/skills", "How each skill is measured"],
   ["04", "Grow", "Adaptive difficulty keeps you near 75% success, a weekly plan targets what matters, and forecasts with bands show where you are heading.", "/dashboard", "Open the dashboard"],
 ];
@@ -39,28 +48,27 @@ export default async function Home() {
         <section className="relative text-center">
           <EkgLine className="pointer-events-none absolute top-44 left-0 hidden h-12 w-1/3 md:block" />
           <EkgLine className="pointer-events-none absolute top-56 right-0 hidden h-12 w-1/3 -scale-x-100 md:block" />
-          <Eyebrow>CISTAC 1.0 · AI4Brain challenge</Eyebrow>
-          <h1 className="mt-4 text-6xl sm:text-8xl">
-            Meet your <span className="text-gradient">Brain Twin</span>
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
-            <b className="text-brand">Artificial intelligence</b> meets <b className="text-accent">cognitive science</b>: short games build a living, honest profile of six thinking skills, then an evidence-linked coach helps you grow them.
+          <h1 className="mx-auto max-w-4xl text-6xl sm:text-8xl">Play a 1-minute game</h1>
+          <p className="mx-auto mt-5 max-w-2xl text-xl text-slate-600 dark:text-slate-300">
+            Bao will tell you what it says about your mind, in plain words. Keep playing and your <b className="text-brand">Brain Twin</b> learns six thinking skills, plus how well you work with AI.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <a href="#start" className="rounded-lg bg-brand px-6 py-3 font-display text-lg tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_30px_rgba(0,181,226,0.4)] transition hover:bg-brand-2">Create my twin</a>
-            <Link href="/try" className="glass rounded-lg px-6 py-3 font-display text-lg tracking-wider uppercase transition hover:border-brand">Try a task first</Link>
+            <Link href="/start" className="rounded-xl bg-brand px-7 py-4 font-display text-xl tracking-wider text-white uppercase transition-transform hover:bg-brand-deep active:scale-[0.98] dark:text-slate-950 dark:hover:bg-brand-2">Play a 1-minute game</Link>
+            <a href="#how" className="rounded-xl border border-slate-300 px-6 py-4 font-display text-xl tracking-wider uppercase transition-transform hover:border-brand active:scale-[0.98] dark:border-slate-600">How it works</a>
           </div>
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">
-            Already have a twin? <Link href="/signin" className="font-semibold text-brand hover:underline">Sign in with your key</Link>
+          <p className="mt-3 text-base text-slate-500 dark:text-slate-300">
+            Already have a twin? <Link href="/signin" className="font-semibold text-brand hover:underline">Sign in with your key</Link> · No email needed
           </p>
           <div className="relative mx-auto mt-6 max-w-xl">
             <BrainTwinArt decor className="w-full drop-shadow-[0_30px_60px_rgba(0,98,155,0.45)]" />
-            <span className="absolute top-1/3 left-0 hidden -translate-x-1/2 font-display text-sm tracking-[0.2em] text-slate-500 uppercase sm:block dark:text-slate-300">You</span>
-            <span className="absolute top-1/3 right-0 hidden translate-x-1/2 font-display text-sm tracking-[0.2em] text-brand uppercase sm:block">Your twin</span>
+            <div className="absolute right-0 bottom-0 flex items-end gap-1 sm:-right-16">
+              <Panda state="wave" size={110} />
+            </div>
           </div>
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Built for CISTAC 1.0 · AI4Brain challenge · not a medical test</p>
         </section>
 
-        <section className="glass grid grid-cols-2 divide-slate-200 rounded-2xl py-6 sm:grid-cols-4 sm:divide-x dark:divide-slate-800">
+        <section id="how" className="glass grid scroll-mt-28 grid-cols-2 divide-slate-200 rounded-2xl py-6 sm:grid-cols-4 sm:divide-x dark:divide-slate-800">
           {STATS.map(([n, label]) => (
             <div key={label} className="px-4 py-2 text-center">
               <p className="font-display text-5xl text-brand">{n}</p>
@@ -102,25 +110,45 @@ export default async function Home() {
     { done: profile.dimensions.some((d) => d.id === "ai_reliance" && d.nObservations > 0), label: "Play Second opinion", hint: "how well do you trust an AI?", href: "/play?mode=training&focus=ai_reliance" },
   ];
   const open = steps.filter((x) => !x.done).length;
+  const rewards = await getRewards(user.id);
+  const greeting = pickLine("greeting", { name: user.displayName, streak: rewards.streak >= 2 ? rewards.streak : undefined }, [], Math.random).text;
+  const next = selectNext({ dimensions: getDimensions(), posteriors: await getPosteriors(user.id), mode: "assessment", available: AVAILABLE_PARADIGMS });
+  const nextSkill = next ? getDimensions().find((d) => d.id === next.dimensionId)?.name : undefined;
   const skills = profile.dimensions.map((d) => ({ id: d.id, name: d.name, mean: d.nObservations > 0 ? d.mean : 0, color: `var(--dim-${d.id}, ${d.color})` }));
   return (
     <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
       <div className="space-y-6">
+        <div className="flex items-end gap-3">
+          <Panda state="wave" size={88} className="shrink-0" />
+          <div>
+            <p className="text-lg text-slate-600 dark:text-slate-300" aria-live="polite">{greeting}</p>
+            <h1 className="text-6xl sm:text-7xl">Hi {user.displayName}</h1>
+          </div>
+        </div>
         <div>
-          <p className="font-display text-sm tracking-[0.25em] text-brand uppercase">Welcome back</p>
-          <h1 className="text-6xl sm:text-7xl">Hi <span className="text-gradient">{user.displayName}</span></h1>
-          <p className="mt-3 text-slate-600 dark:text-slate-300">{measured.length} of {profile.dimensions.length} skills measured. The glowing nodes on your twin grow with each estimate.</p>
+          <p className="mt-3 text-slate-600 dark:text-slate-300">{measured.length} of {profile.dimensions.length} skills measured. Every game teaches your twin a little more about you.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Link href="/play" className="rounded-2xl bg-brand p-5 text-white dark:text-slate-950 shadow-[0_0_30px_rgba(0,181,226,0.3)] transition hover:bg-brand-2">
-            <p className="font-display text-2xl tracking-wide uppercase">{measured.length ? "Continue assessment" : "Start your first assessment"}</p>
-            <p className="text-sm opacity-80">About 5 minutes. The agent picks the task that teaches it most about you.</p>
+            <p className="font-display text-2xl tracking-wide uppercase">{measured.length && nextSkill ? `Your next game: ${nextSkill}` : "Start your first game"}</p>
+            <p className="text-sm opacity-80">About 5 minutes. Bao picks the game that teaches him most about you.</p>
           </Link>
           <Link href="/play?mode=training" className="glass rounded-2xl p-5 transition hover:border-brand">
             <p className="font-display text-2xl tracking-wide uppercase">Train</p>
             <p className="text-sm text-slate-500 dark:text-slate-300">Your weakest skill, at the level where you grow fastest.</p>
           </Link>
         </div>
+        <DailyGift claimed={rewards.giftClaimedToday} />
+        {!rewards.dailyDoneToday && (
+          <Link href="/daily" className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-transform hover:border-brand active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900">
+            <span>
+              <span className="block text-lg font-semibold">Today&apos;s challenge</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">One game, the same puzzle for everyone today. +15 bamboo.</span>
+            </span>
+            <span aria-hidden className="font-display text-2xl text-brand">→</span>
+          </Link>
+        )}
+        <BambooGarden stalks={rewards.gardenStalks} total={rewards.total} streak={rewards.streak} frozenDays={rewards.frozenDays} />
         {open > 0 && (
           <div className="glass rounded-2xl p-5">
             <p className="font-display text-sm tracking-[0.2em] text-brand uppercase">Getting started · {steps.length - open}/{steps.length}</p>

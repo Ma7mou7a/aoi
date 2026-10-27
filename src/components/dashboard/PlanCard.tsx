@@ -31,7 +31,7 @@ export function PlanCard({ plan, colors }: { plan: DashboardData["plan"]; colors
       </div>
 
       <p className="text-sm tabular-nums" style={{ color: "var(--chart-ink)" }}>
-        <b>{done}</b> of {total} blocks done
+        <b>{done}</b> of {total} games done
       </p>
       <ul className="space-y-3">
         {plan.items.map((i) => {

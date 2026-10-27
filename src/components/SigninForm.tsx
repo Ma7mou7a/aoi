@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearFirstGame } from "@/lib/firstGame";
 
 export function SigninForm() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export function SigninForm() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    // A first game played before signing in belongs to nobody yet: never import it into this account.
+    clearFirstGame(sessionStorage);
     const res = await fetch("/api/signin", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key }) });
     setBusy(false);
     if (!res.ok) return setError((await res.json()).error ?? "Sign-in failed.");

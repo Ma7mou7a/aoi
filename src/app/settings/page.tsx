@@ -20,7 +20,7 @@ export default async function SettingsPage() {
         <p className="text-slate-600 dark:text-slate-300">You decide what AI4Brain may use and how long it keeps it. Changes apply immediately.</p>
       </div>
       <AccountSection hasKey={user.signinKeyHash != null} displayName={user.displayName} />
-      <SettingsForm initial={consents.current} retentionDays={user.retentionDays} history={consents.history} />
+      <SettingsForm initial={consents.current} retentionDays={user.retentionDays} history={consents.history} researchMode={!!user.preferences.researchMode} />
     </div>
   );
 }

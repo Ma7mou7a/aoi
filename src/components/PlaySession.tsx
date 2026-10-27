@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { pandaBus } from "@/lib/panda/bus";
+import { PandaCorner } from "./panda/PandaCorner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
@@ -37,7 +39,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; focus?: string }) {
+export function PlaySession({ mode, focus, daily = false }: { mode: "assessment" | "training"; focus?: string; daily?: boolean }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const sessionId = useRef<string | null>(null);
   const started = useRef(false);
@@ -45,13 +47,13 @@ export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; 
   useEffect(() => {
     if (started.current) return; // StrictMode double-invoke guard
     started.current = true;
-    post<{ sessionId: string; next: BlockSpec | null }>("/api/sessions", { mode, focus, device: device() })
+    post<{ sessionId: string; next: BlockSpec | null }>("/api/sessions", { mode, focus, daily, device: device() })
       .then(({ sessionId: id, next }) => {
         sessionId.current = id;
         setState(next ? { kind: "block", spec: next } : { kind: "done" });
       })
       .catch((e) => setState({ kind: "error", message: e.message }));
-  }, [mode, focus]);
+  }, [mode, focus, daily]);
 
   const submit = useCallback((spec: BlockSpec, { trials, status, startedAt }: Finished, selfEstimate: number | null) => {
     setState({ kind: "loading" });
@@ -80,6 +82,21 @@ export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; 
     [state, submit],
   );
 
+  // Bao: a game starting or ending is an event; during the game he reacts only in training mode.
+  const phase = state.kind === "block" ? `block:${state.spec.seed}` : state.kind;
+  useEffect(() => {
+    if (phase.startsWith("block:")) pandaBus.emit({ type: "block:start" });
+    else if (phase === "guess" || phase === "result") pandaBus.emit({ type: "block:end" });
+  }, [phase]);
+
+  return (
+    <>
+      {renderState()}
+      <PandaCorner mode={mode === "assessment" ? "quiet" : "lively"} />
+    </>
+  );
+
+  function renderState() {
   switch (state.kind) {
     case "loading":
       return <p className="text-center text-slate-500">Loading…</p>;
@@ -136,5 +153,6 @@ export function PlaySession({ mode, focus }: { mode: "assessment" | "training"; 
           </div>
         </div>
       );
+  }
   }
 }

@@ -90,8 +90,8 @@ export function selectNext(input: SelectorInput): Selection | null {
       reason: {
         rule: "max_expected_uncertainty_reduction",
         expectedSdReduction: best.reduction,
-        note: `Your ${inSentence(best.dim.name)} estimate is still ±${toPercent(Z90 * post.sd)}% wide, the most we can narrow right now. ` +
-          `One ${best.task.name} block at level ${best.level} should narrow it to about ±${toPercent(Z90 * after)}%.`,
+        note: `We're least sure about your ${inSentence(best.dim.name)} so far (±${toPercent(Z90 * post.sd)}%). ` +
+          `One ${best.task.name} game at level ${best.level} should bring that down to about ±${toPercent(Z90 * after)}%.`,
       },
     };
   }
@@ -116,9 +116,9 @@ export function selectNext(input: SelectorInput): Selection | null {
     level = levels[Math.min(levels.length - 1, Math.max(0, i + (up ? 1 : down ? -1 : 0)))];
     rule = "staircase";
     note = up
-      ? `You scored ${toPercent(lastRun.accuracy)}% last block, so we're stepping up to level ${level}.`
+      ? `You scored ${toPercent(lastRun.accuracy)}% last game, so we're stepping up to level ${level}.`
       : down
-        ? `Last block was tough (${toPercent(lastRun.accuracy)}%), so level ${level} lets you consolidate.`
+        ? `Last game was tough (${toPercent(lastRun.accuracy)}%), so level ${level} lets you find your feet.`
         : `${toPercent(lastRun.accuracy)}% is right in the growth zone (~${toPercent(target)}%), so we stay at level ${level}.`;
   } else {
     const best = options.filter((c) => c.task.id === task.id).reduce((a, b) => (Math.abs(b.c - target) < Math.abs(a.c - target) ? b : a));

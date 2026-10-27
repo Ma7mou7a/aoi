@@ -4,7 +4,20 @@ import type { ValidityFlag } from "@/lib/scoring/types";
 import type { RunResult } from "@/lib/server/blocks";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { biasWord } from "@/lib/metacog";
+import Link from "next/link";
+import { useEffect } from "react";
+import { pandaBus } from "@/lib/panda/bus";
+import { inSentence } from "@/lib/text";
+import { gamesToSure, plainDid, sureText } from "@/lib/words";
 import { BandBar } from "./BandBar";
+import { CountUp } from "./motion/CountUp";
+import { celebrate } from "./motion/celebrate";
+import { SureMeter } from "./SureMeter";
+import { RewardFloat } from "./rewards/RewardFloat";
+import { ShareDaily } from "./ShareDaily";
+
+/** Typical noise of one game in the skill configs (obs_sd ~ 0.2), for the "N more games" wording only. */
+const TYPICAL_OBS_SD = 0.2;
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const halfWidth = (ci: [number, number]) => `±${Math.round(((ci[1] - ci[0]) / 2) * 100)}%`;
@@ -41,16 +54,16 @@ function detail(paradigm: string, m: Record<string, number>) {
 }
 
 const FLAG_TEXT: Record<ValidityFlag, string> = {
-  too_few_trials: "Not enough usable answers in this block.",
+  too_few_trials: "Not enough usable answers in this game.",
   near_chance: "Results were close to random guessing. Maybe the level was too hard, or attention drifted.",
   response_streak: "Very long runs of the same answer.",
   many_anticipations: "Many presses came faster than is humanly possible to react.",
   many_timeouts: "Many answers came too late.",
-  focus_lost: "The window lost focus several times during the block.",
+  focus_lost: "The window lost focus several times during the game.",
 };
 
 /** Share for the reliance rates (they use a small-sample correction, so show "about"). */
-const fmtShare = (v: number) => (Number.isFinite(v) ? `about ${pct(v)} of the time` : "(no such cases this block)");
+const fmtShare = (v: number) => (Number.isFinite(v) ? `about ${pct(v)} of the time` : "(no such cases this game)");
 
 function fmt(metric: string, v: number) {
   if (!Number.isFinite(v)) return "n/a";
@@ -64,78 +77,79 @@ function fmt(metric: string, v: number) {
 
 export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spec: BlockSpec; result: RunResult; next: BlockSpec | null; onContinue: () => void; onEnd?: () => void }) {
   const { score, before, after } = result;
-  return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <div>
-        <p className="text-sm font-medium" style={{ color: spec.dimension.color }}>{spec.dimension.name}</p>
-        <h2 className="text-2xl font-semibold">
-          {after ? <>Estimate now {pct(after.mean)} <span className="text-slate-400">({halfWidth(after.ci)})</span></> : "Block stopped"}
-        </h2>
-      </div>
+  const skill = inSentence(spec.dimension.name);
+  const lo = after ? Math.round(after.ci[0] * 100) : 0;
+  const hi = after ? Math.round(after.ci[1] * 100) : 0;
+  const more = after ? gamesToSure(after.sd, TYPICAL_OBS_SD) : 0;
 
-      {after && (
-        <div className="space-y-2 glass rounded-2xl p-4 ">
-          <BandBar label="Before" mean={before.mean} ci={before.ci} color="#94a3b8" />
-          <BandBar label="After" mean={after.mean} ci={after.ci} color={spec.dimension.color} />
-          <p className="pt-1 text-sm text-slate-600 dark:text-slate-300">
-            The band shows where your current level most likely is (90% range). It went from {halfWidth(before.ci)} to {halfWidth(after.ci)}: the more you play, the narrower it gets.
-          </p>
+  // A real improvement (milestone) gets confetti and a happy Bao; nothing is celebrated otherwise.
+  useEffect(() => {
+    if (!result.wins.length) return;
+    pandaBus.emit({ type: "milestone" });
+    void celebrate();
+  }, [result.wins.length]);
+
+  return (
+    <div className="mx-auto max-w-xl space-y-5">
+      <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+        <p className="text-sm font-semibold" style={{ color: spec.dimension.color }}>{spec.dimension.name} · {spec.task.name}</p>
+
+        <div>
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400">What you did</h2>
+          <p className="mt-1 text-lg">{plainDid(spec.task.paradigm, score.metrics)}</p>
         </div>
-      )}
+
+        {after ? (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400">What it means</h2>
+            <p className="text-lg">
+              Your {skill} score is now about{" "}
+              <b className="font-display text-4xl text-brand"><CountUp from={Math.round(before.mean * 100)} to={Math.round(after.mean * 100)} /></b>.
+            </p>
+            <SureMeter before={before.ci} after={after.ci} mean={after.mean} color={spec.dimension.color} />
+            <p className="text-base text-slate-600 dark:text-slate-300">
+              {sureText(lo, hi)}{" "}
+              {more > 0 ? `${more} more ${more === 1 ? "game" : "games"} and we'll be much surer.` : "That's a confident reading."}
+            </p>
+          </div>
+        ) : (
+          <p className="text-lg">This game was stopped early, so it doesn&apos;t change your score.</p>
+        )}
+
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400">What&apos;s next</h2>
+          {next && <p className="text-base text-slate-600 dark:text-slate-300">{next.reason.note}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onContinue} className="rounded-xl bg-brand px-5 py-3 font-medium text-white transition-transform hover:bg-brand-deep active:scale-[0.98] dark:text-slate-950 dark:hover:bg-brand-2">
+              {next ? "Next game" : "Finish"}
+            </button>
+            <Link href="/coach?ask=debrief" className="rounded-xl border border-slate-300 px-5 py-3 font-medium transition-transform hover:bg-slate-100 active:scale-[0.98] dark:border-slate-600 dark:hover:bg-slate-800">
+              Ask Bao about this game
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <RewardFloat rewards={result.rewards ?? []} />
+
+      {spec.reason.rule === "daily" && <ShareDaily taskName={spec.task.name} score={score.composite} detail={spec.dimension.name} />}
 
       {result.wins.length > 0 && (
-        <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+        <ul className="space-y-1 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-base text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
           {result.wins.map((w) => <li key={w}><span aria-hidden>★ </span>{w}</li>)}
         </ul>
       )}
 
-      {result.selfCheck && (() => {
-        const c = result.selfCheck;
-        const off = Math.round(Math.abs(c.error) * 100);
-        return (
-          <div className="glass rounded-2xl p-4">
-            <h3 className="mb-1 font-medium">How sure were you?</h3>
-            <p className="text-sm">
-              You guessed <b>{pct(c.guess)}</b>; the block scored <b>{pct(c.actual)}</b>.{" "}
-              {off <= 5 ? "Spot on!" : `You were ${off} points ${c.error > 0 ? "too high" : "too low"}.`}
-            </p>
-            {c.recent && (
-              <p className="mt-1 text-xs text-slate-500">
-                Over your last {c.recent.blocks} guesses you were off by {Math.round(c.recent.meanAbsError * 100)} points on average, {biasWord(c.recent.bias)}.
-              </p>
-            )}
-          </div>
-        );
-      })()}
-
-
-      {result.whatIf.length > 0 && (
-        <div className="glass rounded-2xl p-4">
-          <h3 className="mb-1 font-medium">What it would take</h3>
-          <ul className="space-y-1 text-sm">
-            {result.whatIf.map((w) => (
-              <li key={w.label}>
-                <b>{w.label[0].toUpperCase() + w.label.slice(1)}</b> → block score <b>{pct(w.to)}</b> <span className="text-slate-500">(now {pct(w.from)})</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-1 text-xs text-slate-500">Exact recalculations with the same scoring, changing just that one thing.</p>
-        </div>
-      )}
-
       {!score.validity.valid && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-          <p className="font-medium">This block counts less toward your profile:</p>
-          <ul className="ml-4 list-disc">
-            {score.validity.flags.map((f) => <li key={f}>{FLAG_TEXT[f]}</li>)}
-          </ul>
-        </div>
+        <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-base text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          <b>Counted a little less:</b> {score.validity.flags.map((f) => FLAG_TEXT[f]).join(" ")}
+        </p>
       )}
 
       {result.affect?.suggestion && (
-        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
+        <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-base text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
           <p className="font-medium">{result.affect.suggestion}</p>
-          <p className="text-xs opacity-80">
+          <p className="text-sm opacity-80">
             Why we think so: {result.affect.cues.join("; ")}. This is a guess from your timing and errors only (never a camera or microphone), and you know best.
           </p>
           {next && onEnd && (
@@ -147,35 +161,71 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       )}
 
-      {/* The detailed breakdown stays one click away: the screen leads with what matters to the player. */}
-      <details className="glass rounded-2xl p-4">
-        <summary className="cursor-pointer font-medium">How this block was scored <span className="font-normal text-slate-500">· {pct(score.composite)}</span></summary>
-        <table className="mt-3 w-full text-sm">
-          <tbody>
-            {score.components.map((c) => (
-              <tr key={c.metric} className="border-t border-slate-100 dark:border-slate-800">
-                <td className="py-1.5">{METRIC_LABELS[c.metric] ?? c.metric}</td>
-                <td className="py-1.5 text-right font-mono">{fmt(c.metric, c.raw)}</td>
-                <td className="py-1.5 text-right text-slate-500">× {Math.round(c.weight * 100)}% weight</td>
-                <td className="py-1.5 text-right font-mono">{pct(c.contribution)}</td>
+      {/* The technical breakdown stays one click away: the screen leads with what matters to the player. */}
+      <details className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <summary className="cursor-pointer font-medium">Details for the curious <span className="font-normal text-slate-500 dark:text-slate-400">· game score {pct(score.composite)}</span></summary>
+        <div className="mt-3 space-y-4">
+          {after && (
+            <div className="space-y-2">
+              <BandBar label="Before" mean={before.mean} ci={before.ci} color="#94a3b8" />
+              <BandBar label="After" mean={after.mean} ci={after.ci} color={spec.dimension.color} />
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                The shaded range is where your level most likely is (90% of the time). It went from {halfWidth(before.ci)} to {halfWidth(after.ci)}.
+              </p>
+            </div>
+          )}
+          {result.selfCheck && (() => {
+            const c = result.selfCheck;
+            const off = Math.round(Math.abs(c.error) * 100);
+            return (
+              <div>
+                <h3 className="font-medium">Your guess</h3>
+                <p className="text-sm">
+                  You guessed <b>{pct(c.guess)}</b>; the game scored <b>{pct(c.actual)}</b>.{" "}
+                  {off <= 5 ? "Spot on!" : `You were ${off} points ${c.error > 0 ? "too high" : "too low"}.`}
+                </p>
+                {c.recent && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Over your last {c.recent.blocks} guesses you were off by {Math.round(c.recent.meanAbsError * 100)} points on average, {biasWord(c.recent.bias)}.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+          {result.whatIf.length > 0 && (
+            <div>
+              <h3 className="font-medium">What it would take</h3>
+              <ul className="space-y-1 text-sm">
+                {result.whatIf.map((w) => (
+                  <li key={w.label}>
+                    <b>{w.label[0].toUpperCase() + w.label.slice(1)}</b> → game score <b>{pct(w.to)}</b> <span className="text-slate-500 dark:text-slate-400">(now {pct(w.from)})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <table className="w-full text-sm">
+            <tbody>
+              {score.components.map((c) => (
+                <tr key={c.metric} className="border-t border-slate-100 dark:border-slate-800">
+                  <td className="py-1.5">{METRIC_LABELS[c.metric] ?? c.metric}</td>
+                  <td className="py-1.5 text-right font-mono">{fmt(c.metric, c.raw)}</td>
+                  <td className="py-1.5 text-right text-slate-500 dark:text-slate-400">× {Math.round(c.weight * 100)}% weight</td>
+                  <td className="py-1.5 text-right font-mono">{pct(c.contribution)}</td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-slate-200 font-medium dark:border-slate-700">
+                <td className="py-1.5" colSpan={3}>Game score at level {spec.level}</td>
+                <td className="py-1.5 text-right font-mono">{pct(score.composite)}</td>
               </tr>
-            ))}
-            <tr className="border-t-2 border-slate-200 font-medium dark:border-slate-700">
-              <td className="py-1.5" colSpan={3}>Block score at level {spec.level}</td>
-              <td className="py-1.5 text-right font-mono">{pct(score.composite)}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="mt-2 text-xs text-slate-500">
-          {detail(spec.task.paradigm, score.metrics)}
-          {score.censored && " The score hit the edge of this level, so it counts a little less."}
-        </p>
+            </tbody>
+          </table>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {detail(spec.task.paradigm, score.metrics)}
+            {score.censored && " The score hit the edge of this level, so it counts a little less."}
+          </p>
+        </div>
       </details>
-
-      {next && <p className="text-sm text-slate-600 dark:text-slate-300"><b>Next:</b> {next.reason.note}</p>}
-      <button onClick={onContinue} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white dark:bg-brand dark:text-slate-900">
-        {next ? "Continue" : "Finish session"}
-      </button>
     </div>
   );
 }

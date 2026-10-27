@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { generateNBack, type NBackParams } from "@/lib/tasks/nback";
-import { stampOnFrame } from "./common";
+import { stampOnFrame, pushTrial } from "./common";
 import type { BlockSpec } from "@/lib/tasks/registry";
 
 export type TaskFinish = (r: { trials: TrialRecord[]; status: "completed" | "abandoned"; startedAt: string }) => void;
@@ -67,7 +67,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
     const end = setTimeout(() => {
       const { rt, focusLost } = current.current;
       const pressed = rt != null;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         isPractice: s.filler,
         stimulus: { letter: s.letter, isTarget: s.isTarget, n: p.n },
@@ -155,7 +155,7 @@ export function NBackTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
         Match <span className="ml-2 text-sm font-normal text-slate-500">(SPACE)</span>
       </button>
       <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">
-        Stop this block
+        Stop this game
       </button>
     </div>
   );

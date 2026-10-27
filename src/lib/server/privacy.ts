@@ -35,6 +35,7 @@ export async function purgeExpired(userId: string, retentionDays: number) {
     await tx.delete(s.coachMessages).where(and(eq(s.coachMessages.userId, userId), lt(s.coachMessages.createdAt, cutoff)));
     await tx.delete(s.collabEvents).where(and(eq(s.collabEvents.userId, userId), lt(s.collabEvents.createdAt, cutoff)));
     await tx.delete(s.collabScores).where(and(eq(s.collabScores.userId, userId), lt(s.collabScores.createdAt, cutoff)));
+    await tx.delete(s.rewardEvents).where(and(eq(s.rewardEvents.userId, userId), lt(s.rewardEvents.createdAt, cutoff)));
     await tx.delete(s.sessions).where(and(eq(s.sessions.userId, userId), lt(s.sessions.startedAt, cutoff)));
   });
 }
@@ -53,5 +54,6 @@ export async function exportUserData(userId: string) {
     coachMessages: await db.select().from(schema.coachMessages).where(eq(schema.coachMessages.userId, userId)),
     collabEvents: await db.select().from(schema.collabEvents).where(eq(schema.collabEvents.userId, userId)),
     collabScores: await db.select().from(schema.collabScores).where(eq(schema.collabScores.userId, userId)),
+    rewardEvents: await db.select().from(schema.rewardEvents).where(eq(schema.rewardEvents.userId, userId)),
   };
 }

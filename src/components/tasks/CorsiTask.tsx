@@ -5,7 +5,7 @@ import { createRng } from "@/lib/rng";
 import type { TrialRecord } from "@/lib/scoring/types";
 import { CORSI_LAYOUT, CorsiStaircase, corsiSequence, expectedOrder, type CorsiParams } from "@/lib/tasks/corsi";
 import type { BlockSpec } from "@/lib/tasks/registry";
-import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "present" | "respond" | "pause";
@@ -104,7 +104,7 @@ export function CorsiTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
 
     const expected = expectedOrder(sequence, backward);
     const correct = expected.every((b, i) => b === next[i]);
-    records.current.push({
+    pushTrial(records.current, {
       trialIndex: trialIdx,
       stimulus: { span: sequence.length, sequence, backward },
       expected,
@@ -161,7 +161,7 @@ export function CorsiTask({ spec, onFinish }: { spec: BlockSpec; onFinish: TaskF
         })}
       </div>
       <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">
-        Stop this block
+        Stop this game
       </button>
     </div>
   );

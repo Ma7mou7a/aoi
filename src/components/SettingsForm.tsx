@@ -26,17 +26,30 @@ const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
   {
     kind: "planted_flaws",
     title: "Spot-the-error mode",
-    text: "Some coach debriefs will contain one deliberate number mistake for you to catch. It is always revealed right after you answer. Trains (and measures) critical checking of AI.",
+    text: "Only in Research mode (below): some coach debriefs will contain one deliberate number mistake for you to catch. It is always revealed right after you answer. Trains (and measures) critical checking of AI.",
   },
 ];
 
 const RETENTION = [30, 90, 180, 365];
 
-export function SettingsForm({ initial, retentionDays, history }: { initial: Record<string, boolean>; retentionDays: number; history: HistoryRow[] }) {
+export function SettingsForm({ initial, retentionDays, history, researchMode }: { initial: Record<string, boolean>; retentionDays: number; history: HistoryRow[]; researchMode: boolean }) {
   const [state, setState] = useState(initial);
   const [rows, setRows] = useState(history);
   const [retention, setRetention] = useState(retentionDays);
   const [saved, setSaved] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [research, setResearch] = useState(researchMode);
+
+  async function changeResearch(on: boolean) {
+    setResearch(on);
+    setError(null);
+    const res = await fetch("/api/me", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ researchMode: on }) });
+    if (res.ok) setSaved("Saved");
+    else {
+      setResearch(!on);
+      setError("Couldn't save Research mode. Please try again.");
+    }
+  }
 
   async function toggle(kind: Editable, granted: boolean) {
     setState({ ...state, [kind]: granted });
@@ -83,6 +96,20 @@ export function SettingsForm({ initial, retentionDays, history }: { initial: Rec
           <span><b>Camera: never used. Microphone: only if you turn on voice questions above.</b> Profiling is fully non-biometric: no score or decision is ever based on your face or voice.</span>
         </div>
         {saved && <p className="text-sm text-emerald-600">{saved}</p>}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Research mode</h2>
+        <label className="flex gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+          <input type="checkbox" aria-label="Research mode" className="mt-1 h-4 w-4" checked={research} onChange={(e) => changeResearch(e.target.checked)} />
+          <span>
+            <span className="font-medium">Research mode</span>
+            <span className="block text-sm text-slate-600 dark:text-slate-400">
+              Shows rating buttons on each coach claim and lets the coach hide a deliberate mistake for you to spot (needs the spot-the-error consent). Used to measure how people check AI.
+            </span>
+          </span>
+        </label>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       </section>
 
       <section className="space-y-3">

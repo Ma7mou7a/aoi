@@ -28,7 +28,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
 
   const table = (
     <DataTable
-      head={["Day", "Skill", "Blocks", "Avg block score"]}
+      head={["Day", "Skill", "Games", "Avg game score"]}
       rows={heat.days.flatMap((day) =>
         skills
           .filter((s) => heat.cells[s.id][day].blocks > 0)
@@ -44,8 +44,8 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
     <ChartCard
       title={mode === "blocks" ? "Practice heatmap" : "Performance heatmap"}
       subtitle={mode === "blocks"
-        ? `${total} block${total === 1 ? "" : "s"} in the last ${heat.days.length} days. The stronger the colour, the more blocks that day.`
-        : `Average block score per skill and day. The stronger the colour, the better the blocks went (empty = not played).`}
+        ? `${total} game${total === 1 ? "" : "s"} in the last ${heat.days.length} days. The stronger the colour, the more games that day.`
+        : `Average game score per skill and day. The stronger the colour, the better the games went (empty = not played).`}
       table={table}
       actions={
         <div className="flex overflow-hidden rounded-md border border-slate-300 text-xs dark:border-slate-700" role="group" aria-label="Heatmap view">
@@ -73,7 +73,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
                 return (
                   <button
                     key={d}
-                    aria-label={`${s.name}, ${fmtDay(d)}: ${c.blocks} block${c.blocks === 1 ? "" : "s"}`}
+                    aria-label={`${s.name}, ${fmtDay(d)}: ${c.blocks} game${c.blocks === 1 ? "" : "s"}`}
                     onMouseEnter={() => setHover({ skill: s.id, day: d })}
                     onMouseLeave={() => setHover(null)}
                     onFocus={() => setHover({ skill: s.id, day: d })}
@@ -90,7 +90,7 @@ export function ActivityHeatmap({ heat, skills }: { heat: Heat; skills: Array<{ 
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs" style={{ color: "var(--chart-ink-2)" }}>
         <p className="min-h-[1.25rem]" aria-live="polite">
           {hover && cell
-            ? `${skills.find((s) => s.id === hover.skill)?.name}, ${fmtDay(hover.day)}: ${cell.blocks} block${cell.blocks === 1 ? "" : "s"}${cell.avgScore != null ? `, average block score ${Math.round(cell.avgScore * 100)}%` : ""}`
+            ? `${skills.find((s) => s.id === hover.skill)?.name}, ${fmtDay(hover.day)}: ${cell.blocks} game${cell.blocks === 1 ? "" : "s"}${cell.avgScore != null ? `, average game score ${Math.round(cell.avgScore * 100)}%` : ""}`
             : `${fmtDay(heat.days[0])} – ${fmtDay(heat.days.at(-1)!)}`}
         </p>
         <span className="flex items-center gap-1">

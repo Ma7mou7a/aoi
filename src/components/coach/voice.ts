@@ -84,6 +84,6 @@ export function useDictation(onText: (text: string) => void) {
 }
 
 /** Plain text of a coach message for reading aloud. */
-export function spokenText(m: { content: string; claims: Array<{ claim: string }>; nextStep: string | null }) {
-  return [m.content, ...m.claims.map((c) => c.claim), m.nextStep ? `Next step: ${m.nextStep}` : ""].filter(Boolean).join(" ");
+export function spokenText(m: { content: string; claims: Array<{ claim: string }> }) {
+  return [m.content, ...m.claims.map((c) => c.claim)].filter(Boolean).join(" ");
 }

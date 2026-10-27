@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pandaBus } from "@/lib/panda/bus";
 import type { BlockSpec } from "@/lib/tasks/registry";
 
 /** Shared intro screen: dimension badge, title, rules, example, start button (SPACE also starts). */
@@ -80,4 +81,16 @@ export function useFocusLoss(onLoss: () => void) {
       document.removeEventListener("visibilitychange", onLoss);
     };
   }, [onLoss]);
+}
+
+/** Tell Bao how a trial went (he decides whether to react; never during assessment blocks). */
+export function emitTrial(correct: boolean | null | undefined) {
+  if (correct == null) return;
+  pandaBus.emit({ type: correct ? "trial:correct" : "trial:wrong" });
+}
+
+/** Record a trial and tell Bao about it. */
+export function pushTrial<T extends { correct: boolean | null }>(list: T[], record: T) {
+  list.push(record);
+  emitTrial(record.correct);
 }

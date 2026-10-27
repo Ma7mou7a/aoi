@@ -3,39 +3,73 @@ import { packToPrompt, type EvidencePack } from "./evidence";
 import { filterClinical, NON_CLINICAL_NOTE } from "./safety";
 import { scienceToPrompt, type ScienceRef } from "./science";
 import { inSentence } from "../text";
+import { resolveActions, type ClientAction } from "./actions";
 
-/** What the model (or the rule engine) produces: claims cite pack references, never raw ids. */
-export const coachDraftSchema = z.object({
-  summary: z.string(),
-  claims: z.array(z.object({ text: z.string(), why: z.string(), evidence: z.array(z.string()), science: z.array(z.string()).default([]) })),
-  next_step: z.string(),
+export const INTENTS = ["debrief", "play", "progress", "forecast", "goal", "explain", "chat", "help"] as const;
+export const MOODS = ["cheer", "think", "proud", "calm", "wave"] as const;
+export type Mood = (typeof MOODS)[number];
+export const MAX_CLAIMS = 3;
+
+const rawActionSchema = z.object({
+  type: z.enum(["play", "show_progress", "forecast", "set_goal", "daily_challenge"]),
+  skill: z.string().optional(),
+  mode: z.enum(["training", "assessment", ""]).optional(),
+  gamesPerWeek: z.number().optional(),
 });
-// Input type: `science` may be omitted (older drafts, tests); finaliseDraft treats it as empty.
+
+/**
+ * What the model (or the template coach) produces: a short reply, 0–3 evidence-backed claims shown
+ * behind "Why?", 0–3 action buttons and Bao's mood. Claims cite pack references, never raw ids.
+ */
+export const coachDraftSchema = z.object({
+  intent: z.enum(INTENTS).default("debrief"),
+  reply: z.string(),
+  claims: z.array(z.object({ text: z.string(), why: z.string(), evidence: z.array(z.string()), science: z.array(z.string()).default([]) })),
+  actions: z.array(rawActionSchema).default([]),
+  mood: z.enum(MOODS).default("calm"),
+});
+// Input type: `science`, `intent`, `actions` and `mood` may be omitted (tests, older drafts).
 export type CoachDraft = z.input<typeof coachDraftSchema>;
 
 /** Same shape as JSON Schema for structured outputs (objects closed, all fields required). */
 export const COACH_JSON_SCHEMA = {
   type: "object",
   properties: {
-    summary: { type: "string", description: "1-2 warm sentences answering the user or summarising the latest session." },
+    intent: { type: "string", enum: [...INTENTS], description: "What the user is asking for." },
+    reply: { type: "string", description: "At most 3 short, warm sentences that answer the user's actual message first." },
     claims: {
       type: "array",
-      description: "2-4 specific observations, each backed by evidence references.",
+      description: "0-3 specific observations, each backed by evidence references (0 for small talk or help).",
       items: {
         type: "object",
         properties: {
           text: { type: "string", description: "The observation, in plain second-person language." },
           why: { type: "string", description: "How the cited numbers support it." },
-          evidence: { type: "array", items: { type: "string" }, description: "References such as R1 or T3 from the evidence pack. At least one is required." },
+          evidence: { type: "array", items: { type: "string" }, description: "References such as R1, T3, W2 or P1 from the evidence pack. At least one is required." },
           science: { type: "array", items: { type: "string" }, description: "Science card references such as S2 that explain the observation or what tends to help. May be empty." },
         },
         required: ["text", "why", "evidence", "science"],
         additionalProperties: false,
       },
     },
-    next_step: { type: "string", description: "One concrete, encouraging suggestion for what to do next." },
+    actions: {
+      type: "array",
+      description: "0-3 buttons. type play needs skill and mode; forecast needs skill and gamesPerWeek (2, 4 or 7); show_progress and set_goal may leave skill empty; daily_challenge needs nothing. Unused fields: empty string or 0.",
+      items: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["play", "show_progress", "forecast", "set_goal", "daily_challenge"] },
+          skill: { type: "string", description: "A skill id from the evidence pack, or empty." },
+          mode: { type: "string", enum: ["training", "assessment", ""], description: "training or assessment for play; empty otherwise." },
+          gamesPerWeek: { type: "integer", description: "2, 4 or 7 for a forecast, else 0." },
+        },
+        required: ["type", "skill", "mode", "gamesPerWeek"],
+        additionalProperties: false,
+      },
+    },
+    mood: { type: "string", enum: [...MOODS], description: "Bao the panda's reaction to show with the reply." },
   },
-  required: ["summary", "claims", "next_step"],
+  required: ["intent", "reply", "claims", "actions", "mood"],
   additionalProperties: false,
 } as const;
 
@@ -51,7 +85,10 @@ export type FinalClaim = {
 
 export type FinalMessage = {
   content: string;
+  /** Label of the first action (drives the "acted on advice" collaboration signal), or "". */
   nextStep: string;
+  actions: ClientAction[];
+  mood: Mood;
   claims: FinalClaim[];
   filteredTerms: string[];
   /** Claims removed because they cited nothing valid or used diagnostic language. */
@@ -84,13 +121,14 @@ export function unverifiedNumbers(text: string, allowed: number[]): number[] {
 /** Remove reference codes the model leaked into user-facing text, e.g. "(S6)" or "(R2, T3)". */
 export const stripRefs = (s: string) =>
   s
-    .replace(/\s*\((?:[RTSW]\d+[,;\s]*(?:and\s+)?)+\)/g, "")
+    .replace(/\s*\((?:[RTSWP]\d+[,;\s]*(?:and\s+)?)+\)/g, "")
     // Bare codes in running text become plain words ("Blocks R2 and R4 show" → "Those blocks show").
     .replace(/\b(blocks?)\s+R\d+(?:\s*(?:,|and|&)\s*R\d+)*/gi, (_, b: string) => (b.toLowerCase() === "blocks" ? "those blocks" : "that block"))
     .replace(/\bR\d+(?:\s*(?:,|and|&)\s*R\d+)+/g, "those blocks")
     .replace(/\bR\d+\b/g, "that block")
     .replace(/\bW\d+\b/g, "the recalculation")
     .replace(/\bT\d+\b/g, "the trial details")
+    .replace(/\bP\d+\b/g, "the forecast")
     .replace(/\bS\d+\b/g, "the research")
     .replace(/\s{2,}/g, " ")
     .trim()
@@ -102,13 +140,19 @@ export const stripRefs = (s: string) =>
  * Science references (S#) are resolved too, but they never count as evidence: "science explains,
  * your data decides", so a claim that cites only science is dropped like any unsupported claim.
  */
-export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: ScienceRef[] = [], context = ""): FinalMessage {
+export function finaliseDraft(
+  draft: CoachDraft,
+  pack: EvidencePack,
+  science: ScienceRef[] = [],
+  context = "",
+  dims: Array<{ id: string; name: string }> = pack.skills,
+): FinalMessage {
   // Everything the model was shown: the only legitimate source of numbers.
   // Timestamps are dropped first: their digits (2026, 10, 14…) would otherwise "verify" almost any number.
   const noDates = (s: string) => s.replace(/\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?/g, " ");
   const promptLines = packToPrompt(pack).split("\n");
-  const lineOf = new Map(promptLines.flatMap((l) => (/^- ([RTW]\d+)\b/.exec(l) ? [[/^- ([RTW]\d+)\b/.exec(l)![1], l] as const] : [])));
-  const skillLines = promptLines.filter((l) => l.startsWith("- ") && !/^- [RTW]\d+\b/.test(l)).join("\n");
+  const lineOf = new Map(promptLines.flatMap((l) => (/^- ([RTWP]\d+)\b/.exec(l) ? [[/^- ([RTWP]\d+)\b/.exec(l)![1], l] as const] : [])));
+  const skillLines = promptLines.filter((l) => l.startsWith("- ") && !/^- [RTWP]\d+\b/.test(l)).join("\n");
   const shared = `${skillLines}\n${scienceToPrompt(science)}\n${context}`;
   // The summary may draw on the whole pack; a claim only on what it cites (plus the skill estimates).
   const allowed = numbersIn(noDates(`${packToPrompt(pack)}\n${shared}`));
@@ -163,6 +207,13 @@ export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: Sc
           runIds.add(parent.runId);
           labels.push(`what it would take: ${w.label} → ${w.toPct}% (was ${w.fromPct}%)`);
         }
+      } else if (ref.startsWith("P")) {
+        const p = pack.pace.find((x) => x.ref === ref);
+        const parent = p && runByRef.get(p.runRef);
+        if (p && parent) {
+          runIds.add(parent.runId);
+          labels.push(`if you keep ${p.gamesPerWeek} games a week: ${p.toPct}% (${p.lowPct}–${p.highPct}%)`);
+        }
       }
     }
     if (!runIds.size) {
@@ -190,12 +241,21 @@ export function finaliseDraft(draft: CoachDraft, pack: EvidencePack, science: Sc
     });
   }
 
-  // Summary and next step: keep only sentences whose numbers check out.
+  // The reply: keep only sentences whose numbers check out.
   const verified = (s: string) => s.split(/(?<=[.!?])\s+/).filter((x) => !unverifiedNumbers(stripRefs(x), allowed).length).join(" ");
-  const summary = clean(verified(draft.summary) || "Here's what your results show.");
-  const next = clean(verified(draft.next_step));
-  const content = summary.blocked ? NON_CLINICAL_NOTE : summary.text;
-  return { content, nextStep: next.blocked ? "" : next.text, claims, filteredTerms, dropped, unknownScience };
+  const reply = clean(verified(draft.reply) || "Here's what your results show.");
+  const content = reply.blocked ? NON_CLINICAL_NOTE : reply.text;
+  const actions = resolveActions(draft.actions ?? [], dims);
+  return {
+    content,
+    nextStep: actions[0]?.label ?? "",
+    actions,
+    mood: draft.mood ?? "calm",
+    claims: claims.slice(0, MAX_CLAIMS),
+    filteredTerms,
+    dropped,
+    unknownScience,
+  };
 }
 
 /** Deterministic coach used when AI coaching is off (no consent / no API access) or the call fails. */
@@ -203,7 +263,7 @@ export function ruleBasedDraft(pack: EvidencePack, nextNote?: string, science: S
   const sci = (...ids: string[]) => science.filter((s) => ids.includes(s.id)).map((s) => s.ref);
   const measured = pack.skills.filter((s) => s.measured);
   if (!measured.length || !pack.runs.length) {
-    return { summary: "Play your first assessment and I'll explain what your results show.", claims: [], next_step: nextNote ?? "Start an assessment from the home page." };
+    return { intent: "debrief", reply: "Play your first game and I'll explain what your results show.", claims: [], actions: [], mood: "wave" };
   }
   const latestRunFor = (skillName: string) => pack.runs.find((r) => r.skill === skillName);
   const factsFor = (runRef: string) => pack.facts.filter((f) => f.runRef === runRef);
@@ -265,8 +325,19 @@ export function ruleBasedDraft(pack: EvidencePack, nextNote?: string, science: S
 
   const wide = [...measured].sort((a, b) => b.bandPct[1] - b.bandPct[0] - (a.bandPct[1] - a.bandPct[0]))[0];
   return {
-    summary: `Nice work: ${measured.length} skill${measured.length > 1 ? "s" : ""} measured so far. Here's what your results show.`,
+    intent: "debrief",
+    reply: `Nice work: ${measured.length} skill${measured.length > 1 ? "s" : ""} measured so far. ${nextNote ?? `Another ${inSentence(wide.name)} game would make me much surer about it.`}`,
     claims,
-    next_step: nextNote ?? `Another ${inSentence(wide.name)} block would narrow its band the most.`,
+    actions: [
+      { type: "play", skill: wide.id, mode: "assessment" },
+      { type: "show_progress" },
+    ],
+    mood: "proud",
   };
+}
+
+/** A question about a health condition always gets the non-clinical answer first, whoever wrote the reply. */
+export function applyClinicalGuard(question: string | undefined, content: string): string {
+  if (!question || !filterClinical(question).blocked || content.startsWith(NON_CLINICAL_NOTE)) return content;
+  return `${NON_CLINICAL_NOTE} ${content}`;
 }

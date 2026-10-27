@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { makeKey, symbolStream, type SymbolDigitParams } from "@/lib/tasks/symbolDigit";
-import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss } from "./common";
+import { ProgressBar, TaskIntro, useCountdown, stampOnFrame, useFocusLoss, pushTrial } from "./common";
 import type { TaskFinish } from "./NBackTask";
 
 type Phase = "intro" | "countdown" | "preview" | "running";
@@ -81,7 +81,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
       if (phase !== "running" || finished.current) return;
       const glyph = stream[idx];
       const rt = performance.now() - onset.current;
-      records.current.push({
+      pushTrial(records.current, {
         trialIndex: idx,
         stimulus: { glyph },
         expected: digitOf[glyph],
@@ -155,7 +155,7 @@ export function SymbolDigitTask({ spec, onFinish }: { spec: BlockSpec; onFinish:
           </button>
         ))}
       </div>
-      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this block</button>
+      <button onClick={() => finish("abandoned")} className="text-sm text-slate-500 underline-offset-4 hover:underline">Stop this game</button>
     </div>
   );
 }

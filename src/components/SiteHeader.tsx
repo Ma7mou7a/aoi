@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { BambooCounter } from "./rewards/BambooCounter";
 
 /** Signed-out visitors see the public pages; the app pages would only send them back home. */
 const PUBLIC_LINKS = [
@@ -77,7 +78,7 @@ export function ThemeToggle() {
   );
 }
 
-export function SiteHeader({ signedIn }: { signedIn: boolean }) {
+export function SiteHeader({ signedIn, bamboo }: { signedIn: boolean; bamboo?: number }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-3 z-40 mx-auto mt-3 max-w-6xl px-4">
@@ -92,13 +93,14 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           <Suspense><NavLinks signedIn={signedIn} /></Suspense>
         </nav>
         <div className="flex items-center gap-2">
+          {signedIn && bamboo != null && <BambooCounter initial={bamboo} />}
           <ThemeToggle />
           {!signedIn && (
             <Link href="/signin" className="glass hidden rounded-lg px-3 py-2 font-display text-[15px] tracking-wider uppercase transition hover:border-brand sm:block">
               Sign in
             </Link>
           )}
-          <Link href={signedIn ? "/play" : "/#start"} className="hidden rounded-lg bg-brand px-4 py-2 font-display text-[15px] tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_24px_rgba(0,181,226,0.35)] transition hover:bg-brand-2 sm:block">
+          <Link href={signedIn ? "/play" : "/start"} className="hidden rounded-lg bg-brand px-4 py-2 font-display text-[15px] tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_24px_rgba(0,181,226,0.35)] transition hover:bg-brand-2 sm:block">
             {signedIn ? "Start playing" : "Get started"}
           </Link>
           <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Menu" className="glass grid h-9 w-9 place-items-center rounded-lg lg:hidden">

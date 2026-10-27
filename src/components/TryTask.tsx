@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { pandaBus } from "@/lib/panda/bus";
+import { PandaCorner } from "./panda/PandaCorner";
 import { useCallback, useEffect, useState } from "react";
 import type { Dimension } from "@/lib/dimensions/schema";
 import { newSeed } from "@/lib/rng";
 import { levelOf, scoreBlock, type BlockScore } from "@/lib/scoring";
+import type { TrialRecord } from "@/lib/scoring/types";
 import type { BlockSpec } from "@/lib/tasks/registry";
 import { CorsiTask } from "./tasks/CorsiTask";
 import { MatricesTask } from "./tasks/MatricesTask";
@@ -17,14 +20,22 @@ import { TaskSwitchingTask } from "./tasks/TaskSwitchingTask";
 const RENDERERS = { n_back: NBackTask, stroop: StroopTask, corsi: CorsiTask, symbol_digit: SymbolDigitTask, task_switching: TaskSwitchingTask, matrices: MatricesTask, trust_machine: TrustMachineTask } as const;
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
-/** Practice mode: play any task at any level; scored in the browser with the real pipeline, nothing stored. */
-export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
+export type TryComplete = { score: BlockScore; trials: TrialRecord[]; startedAt: string; level: number; params: Record<string, unknown> };
+
+/**
+ * Practice mode: play any task at any level; scored in the browser with the real pipeline, nothing stored.
+ * `seed` fixes the puzzle (daily challenge), `fixedLevel` hides the level picker, and `onComplete`
+ * hands the finished game to the caller instead of showing the built-in result (first game, daily).
+ */
+export function TryTask({ dim, taskId, seed: fixedSeed, level: fixedLevel, onComplete }: { dim: Dimension; taskId: string; seed?: number; level?: number; onComplete?: (r: TryComplete) => void }) {
   const task = dim.tasks.find((t) => t.id === taskId)!;
-  const [level, setLevel] = useState(task.difficulty.levels[Math.floor(task.difficulty.levels.length / 2)].level);
+  const [level, setLevel] = useState(fixedLevel ?? task.difficulty.levels[Math.floor(task.difficulty.levels.length / 2)].level);
   // The seed is drawn in the browser only: a server-rendered seed would mismatch on hydration.
-  const [seed, setSeed] = useState<number | null>(null);
+  const [seed, setSeed] = useState<number | null>(fixedSeed ?? null);
   const [result, setResult] = useState<BlockScore | null>(null);
-  useEffect(() => setSeed(newSeed()), []);
+  useEffect(() => {
+    if (fixedSeed == null) setSeed(newSeed());
+  }, [fixedSeed]);
 
   const spec: BlockSpec = {
     dimension: { id: dim.id, name: dim.name, color: dim.color },
@@ -35,18 +46,25 @@ export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
     reason: { rule: "practice", expectedSdReduction: 0, note: "Practice mode" },
   };
 
-  const onFinish = useCallback<TaskFinish>(({ trials, status }) => {
-    if (status === "completed") setResult(scoreBlock(dim, task, level, trials));
-    else setSeed(newSeed());
-  }, [dim, task, level]);
+  const onFinish = useCallback<TaskFinish>(({ trials, status, startedAt }) => {
+    if (status !== "completed") return setSeed(fixedSeed ?? newSeed());
+    const score = scoreBlock(dim, task, level, trials);
+    if (onComplete) onComplete({ score, trials, startedAt, level, params: { ...task.params, ...levelOf(task, level).params, seed } });
+    else setResult(score);
+  }, [dim, task, level, onComplete, fixedSeed, seed]);
 
   const Renderer = RENDERERS[task.paradigm];
+  useEffect(() => {
+    if (result) pandaBus.emit({ type: "block:end" });
+    else if (seed != null) pandaBus.emit({ type: "block:start" });
+  }, [result, seed]);
 
   return (
     <div className="space-y-6">
+      <PandaCorner mode="lively" />
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">Practice mode: nothing is stored and your profile doesn&apos;t change.</p>
-        <div className="flex items-center gap-2 text-sm">
+        {!onComplete && <p className="text-sm text-slate-500">Practice mode: nothing is stored and your profile doesn&apos;t change.</p>}
+        {fixedLevel == null && <div className="flex items-center gap-2 text-sm">
           Level
           {task.difficulty.levels.map((l) => (
             <button key={l.level} onClick={() => { setLevel(l.level); setResult(null); setSeed(newSeed()); }} aria-pressed={level === l.level}
@@ -54,7 +72,7 @@ export function TryTask({ dim, taskId }: { dim: Dimension; taskId: string }) {
               {l.level}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       {result ? (
         <div className="mx-auto max-w-md space-y-3 glass rounded-2xl p-4 ">
