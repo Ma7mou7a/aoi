@@ -48,6 +48,9 @@ export function createLimiter(opts: { windowMs: number; maxFailures: number; fre
 /** Shared limiter for every secret-checking endpoint (sign-in key, device code, passkey). */
 export const signinLimiter = createLimiter({ windowMs: 15 * 60_000, maxFailures: 10, freeFailures: 3, baseDelayMs: 250, maxDelayMs: 8000 });
 
+/** Plain request cap for endpoints that create rows without a session (passkey challenges): 30 a minute per address. */
+export const challengeLimiter = createLimiter({ windowMs: 60_000, maxFailures: 30, freeFailures: 30, baseDelayMs: 0, maxDelayMs: 0 });
+
 /** The client address as seen by the app (first X-Forwarded-For hop when behind a proxy). Never stored. */
 export function clientAddress(h: Headers) {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
