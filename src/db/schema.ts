@@ -48,6 +48,7 @@ export const consentKind = pgEnum("consent_kind", [
   "camera", // optional, off by default; never the sole basis of a decision
   "microphone",
   "research_export", // anonymised export for validation
+  "age_18_plus", // confirmed at signup: the app is for adults only
 ]);
 
 /** Append-only: the latest row per (user, kind) is the current state, older rows are the audit trail. */
@@ -333,3 +334,84 @@ export const rewardEvents = pgTable("reward_events", {
   ref: text("ref").notNull().default(""),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("reward_events_once_idx").on(t.userId, t.kind, t.day, t.ref)]);
+
+// ── Security: data keys, sign-in sessions, passkeys, tamper-evident log ─────
+
+/**
+ * One data key (DEK) per user, wrapped (AES-256-GCM) by a master key that lives only in the environment.
+ * Deleting this row (cascade on user delete) crypto-shreds every encrypted field of the user, in every copy.
+ */
+export const userKeys = pgTable("user_keys", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  wrappedKey: text("wrapped_key").notNull(),
+  /** Master key version that wraps this DEK; `npm run keys:rotate` re-wraps to the current one. */
+  keyVersion: integer("key_version").notNull(),
+  createdAt: createdAt(),
+  rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+});
+
+/** Signed-in browsers. The cookie holds a random token; only its SHA-256 is stored. */
+export const authSessions = pgTable("auth_sessions", {
+  id: id(),
+  userId: userRef(),
+  tokenHash: text("token_hash").notNull().unique(),
+  /** Coarse, e.g. "Chrome on Windows" (never the full user agent or the IP address). */
+  deviceLabel: text("device_label").notNull(),
+  /** How this session was opened: signup | key | passkey | device_link | dev. */
+  method: text("method").notNull(),
+  createdAt: createdAt(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Absolute expiry; idle expiry is checked against lastSeenAt. */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedReason: text("revoked_reason"),
+}, (t) => [index("auth_sessions_user_idx").on(t.userId, t.createdAt)]);
+
+/** Short-lived, single-use secrets: WebAuthn challenges and "sign in on another device" links. Hashed. */
+export const authChallenges = pgTable("auth_challenges", {
+  id: id(),
+  kind: text("kind").notNull(), // "webauthn_register" | "webauthn_login" | "device_link"
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  /** Device links only: hash of the short code that can be typed instead of scanning. */
+  codeHash: text("code_hash").unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+/** WebAuthn credentials (passkeys). Only the public key is stored; the private key never leaves the device. */
+export const passkeys = pgTable("passkeys", {
+  id: id(),
+  userId: userRef(),
+  credentialId: text("credential_id").notNull().unique(), // base64url
+  publicKey: text("public_key").notNull(), // SPKI DER, base64url
+  algorithm: integer("algorithm").notNull(), // COSE: -7 ES256, -257 RS256, -8 EdDSA
+  counter: integer("counter").notNull().default(0),
+  /** Random per-user WebAuthn handle (not the user id), reused for every passkey of the user. */
+  userHandle: text("user_handle").notNull(),
+  transports: jsonb("transports").$type<string[]>().notNull().default([]),
+  label: text("label").notNull(),
+  backedUp: boolean("backed_up").notNull().default(false),
+  createdAt: createdAt(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+}, (t) => [index("passkeys_user_idx").on(t.userId)]);
+
+/**
+ * Append-only, hash-chained security log (sign-in, sign-out, key replacement, consent change, export,
+ * delete, session revoke…). hash = HMAC(auditKey, prevHash | contentHash), so editing, deleting or
+ * reordering any entry breaks the chain from there on (see src/lib/security/hashChain.ts).
+ * No foreign key: entries outlive the user, but their content is redacted on deletion while
+ * contentHash keeps the chain verifiable.
+ */
+export const securityEvents = pgTable("security_events", {
+  seq: integer("seq").primaryKey(),
+  at: timestamp("at", { withTimezone: true }).notNull(),
+  userId: uuid("user_id"),
+  type: text("type").notNull(),
+  details: jsonb("details").$type<Record<string, string | number | boolean>>(),
+  contentHash: text("content_hash").notNull(),
+  prevHash: text("prev_hash").notNull(),
+  hash: text("hash").notNull(),
+  redactedAt: timestamp("redacted_at", { withTimezone: true }),
+}, (t) => [index("security_events_user_idx").on(t.userId, t.seq)]);
