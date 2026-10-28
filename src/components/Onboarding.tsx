@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { takeFirstGame } from "@/lib/firstGame";
@@ -17,7 +18,7 @@ const GOALS: Array<[string, string]> = [
   ["curious", "Just curious"],
 ];
 
-type Consents = { data_processing: boolean; behavioural_signals: boolean; llm_coaching: boolean };
+type Consents = { data_processing: boolean; behavioural_signals: boolean; llm_coaching: boolean; age_18_plus: boolean };
 
 /** If the visitor played the 60-second first game, submit it as their first real game (scored again on the server). */
 async function carryOverFirstGame() {
@@ -49,7 +50,8 @@ export function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
-  const [consents, setConsents] = useState<Consents>({ data_processing: false, behavioural_signals: false, llm_coaching: false });
+  const [consents, setConsents] = useState<Consents>({ data_processing: false, behavioural_signals: false, llm_coaching: false, age_18_plus: false });
+  const [underAge, setUnderAge] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [signinKey, setSigninKey] = useState<string | null>(null);
@@ -102,12 +104,33 @@ export function Onboarding() {
         </form>
       ),
     },
+    underAge
+      ? {
+          pose: "calm",
+          say: "Thanks for being honest! AI4Brain is made for adults, so I can't build a twin for you. You can still play every game without an account.",
+          body: (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/try" className={PRIMARY}>Play the games</Link>
+              <button type="button" onClick={() => { setUnderAge(false); setStep(0); }} className={SECONDARY}>Back</button>
+            </div>
+          ),
+        }
+      : {
+          pose: "think",
+          say: <>Nice to meet you, {name.trim()}! Quick check first: AI4Brain is for adults. Are you 18 or over?</>,
+          body: (
+            <div className="flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => { setConsents({ ...consents, age_18_plus: true }); setStep(2); }} className={PRIMARY}>Yes, I&apos;m 18 or over</button>
+              <button type="button" onClick={() => { setConsents({ ...consents, age_18_plus: false }); setUnderAge(true); }} className={SECONDARY}>No, I&apos;m under 18</button>
+            </div>
+          ),
+        },
     {
       pose: "calm",
-      say: <>Nice to meet you, {name.trim()}! To build your twin I need to keep your game results. They stay 180 days, and you can delete everything with one click.</>,
+      say: "Great. To build your twin I need to keep your game results. They stay 180 days, they're stored encrypted, and you can delete everything with one click.",
       body: (
         <div className="flex flex-wrap justify-center gap-2">
-          <button type="button" onClick={() => { setConsents({ ...consents, data_processing: true }); setStep(2); }} className={PRIMARY}>OK, keep my results</button>
+          <button type="button" onClick={() => { setConsents({ ...consents, data_processing: true }); setStep(3); }} className={PRIMARY}>OK, keep my results</button>
           <button type="button" onClick={() => setStep(0)} className={SECONDARY}>Back</button>
         </div>
       ),
@@ -115,9 +138,9 @@ export function Onboarding() {
     {
       pose: "think",
       say: "May I also look at how you play (timing, errors, the window losing focus) to judge how reliable a game was? Never a camera or microphone.",
-      body: yesNo("behavioural_signals", 3),
+      body: yesNo("behavioural_signals", 4),
     },
-    { pose: "wave", say: AI_CONSENT_COPY, body: yesNo("llm_coaching", 4) },
+    { pose: "wave", say: AI_CONSENT_COPY, body: yesNo("llm_coaching", 5) },
     {
       pose: "cheer",
       say: "Last one: what would you like to grow?",

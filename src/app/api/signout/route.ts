@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
-import { USER_COOKIE } from "@/lib/server/user";
+import { endCurrentSession, handle } from "@/lib/server/user";
 
-/** Sign out of this browser (the profile itself stays; sign back in with the sign-in key). */
-export async function POST() {
-  (await cookies()).delete(USER_COOKIE);
+/** Sign out of this browser: the session is revoked server-side (the profile stays; sign back in with the key). */
+export const POST = handle(async () => {
+  await endCurrentSession();
   return Response.json({ ok: true });
-}
+});

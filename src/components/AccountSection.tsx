@@ -11,7 +11,7 @@ export function AccountSection({ hasKey, displayName }: { hasKey: boolean; displ
   const [busy, setBusy] = useState(false);
 
   async function newKey() {
-    if (hasKey && !confirm("Create a new sign-in key? Your old key will stop working.")) return;
+    if (hasKey && !confirm("Create a new sign-in key? Your old key will stop working, and every other device will be signed out.")) return;
     setBusy(true);
     const res = await fetch("/api/me/signin-key", { method: "POST" });
     setBusy(false);

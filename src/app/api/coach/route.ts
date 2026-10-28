@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { readJson } from "@/lib/security/body";
 import { generateCoachMessage, getCoachState, listCoachMessages } from "@/lib/server/coach";
 import { getCollabView } from "@/lib/server/collab";
-import { handle, HttpError, requireUser } from "@/lib/server/user";
+import { handle, requireUser } from "@/lib/server/user";
 
 const view = async (userId: string) => ({ messages: await listCoachMessages(userId), collab: await getCollabView(userId), ...(await getCoachState(userId)) });
 
@@ -23,8 +24,7 @@ const body = z.object({
 /** Ask the coach: no question = debrief of the latest session. */
 export const POST = handle(async (req: Request) => {
   const user = await requireUser();
-  const parsed = body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) throw new HttpError(400, "Questions must be 1–500 characters.");
-  await generateCoachMessage(user.id, parsed.data);
+  const b = await readJson(req, body, { maxBytes: 4096, message: "Questions must be 1–500 characters." });
+  await generateCoachMessage(user.id, b);
   return Response.json(await view(user.id));
 });

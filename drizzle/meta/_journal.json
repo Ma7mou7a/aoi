@@ -43,6 +43,13 @@
       "when": 1793122120769,
       "tag": "0005_ux_overhaul",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793190967349,
+      "tag": "0006_security_hardening",
+      "breakpoints": true
     }
   ]
 }

@@ -25,6 +25,9 @@ import { selectNext } from "../selector";
 import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { getPosteriors, getProfileView } from "./profile";
 import { POLICY_VERSION } from "./user";
+import { loadUser as loadAccount, saveCoachMemory } from "./accounts";
+import { cipherFor, FIELDS, type UserCipher } from "./vault";
+import type { AffectState } from "../affect";
 import { inSentence } from "../text";
 
 /** How many recent blocks the coach can see and cite. */
@@ -73,12 +76,13 @@ export async function buildPackForUser(userId: string, pace: Array<PaceForecast 
     .where(and(eq(schema.profileSnapshots.userId, userId), eq(schema.profileSnapshots.trigger, "task_run")))
     .orderBy(schema.profileSnapshots.dimensionId, asc(schema.profileSnapshots.createdAt));
 
+  const c = await cipherFor(userId);
   const pack = buildEvidencePack({
     dimensions,
     posteriors,
     firstMeans: Object.fromEntries(firsts.map((s) => [s.dimensionId, s.mean])),
-    runs: runs.map((r) => ({ ...r, validity: r.validity ?? null })),
-    trials,
+    runs: runs.map((r) => ({ ...r, validity: r.validity ?? null, affect: c.openJson<AffectState>(r.affect, FIELDS.affect) })),
+    trials: trials.map((t) => ({ ...t, behaviour: c.openJson<NonNullable<typeof t.behaviour>>(t.behaviour, FIELDS.behaviour) })),
     pace,
   });
   const next = selectNext({ dimensions, posteriors, mode: "assessment", available: AVAILABLE_PARADIGMS });
@@ -101,12 +105,18 @@ async function paceFor(userId: string, skill: string | undefined) {
 }
 
 async function loadUser(userId: string) {
-  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, userId));
+  const user = await loadAccount(userId);
+  if (!user) throw new Error("No such user");
   const memory: CoachMemory = { ...EMPTY_MEMORY, ...user.coachMemory };
   return { user, memory, researchMode: !!user.preferences.researchMode };
 }
 
-const saveMemory = (userId: string, memory: CoachMemory) => db.update(schema.users).set({ coachMemory: memory }).where(eq(schema.users.id, userId));
+/** Coach memory is encrypted with the user's data key (see ./accounts.ts). */
+const saveMemory = saveCoachMemory;
+
+type MessageRow = typeof schema.coachMessages.$inferSelect;
+/** Coach messages (the user's questions included) are stored encrypted; decrypt for display. */
+const openMessage = (c: UserCipher, m: MessageRow): MessageRow => ({ ...m, content: c.openText(m.content, FIELDS.coachContent) });
 
 /** What the coach page needs besides the messages: whether Bao should ask for AI consent or offer a bet. */
 export async function getCoachState(userId: string) {
@@ -137,11 +147,12 @@ async function answerConsent(userId: string, granted: boolean) {
   const l = pickLine(granted ? "consent_yes" : "consent_no", { name: user.displayName }, memory.recentLineIds, Math.random);
   await saveMemory(userId, updateMemory(updateMemory(memory, { type: "ai_asked" }), { type: "line", id: l.id }));
   const actions = resolveActions([{ type: "show_progress" }, { type: "daily_challenge" }], getDimensions());
+  const c = await cipherFor(userId);
   const [msg] = await db
     .insert(schema.coachMessages)
-    .values({ userId, role: "coach", content: l.text, nextStep: actions[0]?.label ?? null, actions, mood: granted ? "cheer" : "calm", model: "rules-v1", meta: { source: "rules", intent: "chat" } })
+    .values({ userId, role: "coach", content: c.text(l.text, FIELDS.coachContent), nextStep: actions[0]?.label ?? null, actions, mood: granted ? "cheer" : "calm", model: "rules-v1", meta: { source: "rules", intent: "chat" } })
     .returning();
-  return msg;
+  return openMessage(c, msg);
 }
 
 /**
@@ -226,7 +237,11 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
       .from(schema.coachMessages)
       .where(eq(schema.coachMessages.userId, userId))
       .orderBy(desc(schema.coachMessages.createdAt))
-      .limit(HISTORY_MESSAGES);
+      .limit(HISTORY_MESSAGES)
+      .then(async (rows) => {
+        const c = await cipherFor(userId);
+        return rows.map((r) => ({ ...r, content: c.openText(r.content, FIELDS.coachContent) }));
+      });
     const skillName = (id: string) => dims.find((d) => d.id === id)?.name ?? id;
     const ask = forecast
       ? `USER QUESTION\nWhat if I play ${forecast.gamesPerWeek} games a week of ${skillName(forecast.skill)}?`
@@ -290,14 +305,15 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   }
 
   // Store the question only now, so it isn't also part of the history sent above.
-  if (question) await db.insert(schema.coachMessages).values({ userId, role: "user", content: question });
+  const cipher = await cipherFor(userId);
+  if (question) await db.insert(schema.coachMessages).values({ userId, role: "user", content: cipher.text(question, FIELDS.coachContent) });
   const intent: Intent = draft.intent ?? classified.intent;
   const [msg] = await db
     .insert(schema.coachMessages)
     .values({
       userId,
       role: "coach",
-      content: final.content,
+      content: cipher.text(final.content, FIELDS.coachContent),
       nextStep: final.nextStep || null,
       claims,
       actions: final.actions,
@@ -322,7 +338,7 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   if (isDebrief) memory = updateMemory(memory, { type: "debrief", bet: prediction !== undefined });
   await saveMemory(userId, memory);
   await recordSignals(userId, signals.map((s) => ({ ...s, coachMessageId: s.coachMessageId ?? msg.id })));
-  return msg;
+  return openMessage(cipher, msg);
 }
 
 /** How the most recently played skill's estimate moved with its latest block. */
@@ -347,7 +363,8 @@ async function latestChange(userId: string) {
 
 export async function listCoachMessages(userId: string) {
   const rows = await db.select().from(schema.coachMessages).where(eq(schema.coachMessages.userId, userId)).orderBy(asc(schema.coachMessages.createdAt));
-  return rows.map(toClientMessage);
+  const c = await cipherFor(userId);
+  return rows.map((m) => toClientMessage(openMessage(c, m)));
 }
 
 /** The exact blocks and trials behind a claim, scoped to the user. */

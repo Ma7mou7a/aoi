@@ -1,10 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { readJson } from "@/lib/security/body";
 import { db, schema } from "@/db";
 import { nextBlock } from "@/lib/server/blocks";
 import { recordSignals, signalActedOnAdvice } from "@/lib/server/collab";
 import { purgeExpired } from "@/lib/server/privacy";
-import { handle, HttpError, requireUser } from "@/lib/server/user";
+import { handle, requireUser } from "@/lib/server/user";
 
 const body = z.object({
   mode: z.enum(["assessment", "training"]),
@@ -24,8 +25,7 @@ const body = z.object({
 /** Start a session (always non-biometric) and return its first block. */
 export const POST = handle(async (req: Request) => {
   const user = await requireUser();
-  const parsed = body.safeParse(await req.json());
-  if (!parsed.success) throw new HttpError(400, parsed.error.message);
+  const parsed = { data: await readJson(req, body, { maxBytes: 2048 }) };
 
   // Housekeeping on activity: enforce the retention window, and credit acting on the coach's advice.
   await purgeExpired(user.id, user.retentionDays);

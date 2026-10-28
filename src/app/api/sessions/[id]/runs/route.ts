@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { readJson } from "@/lib/security/body";
 import { db, schema } from "@/db";
 import { nextBlock, recordRun } from "@/lib/server/blocks";
 import { getSessionForUser } from "@/lib/server/profile";
@@ -21,11 +22,11 @@ const trial = z.object({
 });
 
 const body = z.object({
-  dimensionId: z.string(),
-  taskId: z.string(),
+  dimensionId: z.string().max(64),
+  taskId: z.string().max(64),
   level: z.number().int().positive(),
   params: z.record(z.string(), z.unknown()),
-  reason: z.object({ rule: z.string(), expectedSdReduction: z.number(), note: z.string() }),
+  reason: z.object({ rule: z.string().max(64), expectedSdReduction: z.number(), note: z.string().max(500) }),
   startedAt: z.string().datetime(),
   status: z.enum(["completed", "abandoned"]),
   trials: z.array(trial).max(500),
@@ -37,13 +38,13 @@ const body = z.object({
 export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: string }> }) => {
   const user = await requireUser();
   const { id } = await ctx.params;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new HttpError(404, "Session not found");
   const session = await getSessionForUser(id, user.id);
   if (!session) throw new HttpError(404, "Session not found");
   if (session.status !== "active") throw new HttpError(409, "Session already ended");
 
-  const parsed = body.safeParse(await req.json());
-  if (!parsed.success) throw new HttpError(400, parsed.error.message);
-  const b = parsed.data;
+  // A block carries all its trials (up to 500), so it gets a larger, still bounded, body limit.
+  const b = await readJson(req, body, { maxBytes: 512 * 1024 });
 
   // Strip behaviour signals unless the user opted in to them.
   const [latest] = await db

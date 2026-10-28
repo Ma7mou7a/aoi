@@ -18,6 +18,7 @@ import { rememberPlayed } from "./coach";
 import { awardForRun, type EarnedReward } from "./rewards";
 import { getPosteriors } from "./profile";
 import { HttpError } from "./user";
+import { cipherFor, FIELDS } from "./vault";
 
 /** Blocks per assessment session before we stop even if bands are still wide (fatigue guard). */
 export const MAX_BLOCKS_PER_SESSION = 6;
@@ -72,8 +73,9 @@ export async function nextBlock(userId: string, sessionId: string, mode: Selecti
   let { level, reason } = selection;
   // Emotion-aware ease-off: after a block that looked frustrating, the next one of that task is one level easier.
   const last = completed.at(-1);
+  const lastAffect = last ? (await cipherFor(userId)).openJson<AffectState>(last.affect, FIELDS.affect) : null;
   const levels = task.difficulty.levels.map((l) => l.level);
-  if (last?.affect?.easeOff && last.taskId === task.id && level > levels[0]) {
+  if (last && lastAffect?.easeOff && last.taskId === task.id && level > levels[0]) {
     level = levels[levels.indexOf(level) - 1] ?? levels[0];
     reason = { ...reason, rule: `${reason.rule}+ease_off`, note: `${reason.note} We're easing off one level after a tough game.` };
   }
@@ -131,6 +133,7 @@ export async function recordRun(input: {
   if (!task.difficulty.levels.some((l) => l.level === input.level)) throw new HttpError(400, `invalid level ${input.level}`);
 
   const now = new Date();
+  const cipher = await cipherFor(input.userId);
   const score = scoreBlock(dim, task, input.level, input.trials);
   const before: Posterior = (await getPosteriors(input.userId, now))[dim.id] ?? priorFor(dim, now);
   const completed = input.status === "completed";
@@ -190,7 +193,8 @@ export async function recordRun(input: {
         observation: score.observation,
         observationSd: score.observationSd,
         validity: score.validity,
-        affect,
+        // Behaviour-based inferences and signals are encrypted with the user's data key.
+        affect: affect ? (cipher.json(affect, FIELDS.affect) as unknown as AffectState) : null,
         selfEstimate: input.selfEstimate ?? null,
         startedAt: input.startedAt,
         endedAt: now,
@@ -210,7 +214,7 @@ export async function recordRun(input: {
           outcome: t.outcome,
           correct: t.correct,
           rtMs: t.rtMs == null ? null : Math.round(t.rtMs),
-          behaviour: t.behaviour ?? null,
+          behaviour: t.behaviour ? (cipher.json(t.behaviour, FIELDS.behaviour) as unknown as typeof t.behaviour) : null,
           shownAt: t.shownAt ? new Date(t.shownAt) : now,
         })),
       );
