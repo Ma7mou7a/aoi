@@ -1,6 +1,6 @@
 # AI4Brain: Cognitive Growth Agent
 
-**CISTAC 1.0 · AI4Brain challenge entry.** A non-clinical agent that continuously **assesses** six cognitive skills with classic cognitive-science tasks, plus how well you rely on AI advice, **understands** performance as an uncertainty-aware profile (the *Brain Twin*), **coaches** with claims you can verify trial by trial, and **improves** you with adaptive exercises, weekly plans and goals.
+**CISTAC 1.0 · AI4Brain challenge entry.** A non-clinical agent that continuously **assesses** six cognitive skills with classic cognitive-science tasks, plus how well you rely on AI advice, **understands** performance as an uncertainty-aware profile (the *Brain Twin*), **coaches** through Bao, a panda who explains every game in plain words with claims you can verify trial by trial, and **improves** your practice with adaptive exercises, weekly plans and goals.
 
 > Every number comes with a band that says how sure the app is, every coach claim links to its evidence, and the whole pipeline is checked against 500 simulated users with known abilities.
 
@@ -12,6 +12,8 @@
 | **Uncertainty everywhere** | Bayesian (Kalman) profile per skill: 90% band on every estimate, wider for noisy or invalid blocks, widening between sessions |
 | **Adaptive testing** | The next block is the one expected to shrink the band most. In simulation this is **10% more accurate than random order** at equal effort |
 | **Validated** | 500 simulated users through the real pipeline: band coverage **89–94%** (target 90%), mean error ±6–10% on the cognitive skills, **98% of invalid play caught** with 1% false alarms (`/validation`, [docs/validation.md](docs/validation.md)) |
+| **A coach that acts** | Bao answers what you ask with a short reply and buttons: play the right game ("I want to improve my memory" → ▶ Play: Working memory), show progress, set a goal, or "what if I play every day?" (a ranged forecast from your own trend). Works without AI too: a template coach with intent detection and a varied line bank |
+| **Experience without dark patterns** | A 60-second first game before signup, a plain-words result card (what you did / what it means / what's next) with a "sure-o-meter", conversational signup, bamboo rewards for consistency and curiosity (never for score level), a weekly streak freeze, and a daily shared puzzle. Bao is quiet during scored games ([docs/ethics.md](docs/ethics.md)) |
 | **Evidence-linked coach** | Claude or an open-weight model on Groq writes claims that must cite the exact blocks and trials, and may add published findings (13 reviewed science cards) to explain why; science alone never counts as evidence; every number in a claim is checked against the evidence it cites; unsupported claims are dropped; a clinical-term filter guards every word and norm comparisons are removed; falls back to a rule-based coach |
 | **No-email accounts** | Sign up with a nickname; a private sign-in key (only its hash is stored) opens your Brain Twin on any device. Sign out and key replacement in Settings |
 | **How sure are you?** | After every block you guess your score before seeing it; the app tracks how well you know your own performance (metacognitive calibration, Carpenter et al. 2019) and shows it on the dashboard |
@@ -24,7 +26,7 @@
 | Brief | Implementation |
 |-|-|
 | A: tasks per dimension; score, RT, error rate, behaviour; dimension docs; non-biometric mode | 6 cognitive skills + AI reliance, 1 task each, 3 levels each (`dimensions/*.yaml`); every trial stored with RT, correctness and behaviour; measurement cards (`/skills`, [docs/measurement-cards.md](docs/measurement-cards.md)); non-biometric only |
-| Brain Twin: history (+ projections with uncertainty) | Append-only profile snapshots; progress curves with bands; 14-day forecast with band and track record (`/dashboard`) |
+| Brain Twin: history (+ projections with uncertainty) | Append-only profile snapshots; progress curves with bands; 7-day forecast with band and track record (`/dashboard`), plus "what if I play N games a week" forecasts in the coach |
 | B: explainable coaching, justified architecture, no clinical terms | Evidence-linked coach (`/coach`), clinical filter, rule-based fallback; architecture below |
 | C: difficulty adaptation, evolving plans, radar, curves, heatmap, goals | Adaptive selector + staircase; weekly plan rebuilt from the twin; radar with bands, progress curves, practice heatmap, uncertainty-aware goals (`/dashboard`) |
 | AI Collaboration Score (0–100, documented formula) | `/coach` score card + [docs/collaboration-score.md](docs/collaboration-score.md) |
@@ -67,7 +69,7 @@ Optional: `ANTHROPIC_API_KEY` or `GROQ_API_KEY` in `.env.local` enables the AI c
 
 | Script | |
 |-|-|
-| `npm test` | 132 unit tests (scoring, profiler calibration, selector, tasks, coach safety, collaboration score, plans, forecasts, affect, milestones) |
+| `npm test` | 269 unit tests (scoring, profiler calibration, selector, tasks, coach safety, intents and actions, number and forecast checks, collaboration score, plans, forecasts, rewards, daily challenge, affect) |
 | `npm run validate` | Validation study (500 simulated users); `-- --apply` refits level maps and noise into the YAML |
 | `npm run dims:check` | Validate all dimension configs |
 | `npm run new-dimension -- --id … --name "…" --from …` | Add a skill from an existing task type |
@@ -76,7 +78,7 @@ Optional: `ANTHROPIC_API_KEY` or `GROQ_API_KEY` in `.env.local` enables the AI c
 
 ## Pages
 
-`/` onboarding · `/play` adaptive assessment (`?mode=training` for practice) · `/dashboard` · `/coach` · `/profile` · `/settings` · `/skills` measurement cards · `/try` play any task without an account · `/validation` the study.
+`/` landing and home · `/start` 60-second first game · `/daily` daily challenge · `/play` adaptive assessment (`?mode=training` for practice) · `/dashboard` · `/coach` · `/profile` · `/settings` · `/skills` measurement cards · `/try` play any task without an account · `/validation` the study.
 
 ## Docs
 

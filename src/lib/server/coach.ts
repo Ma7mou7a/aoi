@@ -3,14 +3,15 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { resolveActions } from "../coach/actions";
 import { applyClinicalGuard, finaliseDraft, type CoachDraft } from "../coach/claims";
-import { buildEvidencePack, packToPrompt } from "../coach/evidence";
+import { buildEvidencePack } from "../coach/evidence";
 import { fallbackDraft } from "../coach/fallback";
 import { classifyIntent, type Intent, type Pace } from "../coach/intent";
-import { EMPTY_MEMORY, memoryToPrompt, shouldOfferBet, updateMemory, type CoachMemory } from "../coach/memory";
+import { EMPTY_MEMORY, shouldOfferBet, updateMemory, type CoachMemory } from "../coach/memory";
+import { buildCoachPrompt } from "../coach/prompt";
 import { pickLine } from "../panda/lines";
 import { Z90 } from "../profiler";
 import { forecastAtPace, type PaceForecast } from "../profiler/pace";
-import { scienceToPrompt, selectScience } from "../coach/science";
+import { selectScience } from "../coach/science";
 import { draftWithLlm } from "../coach/llm";
 import { filterClinical } from "../coach/safety";
 import { plantFlaw, PLANT_PROBABILITY } from "../collab/plant";
@@ -220,14 +221,18 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
       : question
         ? `USER QUESTION\n${question}`
         : "TASK\nGive the user feedback on their most recent session.";
-    const prompt =
-      `EVIDENCE PACK\n${packToPrompt(pack)}\n\n` +
-      `${scienceToPrompt(science)}\n\n` +
-      `ABOUT THE USER (name: ${user.displayName})\n${memoryToPrompt(memory, dims)}\n\n` +
-      `USER INTENT (keyword guess, may be wrong): ${classified.intent}${classified.skill ? `, skill id ${classified.skill}` : ""}\n\n` +
-      (nextNote ? `SUGGESTED NEXT BLOCK (from the adaptive selector)\n${nextNote}\n\n` : "") +
-      (history.length ? `RECENT CONVERSATION (oldest first)\n${history.reverse().map((m) => `${m.role}: ${m.content}`).join("\n")}\n\n` : "") +
-      ask;
+    const prompt = buildCoachPrompt({
+      pack,
+      science,
+      memory,
+      dims,
+      intent: classified.intent,
+      skill: classified.skill,
+      nextNote,
+      history: history.reverse(),
+      ask,
+      userName: user.displayName,
+    });
     const res = await draftWithLlm(prompt);
     if (res.ok) {
       draft = res.draft;

@@ -5,140 +5,252 @@ Team: *[team name and members]* · Repository: https://github.com/ChaimaGhazali/
 
 ## 1. Summary
 
-AI4Brain is a non-clinical agent that **assesses** six cognitive skills with classic cognitive-science tasks, and how well the user relies on AI advice, **understands** the results as a Bayesian profile in which every estimate carries a 90% credible band (the *Brain Twin*), **coaches** with natural-language claims that are each linked to the exact trials behind them, and **improves** the user with adaptive difficulty, weekly plans and goals.
+AI4Brain is a non-clinical agent that **assesses** six cognitive skills with classic cognitive-science tasks, plus how well the user relies on AI advice. It **understands** the results as a Bayesian profile in which every score carries a 90% band showing how sure we are (the *Brain Twin*). It **coaches** through Bao, a panda who explains every game in plain words, cites the exact trials behind each claim and can start the right game in one tap. It **improves** practice with adaptive difficulty, weekly plans and goals. We speak of practice gains on these tasks, never of a "better brain".
 
-Three design choices set it apart:
+Four design choices set it apart:
 
-1. **Transparent statistics, not a black box.** Scoring and profiling are explicit formulas over configuration, so every number can be explained. The language model only writes language, constrained to an evidence pack and re-checked in code.
-2. **Measured, not claimed.** We ran 500 simulated users with known abilities through the real pipeline. After calibration the 90% bands contain the true ability **89–94%** of the time, mean error on the cognitive skills is **±6–10%**, adaptive block selection is **10% more accurate** than random order at equal effort, **98%** of invalid play is flagged with **1%** false alarms, 7-day forecast bands are close to calibrated (TADPOLE-style CPA 0.04), and slower but equally accurate users are not penalised (bias under 2 points outside processing speed).
-3. **Generalisable by configuration.** A skill is a YAML file. A new skill reusing any of the six task types is added with one command and no code change, which is how we prepare for the surprise element.
+1. **Transparent statistics, not a black box.** Scoring and profiling are explicit formulas over configuration, so every number can be explained. The language model only writes language, constrained to an evidence pack and re-checked in code: it cannot invent a number.
+2. **Measured, not claimed.** We ran 500 simulated users with known abilities through the real pipeline. After calibration:
+   - the 90% bands contain the true ability **89–94%** of the time
+   - mean error on the cognitive skills is **±6–10%**
+   - adaptive game selection gives **10% lower error** than random order at equal effort
+   - **98%** of invalid play is flagged, with about **1%** false alarms
+   - 7-day forecast bands hold the truth 94% of the time
+   - slower but equally accurate users are not penalised (bias under 2 points outside processing speed)
+3. **An experience people come back to, without dark patterns.**
+   - a 60-second first game before any signup
+   - results in three plain lines
+   - a coach that acts: play, progress, "what if I play every day?"
+   - bamboo rewards for consistency and curiosity, never for high scores
+4. **Generalisable by configuration.** A skill is a YAML file. A new skill reusing any of the seven task types is added with one command and no code change. This is how we prepare for the surprise element.
 
 ## 2. Cognitive dimensions and tasks
 
-The brief refers to a list of dimensions in Section 3 that does not appear in the published document. We chose six skills that are widely studied, measurable in a browser in about a minute, and covered by classic paradigms with trial-level data:
+The brief refers to a list of dimensions that does not appear in the published document. We chose six skills that are widely studied, measurable in a browser in about a minute, and covered by classic paradigms with trial-level data. AI reliance is a seventh, collaboration skill.
 
 | Skill | Task | Main measures | Reference |
 |-|-|-|-|
 | Working memory | Letter N-back (1/2/3-back) | d′ (log-linear corrected), hit RT | Kirchner 1958; Owen et al. 2005 |
-| Attention & inhibition | Colour-word Stroop | interference cost (RT), incongruent accuracy | Stroop 1935; MacLeod 1991 |
-| Processing speed | Symbol-digit coding (key reshuffled per block; hidden key at level 3) | correct/min, accuracy | Smith 1982; Salthouse 1996 |
-| Cognitive flexibility | Number task switching (parity / magnitude) | switch cost (RT, errors) | Rogers & Monsell 1995; Monsell 2003 |
-| Visuospatial memory | Corsi blocks with an in-block span staircase (backward at level 3) | span, total score | Corsi 1972; Kessels et al. 2000 |
-| Reasoning | **Generated** Raven-style 3×3 matrices (Latin-square / progression rules, one-attribute distractors) | accuracy | Raven 2000; Matzen et al. 2010 |
-| *AI reliance* (collaboration skill) | **Second opinion**: compare two sums under time pressure, see an AI helper's answer, decide | appropriate reliance on disagreements (relative self-reliance and relative AI reliance) | Schemmer et al. 2023; Parasuraman & Manzey 2010 |
+| Attention & inhibition | Colour-word Stroop | interference cost (proportional), incongruent accuracy | Stroop 1935; MacLeod 1991 |
+| Processing speed | Symbol-digit coding (key reshuffled per block) | correct/min, accuracy | Smith 1982; Salthouse 1996 |
+| Cognitive flexibility | Number task switching (parity / magnitude) | switch cost (RT, errors) | Rogers & Monsell 1995 |
+| Visuospatial memory | Corsi blocks with an in-block span staircase | span, total score | Corsi 1972; Kessels et al. 2000 |
+| Reasoning | **Generated** Raven-style 3×3 matrices | accuracy | Raven 2000; Matzen et al. 2010 |
+| *AI reliance* | **Second opinion**: answer, see an AI helper's answer, decide | appropriate reliance on disagreements | Schemmer et al. 2023 |
 
-Each skill has a **measurement card** (definition, what it is *not*, task, levels, scoring, uncertainty, data-quality checks, known biases, references) generated from its configuration and shown in the app (`/skills`, `docs/measurement-cards.md`). Every trial stores the stimulus, response, correctness, response time and behaviour signals (window focus loss, answer changes), which covers the brief's score, response time, error rate and behaviour. Assessment is **non-biometric only**. Like jsPsych, the research standard for browser experiments, each stimulus onset is time-stamped at the animation frame that paints it (`requestAnimationFrame`), so response times are measured from what the user actually saw. We kept our own renderers rather than embedding jsPsych because every block must feed the live profile and the adaptive selector inside one typed app.
+Each skill has a **measurement card** (definition, what it is *not*, task, levels, scoring, uncertainty, data-quality checks, known biases, references). The cards are generated from the configuration and shown in the app (`/skills`, `docs/measurement-cards.md`).
+
+Every trial stores the stimulus, response, correctness, response time and behaviour signals (window focus loss, answer changes). Assessment is **non-biometric only**. As in jsPsych, each stimulus onset is time-stamped at the frame that paints it, so response times are measured from what the user actually saw.
 
 ## 3. From trials to the Brain Twin
 
-**Block score.** Each task's metrics are normalised linearly to 0–1 and combined with configured weights into a composite *c* (e.g. working memory: 0.8·d′ + 0.2·speed). The composite is mapped onto the 0–1 ability scale through the difficulty level's range: *observation = lo + (hi − lo)·c*. A strong 3-back block therefore counts for more than an equally good 1-back block, so making a task harder never lowers a user's estimate.
+**Game score.** Each task's metrics are normalised to 0–1 and combined with configured weights into a composite *c*. The composite is mapped onto the 0–1 ability scale through the difficulty level's range, *observation = lo + (hi − lo)·c*. So a strong 3-back game counts for more than an equally good 1-back game.
 
-**Data quality.** A block is flagged when it has too few valid trials, accuracy not above chance (binomial margin), long runs of identical answers, many anticipations (faster than a configured minimum RT) or timeouts, or repeated focus loss. A flagged block still counts, but with **2.5×** the noise; a block at the floor or ceiling of its level counts with 1.5×.
+**Data quality.** A game is flagged when it has:
+- too few valid trials
+- accuracy not above chance
+- long runs of identical answers
+- many anticipations or timeouts
+- repeated focus loss
 
-**Bayesian update.** Each skill's ability is a Normal belief (prior 50% ± 33 points, 90% band). A block is an observation with noise *σ·√(n_ref/n_valid)*, combined by a precision-weighted (1-D Kalman) update. Between sessions the variance grows by *q²·days* (*q* = 0.03/day), so the twin can follow real change and does not become over-confident. Snapshots are append-only, which gives the required history.
+A flagged game still counts, but with **2.5×** the noise.
 
-**Forecast.** A weighted linear trend over the twin's own history (weights 1/σ²) is extended from today's estimate, with a band that combines today's uncertainty, the uncertainty of the trend and drift, and a cap on plausible growth. Every week a 7-day forecast is stored; once it is due, the dashboard shows whether the real estimate landed inside it (**the twin's track record**). Forecasts are labelled "a forecast, not a promise".
+**Bayesian update.** Each skill's ability is a Normal belief (prior 50% ± 33 points). A game is an observation with noise *σ·√(n_ref/n_valid)*, combined by a precision-weighted (1-D Kalman) update. Between sessions the variance grows by *q²·days* (*q* = 0.02/day), so the twin follows real change and does not become over-confident. Snapshots are append-only, which gives the required history.
+
+**Forecast.** A weighted linear trend over the twin's history is extended from today's score, with a band that combines today's uncertainty, the trend's uncertainty and drift. The slope has a Bayesian prior that shrinks noisy trends toward "no change".
+
+Every week a 7-day forecast is stored. Once it is due, the dashboard shows whether the real score landed inside it: **the twin's track record**. Forecasts are labelled "a forecast, not a promise".
 
 ## 4. Adaptive assessment and learning
 
-**Which block next (assessment).** For every playable skill, task and level, the selector computes the expected reduction of the band, *σ − (σ⁻² + σ_obs⁻²)^−½*, with the observation noise inflated where the user is expected to hit a level's floor or ceiling, and it picks the largest. Repeats are lightly penalised, and assessment stops once every band is narrow enough. Each choice comes with a plain-language reason ("Your attention estimate is still ±33% wide; one Stroop block at level 2 should narrow it to about ±18%").
+**Which game next.** For every playable skill, task and level, the selector computes the expected reduction of the band, *σ − (σ⁻² + σ_obs⁻²)^−½*, with the noise inflated where a floor or ceiling is likely, and picks the largest. Each choice comes with a plain reason, e.g. "We're least sure about your attention so far (±33%). One Stroop game at level 2 should bring that down to about ±18%."
 
-**Training.** The training mode focuses on the weakest skill at the level where the expected success is closest to the task's target (≈75%), then follows a 1-up/1-down staircase.
+**Training** focuses on the weakest skill, at the level where expected success is closest to ≈75%, then follows a 1-up/1-down staircase.
 
-**Weekly plan.** Twelve blocks are allocated by *priority = 0.6·(band width / prior width) + 0.4·(room to grow)*, with unmeasured skills first. Each item has a target level and a reason. The plan is rebuilt weekly, or on demand, and stores the profile snapshots it was built from.
+**Weekly plan.** Twelve games are allocated by *priority = 0.6·(band width / prior width) + 0.4·(room to grow)*. Each item has a target level and a reason. The plan is rebuilt weekly and records the snapshots it came from.
 
-**Goals.** Score goals count as reached only when the **whole 90% band** is above the target. Until then the app shows the probability that the user is already there (e.g. "6% likely you're already at 70%+"). Consistency goals count sessions. After each block the user sees concrete wins compared only with their own history (a new personal best at that level, a new highest estimate, a 3/5/7/14/30-day streak).
+**Goals.** A score goal counts as reached only when the **whole 90% band** is above the target. Until then the app shows the probability that the user is already there (e.g. "6% likely you're already at 70%+").
 
-**Dashboard.** The dashboard shows a radar of the current profile with the band as a shaded ring, small-multiple progress curves with bands and the dashed forecast, a skill × day heatmap (practice or performance view), a day streak, a 7-day forecast sentence, goals, the plan and stat tiles. Every chart has a table view. Colours come from a palette validated for colour-vision deficiency in light and dark mode.
+**Dashboard.** A radar with the band as a shaded ring, progress curves with bands and the dashed forecast, a skill × day heatmap, streaks, goals and the plan. Every chart has a table view, and the palette is validated for colour-vision deficiency in light and dark mode.
 
 ## 5. AI coach
 
 **Architecture.**
 
-1. The server builds an **evidence pack**: skill estimates with bands, the last six blocks with metrics and reliability, and grouped trial facts ("5 matches you caught"). Each item gets a short reference (R1, T3); no names or database IDs leave the server.
-2. The LLM (Claude `claude-opus-5-5` when an Anthropic key is set, otherwise `gpt-oss-120b` on Groq; both with strict JSON-schema output) receives the pack and a short policy (non-clinical, cite references, mention uncertainty, compare only with the user's own history) and returns **structured JSON**: a summary, 2–4 claims each with "why" and references, and a next step.
-3. The server maps references back to blocks and trials and **drops any claim without valid evidence**. A **clinical-term filter** removes any claim with diagnostic language and rewrites medical-sounding words, and a **norm filter** removes any sentence comparing the user with other people or averages. A question about a health condition always gets a fixed non-clinical answer first.
-4. **Science explains, your data decides.** Alongside the pack, the server selects up to 8 relevant **science cards** from `science/findings.yaml`: 13 reviewed, non-clinical findings (practice effects, the reliability of difference scores, spacing, the difficulty sweet spot, chunking, switch preparation and others), each with its citation and link. The model may cite them as S# to explain *why* something happened or *what tends to help*, but every claim must still cite the user's own R#/T# evidence. A claim backed only by science is dropped, unknown S# references are logged, and findings can never be used to compare the user with others. In the app, each claim shows its sources as "Science: …" chips that open the finding and the paper.
-5. **Number check and "what it would take".** For each recent block the server computes exact counterfactuals with the real scoring function, for example "1 more match caught → block score 68% instead of 60%" (cite as W#). They appear on the block result screen and in the pack, so the coach can give concrete next steps without guessing. Every number the model writes (digits and number words) must then match the evidence that claim cites, within rounding, or be the difference of two verified numbers. Otherwise the claim is dropped, and summary sentences with unverified numbers are removed. This is a deterministic version of chain-of-verification (Dhuliawala et al. 2024): no second model, so the check cannot itself hallucinate.
-6. Without the user's consent to AI coaching, or if the API fails, a **deterministic rule-based coach** writes the claims from the same pack and goes through the same checks.
+1. **Evidence pack.** The server builds a pack with:
+   - skill scores with bands
+   - the last six games with metrics and reliability
+   - grouped trial facts ("5 matches you caught")
+   - exact "what it would take" recalculations ("1 more match caught → 68% instead of 60%")
+   - forecasts at 2, 4 and 7 games a week
 
-**Why this design.** The LLM is good at language but must not invent facts or medicalise results. Forcing citations and verifying them in code turns explainability from a promise into a check the user can perform: every claim has a "See the evidence" button that opens the exact trials.
+   Each item gets a short reference (R1, T3, W2, P1). No names or database IDs leave the server.
+2. **Structured output.** The LLM (Claude `claude-opus-5-5` when an Anthropic key is set, otherwise `gpt-oss-120b` on Groq; both with strict JSON-schema output) returns:
+   - the user's **intent**
+   - a short **reply** (at most 3 sentences)
+   - 0–3 **claims**, each with a "why" and references
+   - up to 3 **action buttons**: play a skill, show progress, "what if I play N games a week?", set a goal, today's challenge
+   - Bao's **mood**
 
-## 6. AI Collaboration Score
+   It also receives a short memory of the user (goal, favourite skill, recent topics), so it never repeats itself.
+3. **Server checks.** The server maps references back to games and trials, **drops any claim without valid evidence**, and accepts only actions that name real skills.
+4. **Number check.** Every number the model writes must match the evidence that claim cites, within rounding, or the claim is dropped. This is a deterministic chain-of-verification (Dhuliawala et al. 2024): no second model, so the check cannot itself hallucinate.
+5. **Safety filters.** A **clinical-term filter** and a **norm filter** remove diagnostic language and comparisons with other people. A health question always gets a fixed non-clinical answer first.
+6. **Science explains, your data decides.** Up to 8 of 13 reviewed findings (`science/findings.yaml`) can explain *why* something happened. A claim backed only by science is dropped.
+7. **Fallback.** Without consent to AI coaching, or if the API fails, a **template coach** answers the same intents: keyword intent detection plus Bao's line bank, with six or more variants per intent and never the same line twice in a row. It goes through the same checks.
 
-*score = round(100 · Σ w_c · s_c)*, where *s_c = (Σ v_i + 0.5·2) / (n_c + 2)* is a Bayesian-smoothed mean of the signal values *v_i* ∈ [0, 1] for each component *c*. The weights follow the brief: clarification 20%, critical verification 25%, iteration 20%, autonomy 20%, responsible use 15%. There are 19 signals, each emitted by a concrete action. Examples:
+**Why this design.** The LLM is good at language but must not invent facts or medicalise results. Forcing citations and verifying them in code turns explainability into a check the user can perform: "Why?" opens the claims, and each claim opens the exact trials.
 
-- opening the evidence (0.8), confirming a claim after checking it (1.0) or without checking (0.3);
-- predicting before a debrief whether the last session went better, the same or worse (correct 1.0, wrong 0.6, skipped 0.2);
-- follow-up questions, acting on the coach's suggested next step;
-- in-scope vs health questions, reviewing privacy settings.
+## 6. The experience layer
 
-**Second-opinion game.** Spot-the-error mode tests whether people *check* the AI; the game tests whether they *rely on it well*. It is a two-stage judge–advisor task (Schemmer et al., IUI 2023): decide quickly which of two sums is larger, see an AI helper's answer, then decide again. The helper is described honestly as "sometimes wrong on purpose". Reliance is scored only on disagreements, conditional on the first answer. *Relative self-reliance* is the share of right first answers kept when the helper was wrong; *relative AI reliance* is the share of wrong first answers switched when the helper was right. The block score is their mean, so "always follow the AI" and "always keep my answer" both land at chance by design. The helper's correctness is drawn per trial after the first answer, so both kinds of disagreement occur in every block. Time pressure and close totals keep the helper better than the player (77% vs 73% right in simulation). A block has 28 trials and a 2.5-second final-answer window (about 2 minutes); this design was chosen over six alternatives by simulation, because it gives about 13 disagreements per block instead of 9 without making the helper worse, the situation in which reliance matters (Vasconcelos et al. 2023). Each completed block adds two *graded* collaboration events (critical verification = relative self-reliance; responsible use = relative AI reliance) rather than one per trial, so the game cannot drown out the coach signals.
+User testing of an early version gave a blunt verdict: "good as a concept, zero as user experience". We rebuilt the experience around one companion and three rules: plain words, one clear next step, and no dark patterns.
 
-**Confident-helper level.** A fourth level of the game has the helper say whether it is "very sure" or "not sure", and that confidence is honest (very sure 80% of the time when right, 30% when wrong). Using it well is calibrated trust (Lee & See 2004): follow a confident helper, check an unsure one. The result screen reports *confidence use*, how much more often the player went with a very-sure helper. The level is offered in training only: following an honest cue is a shortcut anyone can learn, so letting assessment pick it would blur skill differences (in our tests recovery after 10 blocks fell from r 0.84 to 0.78 when it could). As a training-only level it leaves measurement unchanged (r 0.82 vs 0.83 over five seeds).
+- **A 60-second first game.** The landing page offers one game (Corsi blocks) before any signup. The result is explained in plain words. Signup is a short conversation with Bao, one consent per step, nothing pre-ticked. The first game then becomes the new account's first real game; the server scores it again.
+- **Bao the panda.**
+  - Bao reacts while you practise: he cheers every third correct answer and covers his eyes at most once in five trials.
+  - **During scored assessment games he only blinks**, so he cannot distract from the measurement.
+  - He is drawn in SVG and animates only transform and opacity. A reduced-motion setting makes him static.
+- **Plain-words result card.** Three lines: *what you did* ("You caught 78% of the matching letters"), *what it means* (the score counting up, plus a "sure-o-meter" that narrows with each game, e.g. "We're fairly sure it's between 55 and 68; 2 more games and we'll be much surer"), and *what's next*. Technical details are one click away.
+- **A coach that acts.**
+  - "I want to improve my memory" returns a **Play** button.
+  - "What if I play every day?" returns a ranged forecast from the user's own trend ("about 64, likely 57–70, if your recent trend continues").
+  - The forecast numbers go through the same number check.
+- **Honest motivation.**
+  - Bamboo for showing up and playing: a daily gift, streak days, a finished weekly plan, a shared daily challenge.
+  - Badges for consistency and curiosity, never for high scores.
+  - A weekly streak freeze, and no loss framing or notifications.
+  - A daily puzzle that is the same for everyone (seeded by date), with a share card that contains only your own result.
+- **Research mode.** The measurement tools (claim ratings, planted errors) are opt-in under Research mode, so everyday users get a conversation rather than a questionnaire.
 
-**How sure are you? (self-estimate).** After every block, before the score is shown, the user guesses it with a slider (optional). The result screen compares guess and score, and after three guesses shows the running average error and whether the user tends to be optimistic or modest; the dashboard shows it as *self-knowledge*. Each guess is a graded autonomy event (1 for a perfect guess, 0 when 40 points off). Knowing how well you did is the metacognitive skill that tells you when your own answer or the AI's deserves trust, and feedback on such judgements improved calibration and transferred to an untrained task (Carpenter et al. 2019). Guesses are also in the coach's evidence pack.
+## 7. AI Collaboration Score
 
-**Spot-the-error mode** (opt-in) makes critical verification measurable. About a third of debriefs carry one deterministic number change in a claim's "why"; the evidence is never altered. The client cannot see which claim is affected, and every planted error is revealed and corrected after the user answers. The formula and its limits are documented in `docs/collaboration-score.md`.
+*score = round(100 · Σ w_c · s_c)*, where *s_c = (Σ v_i + 0.5·2) / (n_c + 2)* is a Bayesian-smoothed mean of the signal values *v_i* ∈ [0, 1] of component *c*. The weights follow the brief:
 
-## 7. Bonus features
+| Component | Weight |
+|-|-|
+| Clarification | 20% |
+| Critical verification | 25% |
+| Iteration | 20% |
+| Autonomy | 20% |
+| Responsible use | 15% |
 
-- **Predictive growth:** the forecasts with bands and the track record (Section 3).
-- **Emotion-aware (from behaviour only):** fatigue (slowing within a block, session length, focus loss) and frustration (miss streaks, a drop against an earlier block, abandoned blocks) are inferred with simple, documented rules, shown with their cues as a dismissible guess, and used only to suggest a break or ease the next training block by one level. No camera or microphone input is ever used for this.
-- **Voice coaching:** coach messages can be read aloud with the browser's speech synthesis; questions can be dictated (with microphone consent), and the transcript is reviewed before sending. No audio is stored.
+There are **19 signals**, each emitted by a concrete action. For example:
+- opening the evidence
+- follow-up questions
+- acting on the coach's suggestion
+- betting with Bao before a debrief on whether the last game went better or worse
+- self-estimates of each score
+- in-scope vs health questions
+- reviewing privacy settings
 
-## 8. Validation with simulated users
+The formula and its limits are in `docs/collaboration-score.md`.
 
-**Set-up.** Each simulated user has a known latent ability per skill (*N*(0.5, 0.18), clamped). Task simulators turn ability into trial-level behaviour (hit and false-alarm rates, interference, switch costs, spans, coding speed, puzzle accuracy). Each user does 18 blocks through the **real** selector, scoring and profiler. Calibration is fitted on 250 users and every result is reported on the other 250 (`npm run validate`, `docs/validation.md`, `/validation`).
+**Second-opinion game.** The player decides quickly which of two sums is larger, sees an AI helper's answer, then decides again. The helper is described honestly as "sometimes wrong on purpose". Reliance is scored only on disagreements, conditional on the first answer:
+- *relative self-reliance*: keeping a right answer when the helper is wrong
+- *relative AI reliance*: switching a wrong answer when the helper is right
 
-**Calibration (per level).** The first run showed bands covering the truth only 52–82% of the time, with coverage *falling* as blocks accumulated. The hand-set level ranges were systematically biased, so errors did not average out. We fitted a measurement model per difficulty level, *c = a + b·ability + ε*, on blocks played at **random** levels (so every level gets data) and inverted it into the level's range. The residual noise became each skill's *σ*. The fit is written back into the YAML, so pilot data can refit it with no code change.
+The game score is their mean, so "always follow the AI" and "always keep my answer" both land at chance. A 28-trial game (about 2 minutes) gives about 13 disagreements. A training-only level adds an honest "very sure / not sure" cue, which measures calibrated trust (Lee & See 2004).
+
+**How sure are you?** Before each score is shown, the user guesses it. Feedback on such guesses improves calibration and transferred to an untrained task (Carpenter et al. 2019). Each guess is a graded autonomy event.
+
+**Spot-the-error** (Research mode, opt-in) makes critical verification measurable. About a third of debriefs carry one deterministic number change in a claim's "why". The evidence is never altered, and every planted error is revealed after the user answers.
+
+## 8. Bonus features
+
+- **Predictive growth:** forecasts with bands, a self-grading track record, and "what if I play N games a week" forecasts in the coach.
+- **Emotion-aware (from behaviour only):** fatigue and frustration are inferred with documented rules from timing, errors and abandoned games. They are shown with their cues as a dismissible guess, and used only to suggest a break or ease the next training game. No camera or microphone input is ever used.
+- **Voice coaching:** Bao's replies can be read aloud, and questions can be dictated (with consent; the user reviews the transcript before sending). No audio is stored.
+
+## 9. Validation with simulated users
+
+**Set-up.** Each simulated user has a known ability per skill (*N*(0.5, 0.18), clamped). Task simulators turn ability into trial-level behaviour. Each user plays 18 games through the **real** selector, scoring and profiler. Calibration is fitted on 250 users, and every result is reported on the other 250 (`npm run validate`, `docs/validation.md`, `/validation`).
+
+**Calibration.** The first run's bands covered the truth only 52–82% of the time, because the hand-set level ranges were biased. We fitted a measurement model per level, *c = a + b·ability + ε*, on games played at random levels, and inverted it into the level's range. The fit is written back into the YAML, so pilot data can refit it with no code change.
 
 | Skill | r | Mean abs. error | 90% coverage (hand-set → fitted) |
 |-|-|-|-|
-| Working memory | 0.84 | 7.1% | 66% → **90%** |
-| Attention & inhibition | 0.75 | 9.2% | 69% → **94%** |
-| Processing speed | 0.94 | 5.7% | 52% → **93%** |
-| Cognitive flexibility | 0.68 | 9.9% | 64% → **93%** |
+| Working memory | 0.84 | 7.1% | 66% → **91%** |
+| Attention & inhibition | 0.75 | 9.1% | 69% → **94%** |
+| Processing speed | 0.94 | 5.7% | 52% → **92%** |
+| Cognitive flexibility | 0.68 | 10.0% | 64% → **93%** |
 | Visuospatial memory | 0.92 | 5.7% | 82% → **89%** |
 | Reasoning | 0.92 | 6.0% | 62% → **94%** |
-| *AI reliance* | 0.37 | 12.6% | 94% → **95%** (see below: needs several blocks) |
+| *AI reliance* | 0.37 | 12.6% | 94% → **95%** (needs several games) |
 
-**Adaptive vs random selection** (RMSE across all seven skills, equal budget): 12.9% vs 14.5% after 6 blocks and **10.1% vs 11.2% after 18 blocks** (−10%). Bands are also narrower (σ 0.112 vs 0.121).
+**Adaptive vs random selection** (RMSE over all seven skills, equal budget): 12.9% vs 14.5% after 6 games, and **10.1% vs 11.2% after 18** (10% lower).
 
-**Robustness** (200 blocks per cell): random answers 82–100% flagged, same-key, no-response and too-fast play 100% (98% of invalid play overall), genuine players 0–2% (under 1% on average). Three changes came from this study: symbol-digit's chance level is now the worst case over its levels (1/6 rather than 1/9, which had let random play at level 1 through); the chance-margin test was relaxed for 8-item matrices blocks, and for n-back (where long runs of "no press" are normal) the same-response limit was raised and the margin set to z = 1.0, cutting honest blocks flagged from 11% to 4% at the cost of catching 81% rather than 93% of random n-back play. A flagged block is down-weighted, not discarded, so a false alarm is the costlier error: it tells an honest player their results looked random.
+**Robustness** (200 games per cell):
+- random answers: 82–100% flagged
+- same-key, no-response and too-fast play: 100% flagged
+- invalid play overall: 98% flagged
+- genuine players: 0–2% flagged (under 1% on average)
 
-**Growth** (100 users improving working memory by 15 points over a month): the drift rate was swept, and *q* = 0.02/day is the smallest value that keeps final coverage ≥ 90% (90%). Improvement was detected for 65% of users; the estimate is deliberately cautious (4.4 of 11.7 points of true gain).
+A flagged game is down-weighted, not discarded, so a false alarm is the costlier error.
 
-**Forecasts** (1,200 seven-day forecasts, scored like the TADPOLE Alzheimer's forecasting challenge): mean absolute error 8.0% (a no-change forecast: 7.4%), with 50% and 90% bands covering the truth 55% and 94% of the time (coverage probability accuracy 0.05 and 0.04; slightly conservative). A first version extrapolated the raw two-week trend and lost to the no-change baseline (8.5% vs 7.0%), so the slope now has a Bayesian prior that shrinks noisy trends toward zero.
+**Growth and forecasts.** Over a month of +15 points of real improvement, *q* = 0.02/day is the smallest drift that keeps coverage ≥ 90%. Across 1,200 seven-day forecasts, scored like the TADPOLE forecasting challenge:
+- mean absolute error is 8.0%, against 7.3% for a no-change forecast
+- the 50% and 90% bands hold the truth 56% and 94% of the time (coverage probability accuracy 0.06 and 0.04)
 
-**Fairness** (inspired by the PREPARE challenge winners, who were judged on generalisation across populations): the same users were re-run with +80 ms device lag and with 30% slower, equally accurate responding. Scoring originally used raw milliseconds and overall speed, which put a slower person's attention estimate **14 points too low** (band coverage 54%). Attention and flexibility now use *proportional* costs (cost ÷ the person's own baseline response time) and working memory uses d′ alone, so the slower group's bias is under 2 points with 90–96% coverage. Processing speed still drops, by design: it *is* speed. The price is some accuracy for typical users (attention r 0.90 → 0.77), because in the simulator overall speed carried real signal. We chose fairness and say so.
+The point forecast is no better than "no change" at one week. What the forecast adds is an **honest range**, and we present it that way.
 
-**The second-opinion game (E7).** *Does it measure reliance or arithmetic?* 600 simulated players had independent reliance skill and arithmetic: the block score correlates with reliance (r = 0.61) and not with arithmetic (r = 0.07), while the naive alternative, final accuracy, leans on arithmetic (r = 0.26). *Do blind strategies fail?* "Always follow the AI" scores 0.51 and "always keep my answer" 0.49 (chance 0.5), against 0.67 and 0.79 for calibrated players of average and high skill; the collaboration components separate them the same way. *How many blocks?* A 2-minute block holds about 13 informative disagreements, so this skill is slower to measure than the others: with 600 simulated users, the twin's estimate correlates with true reliance at r = 0.34 after 1 block, 0.58 after 3, 0.76 after 6 and 0.81 after 10 (mean error 8.8%), with honest 90–93% band coverage throughout; a five-seed check gives 0.39 / 0.60 / 0.72 / 0.82. A first version with 20 trials reached only about r = 0.72 after 10 blocks. *Confident-helper level:* blind strategies show zero confidence use, calibrated players 0.45 (average) and 0.74 (high skill). Research versions of this paradigm use 50–100+ trials; we say so on the card and in the band.
+**Fairness** (as in the PREPARE challenge). Raw-millisecond scoring put a slower but equally accurate person's attention **14 points too low**. With costs proportional to the person's own speed, the bias is now under 2 points, with 90–96% coverage. Processing speed still drops, by design: it *is* speed. The price is some accuracy for typical users (attention r 0.90 → 0.77). We chose fairness, and we say so.
 
-## 9. Ethics, safety and robustness
+**Second-opinion game.** Its score correlates with simulated reliance skill (r = 0.61), not with arithmetic (r = 0.07). Blind strategies land at chance (0.51 and 0.49), against 0.67 and 0.79 for calibrated players of average and high skill. The twin's estimate reaches r = 0.76 after 6 games and 0.81 after 10, with 90–93% band coverage throughout.
 
-- **Non-clinical:** clinical-term filter, fixed answer to health questions, "what it is not" on every card, no norms, comparisons only with the user's own history.
-- **Consent and data:** opt-in, granular consents with an append-only history; user-chosen retention (30/90/180/365 days) enforced by purges; JSON export; one-click deletion that cascades through every table and leaves only a salted hash as proof. No email, password, real name, audio or images are collected. Only an evidence pack, with no identifiers, goes to the LLM, and only with consent.
-- **Accounts without personal data:** no email or password. A random 80-bit sign-in key is shown once at signup (copy or save as a file) and only its SHA-256 is stored; it opens the profile on another browser or device, can be replaced in Settings (the old key stops working), and sign-in attempts are rate-limited. Sign out is one click and warns if no key has been saved.
-- **No decision from face or voice:** there is no camera; voice is only an input method for questions.
-- **Robustness:** cold start from an explicit prior; invalid, abandoned and too-fast blocks are flagged and down-weighted; the posterior SD has a floor; the coach falls back to rules if the API is unavailable.
-- Full details: `docs/ethics.md`.
+## 10. Ethics, safety and robustness
 
-## 10. Engineering
+- **Non-clinical.**
+  - clinical-term filter
+  - a fixed answer to health questions
+  - "what it is not" on every card
+  - no norms; comparisons only with the user's own history
+  - claims limited to practice on these tasks
+- **Consent and data.**
+  - opt-in, granular consents with an append-only history
+  - user-chosen retention (30/90/180/365 days), enforced by purges
+  - JSON export
+  - one-click deletion through every table, rewards and coach memory included
+  - no email, password, real name, audio or images collected
+  - only an evidence pack with no identifiers goes to Anthropic or Groq, and only with consent
+- **Accounts without personal data.** A random 80-bit sign-in key is shown once, and only its SHA-256 is stored.
+- **Motivation without dark patterns.**
+  - rewards never change a score
+  - badges never depend on score level
+  - streaks have a freeze, and there are no notifications or loss framing
+  - Bao is silent during measurement
+- **No decision from face or voice.** There is no camera; voice is only an input method for questions.
+- **Robustness.**
+  - cold start from an explicit prior
+  - invalid, abandoned and too-fast games are flagged and down-weighted
+  - the coach falls back to the template coach if the API is unavailable or returns invalid output
 
-Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API. **132 unit tests** cover the scoring, profiler calibration, selector, the six task generators, coach safety, the collaboration score, plans, forecasts, affect and milestones. GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every block can be replayed. `npm run new-dimension` scaffolds a skill from any task type. A public `/try` gallery lets anyone play every task without an account.
+Full details are in `docs/ethics.md`.
 
-## 11. Limitations and next steps
+## 11. Engineering
 
-- **Simulated, not human, validation.** The study shows the pipeline is internally consistent, calibrated and robust. It does not show that the tasks measure cognition in real people. Next step: a pilot (e.g. 30 people × 2 sessions) to refit `profile.calibration` and the level ranges, and to estimate test–retest reliability.
-- **Independent skills.** Real skills correlate. A hierarchical model could share information between them and speed up assessment.
-- **AI reliance** needs many blocks (r = 0.76 after 6, 0.81 after 10), because only disagreements are informative. The confident-helper level is training-only for the same reason.
-- **Self-estimates** are only recorded from now on; their value for prediction (do well-calibrated users rely on AI better?) needs real data.
-- **Stroop levels** barely differ in difficulty once costs are proportional (their fitted ranges almost coincide); a stronger difficulty lever (e.g. shorter deadlines or more colours) is future work.
-- **Cognitive flexibility** recovers least well (r = 0.68) because switch costs are noisy (the reliability paradox: Hedge et al. 2018). More trials per block or an extra measure (e.g. mixing cost) would help.
-- **Language and device.** Stroop requires fluent reading of English colour words, and response times depend on the device. Both are documented biases and mitigated by within-user comparison.
-- **The AI Collaboration Score** is a design proposal. Its weights and signal values should be validated against expert ratings.
+Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API.
+
+**269 unit tests** cover:
+- scoring, profiler calibration and the selector
+- task generators
+- coach safety, intents and actions
+- number and forecast checks
+- the collaboration score
+- plans and forecasts
+- rewards and streak freezes
+- the daily challenge
+
+GitHub Actions runs the config check, typecheck, lint, tests, a 100-user validation smoke test and the build. Trials store their RNG seeds, so every game can be replayed. `npm run new-dimension` scaffolds a skill from any task type.
+
+## 12. Limitations and next steps
+
+- **Simulated, not human, validation.** The study shows the pipeline is consistent, calibrated and robust. It does not show that the tasks measure cognition in real people. Next step: a pilot (e.g. 30 people × 2 sessions) to refit the calibration and estimate test–retest reliability.
+- **Independent skills.** Real skills correlate, and a hierarchical model could share information between them.
+- **AI reliance** needs many games, because only disagreements are informative.
+- **Cognitive flexibility** recovers least well (r = 0.68), because switch costs are noisy (Hedge et al. 2018).
+- **Language and device.** Stroop needs fluent reading of English colour words, and response times depend on the device. Both are documented biases, mitigated by comparing users only with themselves.
+- **The AI Collaboration Score** and the reward design are proposals. They should be validated with real users and expert ratings.
 
 ## References
 
-Corsi 1972 · Hautus 1995 (log-linear d′ correction) · Kessels et al. 2000 · Kirchner 1958 · MacLeod 1991 · Matzen et al. 2010 · Monsell 2003 · Owen et al. 2005 · Raven 2000 · Rogers & Monsell 1995 · Salthouse 1996 · Smith 1982 · Stroop 1935. Full citations are in `docs/measurement-cards.md`.
+Carpenter et al. 2019 · Corsi 1972 · Dhuliawala et al. 2024 · Hautus 1995 · Hedge et al. 2018 · Kessels et al. 2000 · Kirchner 1958 · Lee & See 2004 · MacLeod 1991 · Matzen et al. 2010 · Owen et al. 2005 · Raven 2000 · Rogers & Monsell 1995 · Salthouse 1996 · Schemmer et al. 2023 · Smith 1982 · Stroop 1935. Full citations are in `docs/measurement-cards.md` and `science/findings.yaml`.

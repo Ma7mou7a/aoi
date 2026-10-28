@@ -31,7 +31,7 @@ No public event matches "AI4Brain" or CISTAC directly; these are the nearest ana
 Our 7-day growth forecasts are now scored the way TADPOLE scored Alzheimer's forecasts: mean absolute error plus **coverage probability accuracy** (|share of true values inside the band − nominal|).
 - **Found:** the first version, which extrapolated the raw two-week trend, *lost* to a no-change forecast (MAE 8.5% vs 7.0%).
 - **Fixed:** a Bayesian prior on the slope now shrinks noisy trends toward zero.
-- **Result:** 90% bands hold the truth **91%** of the time (CPA **0.007**), 50% bands 48% (CPA 0.02), and point accuracy matches the no-change baseline (7.7% vs 7.4%).
+- **Result:** 90% bands hold the truth **94%** of the time (CPA **0.04**), 50% bands 56% (CPA 0.06). The point forecast is not better than "no change" at one week (8.0% vs 7.3%), so we present the forecast as an honest range, not a prediction.
 
 ### E6: PREPARE-style fairness audit
 We re-ran the same users with +80 ms device lag and with a 30% slower but equally accurate response style.
@@ -55,7 +55,7 @@ Both run with `npm run validate` and appear at `/validation` and in `docs/valida
 1. **Pilot with real people** (CrossSense, Neurotrack): see `docs/pilot-protocol.md`. Even 10 people × 2 sessions gives test–retest reliability and a usability score, and it is the single biggest credibility gain.
 2. **Conformal check of the bands** (RASKA's Jackknife+): once pilot data exists, check band coverage on real people and widen it if needed. This needs no code beyond the existing calibration fit.
 3. **A short "check-in" mode** (Neurotrack): one block per skill, about 3 minutes, for a weekly snapshot.
-4. **Clean-code bonus thinking** (PREPARE): CI, 104 tests and one-command reproduction already exist. Name them explicitly in the report.
+4. **Clean-code bonus thinking** (PREPARE): CI, 269 tests and one-command reproduction already exist. Name them explicitly in the report.
 
 ## Sources
 

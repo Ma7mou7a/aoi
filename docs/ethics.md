@@ -20,6 +20,8 @@ AI4Brain is a **non-clinical learning tool**. It helps people practise and under
 | Block scores, validity flags, profile snapshots, forecasts | Brain Twin, dashboard | Required | Retention window |
 | Behaviour signals: window focus loss, timing-based fatigue/frustration inference | Down-weighting unreliable blocks; break suggestions | `behavioural_signals` (opt-in) | Retention window; dropped before storage if not granted |
 | Coach messages, claim verdicts, collaboration signals | Coaching, AI Collaboration Score | Required (LLM use needs `llm_coaching`) | Retention window |
+| Coach memory (goal, most-played skill, last 5 topics and lines) | Answers that fit and never repeat | Required | Until deletion (part of the user row) |
+| Bamboo reward events (kind, amount, day) | Daily gift, streaks, badges, garden | Required | Retention window |
 | Device type, screen size | Interpreting response times | Required | Retention window |
 | Consent history | Accountability | n/a | Until deletion |
 
@@ -29,7 +31,23 @@ AI4Brain is a **non-clinical learning tool**. It helps people practise and under
 
 ## Data sent to third parties
 
-Only with the `llm_coaching` consent: an **evidence pack** goes to Anthropic's Claude API to write coaching text. It contains skill names, estimates and bands, block-level metrics and counts of trial groups ("5 matches caught"). It contains **no name, no user ID, no database IDs and no raw trial data**. The model must cite references from the pack, and everything it returns is re-checked server-side. Without consent, or when the API is unavailable, a deterministic rule-based coach is used instead. Voice questions are transcribed by the user's browser, which may use its vendor's speech service (disclosed in Settings).
+Only with the `llm_coaching` consent: an **evidence pack** goes to one AI provider to write coaching text: **Anthropic's Claude API** when the server has an Anthropic key, otherwise **an open-weight model on Groq's API** (`COACH_PROVIDER` can force one). It contains:
+- skill names, scores and bands
+- game-level metrics and counts of trial groups ("5 matches caught")
+- forecasts at a pace
+- a short coach memory: the user's goal, most-played skill and recent question topics
+
+It contains **no name, no user ID, no database IDs and no raw trial data**. The display name is removed from the question and the conversation history before sending (`src/lib/coach/prompt.ts`, tested), because Bao's built-in lines greet people by name. Providers process requests under their API terms and, by default, do not train on API data. The model must cite references from the pack, and everything it returns is re-checked server-side. Without consent, or when the API is unavailable, a deterministic rule-based coach is used instead. Voice questions are transcribed by the user's browser, which may use its vendor's speech service (disclosed in Settings).
+
+## Motivation without dark patterns
+
+The experience layer (Bao the panda, bamboo, streaks, badges, the daily challenge) is designed to bring people back without manipulating them:
+- **Rewards never touch a score.** Bamboo and badges are stored separately and never enter scoring, the profile or the coach's evidence.
+- **Effort and curiosity, never level.** Every badge is about showing up, trying skills, asking questions or playing again after a tough game. None depends on how high a score is, so slower or newer players earn exactly the same.
+- **No loss framing.** A weekly streak freeze covers one missed day. Nothing is taken away for missing a day, and there are no push notifications or emails.
+- **Measurement comes first.** Bao only blinks during scored assessment games, and reacts only in practice, between games and on results.
+- **No health claims.** We talk about practice on these tasks, never about a "better brain" (cf. the 2016 FTC action against Lumosity). Comparisons are only ever with the user's own history; the daily challenge shares only your own result.
+- **Opt-in research tools.** Claim ratings and planted errors run only in Research mode, so everyday users aren't treated as test subjects.
 
 ## User rights in the app
 

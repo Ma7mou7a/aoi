@@ -11,7 +11,7 @@ const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
   {
     kind: "llm_coaching",
     title: "AI coaching",
-    text: "A summary of your results (never your name) is sent to an AI model (Claude, by Anthropic) to write coaching feedback. Off: built-in rules write the feedback instead.",
+    text: "A summary of your results (never your name) is sent to an AI model (Claude by Anthropic, or an open model on Groq) so Bao can answer in his own words. Off: Bao uses his built-in replies instead.",
   },
   {
     kind: "behavioural_signals",

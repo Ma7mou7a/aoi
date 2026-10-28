@@ -137,7 +137,7 @@ export function ProgressMultiples({ dims, rangeDays, now, projections, track }: 
   );
   const ordered = [...dims].sort((a, b) => Number(b.nObservations > 0) - Number(a.nObservations > 0));
   return (
-    <ChartCard title="Progress and forecast" subtitle={`Last ${rangeDays} days, then a dashed ${Object.values(projections).find(Boolean)?.horizonDays ?? 14}-day forecast. Bands narrow with evidence and widen with time.`} table={table}>
+    <ChartCard title="Progress and forecast" subtitle={`Last ${rangeDays} days, then a dashed ${Object.values(projections).find(Boolean)?.horizonDays ?? 7}-day forecast. Bands narrow with evidence and widen with time.`} table={table}>
       {track.checks.length > 0 && (
         <div className="rounded-xl p-3 text-sm" style={{ background: "var(--chart-empty)", color: "var(--chart-ink)" }}>
           <b>Twin track record:</b> {track.checks.filter((c) => c.hit).length} of {track.checks.length} past weekly forecasts came true (the real score landed inside the forecast range).
