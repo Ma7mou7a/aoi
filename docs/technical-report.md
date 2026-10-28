@@ -212,7 +212,7 @@ The point forecast is no better than "no change" at one week. What the forecast 
   - one-click deletion through every table, rewards and coach memory included
   - no email, password, real name, audio or images collected
   - only an evidence pack with no identifiers goes to Anthropic or Groq, and only with consent
-- **Accounts without personal data.** A random 80-bit sign-in key is shown once, and only its SHA-256 is stored.
+- **Accounts without personal data.** A random 80-bit sign-in key is shown once, and only its SHA-256 is stored. Passkeys (WebAuthn) and a QR link or short code from a signed-in device are optional ways back in; sessions are opaque hashed tokens with idle and absolute expiry.
 - **Motivation without dark patterns.**
   - rewards never change a score
   - badges never depend on score level
@@ -230,7 +230,7 @@ Full details are in `docs/ethics.md`.
 
 Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API.
 
-**269 unit tests** cover:
+**498 unit tests** cover:
 - scoring, profiler calibration and the selector
 - task generators
 - coach safety, intents and actions
