@@ -14,7 +14,12 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
-    "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:demo": "tsx --conditions=react-server scripts/seed-demo.ts",
+    "purge": "tsx --conditions=react-server scripts/purge.ts",
+    "keys:new": "tsx scripts/keys.ts new",
+    "keys:rotate": "tsx --conditions=react-server scripts/keys.ts rotate",
+    "keys:status": "tsx --conditions=react-server scripts/keys.ts status",
+    "audit:verify": "tsx --conditions=react-server scripts/keys.ts verify",
     "validate": "tsx scripts/validate.ts",
     "cards": "tsx scripts/cards.ts",
     "new-dimension": "tsx scripts/new-dimension.ts"

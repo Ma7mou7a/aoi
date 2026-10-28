@@ -14,6 +14,8 @@ import { levelOf, scoreBlock } from "../src/lib/scoring";
 import { selectNext, type LastRun } from "../src/lib/selector";
 import { simulateBlock } from "../src/lib/sim";
 import { AVAILABLE_PARADIGMS } from "../src/lib/tasks/registry";
+import { eq } from "drizzle-orm";
+import { cipherFor, FIELDS } from "../src/lib/server/vault";
 
 const DAY = 86_400_000;
 const rng = createRng(2026);
@@ -37,10 +39,13 @@ const simulate = (paradigm: Paradigm, params: Record<string, unknown>, ability: 
 
 async function main() {
   const start = Date.now() - 13 * DAY;
-  const [user] = await db.insert(schema.users).values({ displayName: "Demo", createdAt: new Date(start), lastActiveAt: new Date() }).returning();
+  const [user] = await db.insert(schema.users).values({ displayName: "", createdAt: new Date(start), lastActiveAt: new Date() }).returning();
+  // The display name is encrypted with the user's own data key, like every real signup.
+  const cipher = await cipherFor(user.id);
+  await db.update(schema.users).set({ displayName: cipher.text("Demo", FIELDS.displayName) }).where(eq(schema.users.id, user.id));
   await db.insert(schema.consents).values(
-    (["data_processing", "behavioural_signals", "llm_coaching", "planted_flaws"] as const).map((kind) => ({
-      userId: user.id, kind, granted: kind !== "planted_flaws", policyVersion: "2026-10-26", createdAt: new Date(start),
+    (["data_processing", "behavioural_signals", "llm_coaching", "planted_flaws", "age_18_plus"] as const).map((kind) => ({
+      userId: user.id, kind, granted: kind !== "planted_flaws", policyVersion: "2026-10-28", createdAt: new Date(start),
     })),
   );
 
