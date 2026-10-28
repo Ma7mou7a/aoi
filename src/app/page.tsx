@@ -134,7 +134,7 @@ export default async function Home() {
             <p className="text-sm opacity-80">About 5 minutes. Bao picks the game that teaches him most about you.</p>
           </Link>
           <Link href="/play?mode=training" className="glass rounded-2xl p-5 transition hover:border-brand">
-            <p className="font-display text-2xl tracking-wide uppercase">Train</p>
+            <p className="font-display text-2xl tracking-wide uppercase">Just practise</p>
             <p className="text-sm text-slate-500 dark:text-slate-300">Your weakest skill, at the level where you grow fastest.</p>
           </Link>
         </div>

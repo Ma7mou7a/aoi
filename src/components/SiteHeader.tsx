@@ -1,24 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { BambooCounter } from "./rewards/BambooCounter";
 
 /** Signed-out visitors see the public pages; the app pages would only send them back home. */
 const PUBLIC_LINKS = [
-  { href: "/try", label: "Try the tasks" },
-  { href: "/skills", label: "Science" },
-  { href: "/validation", label: "Validation" },
+  { href: "/try", label: "Try a game" },
+  { href: "/skills", label: "How it works" },
+  { href: "/validation", label: "Evidence" },
 ];
 
+/** One word or two per page, named for what you do there. Play is the big button; Settings is the gear. */
 const LINKS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/play", label: "Assess" },
-  { href: "/play?mode=training", label: "Train" },
-  { href: "/coach", label: "Coach" },
+  { href: "/dashboard", label: "My progress" },
+  { href: "/coach", label: "Ask Bao" },
   { href: "/ai-lab", label: "AI Lab" },
-  { href: "/skills", label: "Science" },
+  { href: "/skills", label: "How it works" },
+];
+
+/** The phone menu has no room for the button and the gear, so they join the list there. */
+const MOBILE_EXTRA = [
+  { href: "/play", label: "Play" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -36,17 +40,13 @@ export function LogoMark({ className = "h-8 w-8" }: { className?: string }) {
   );
 }
 
-function NavLinks({ onNavigate, signedIn }: { onNavigate?: () => void; signedIn: boolean }) {
+function NavLinks({ onNavigate, signedIn, mobile = false }: { onNavigate?: () => void; signedIn: boolean; mobile?: boolean }) {
   const path = usePathname();
-  const mode = useSearchParams().get("mode");
-  const active = (href: string) => {
-    const [p, q] = href.split("?");
-    if (p === "/play") return path === "/play" && (q ? mode === "training" : mode !== "training");
-    return path === p || path.startsWith(`${p}/`);
-  };
+  const active = (href: string) => path === href || path.startsWith(`${href}/`);
+  const links = signedIn ? (mobile ? [...MOBILE_EXTRA.slice(0, 1), ...LINKS, ...MOBILE_EXTRA.slice(1)] : LINKS) : PUBLIC_LINKS;
   return (
     <>
-      {(signedIn ? LINKS : PUBLIC_LINKS).map((l) => (
+      {links.map((l) => (
         <Link key={l.href} href={l.href} onClick={onNavigate} aria-current={active(l.href) ? "page" : undefined}
           className={`relative px-1 py-1 font-display text-[15px] tracking-wider uppercase transition-colors after:absolute after:inset-x-1 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-transform ${
             active(l.href) ? "text-foreground after:scale-x-100 after:bg-brand" : "text-slate-500 hover:text-foreground after:scale-x-0 dark:text-slate-300"
@@ -96,13 +96,18 @@ export function SiteHeader({ signedIn, bamboo }: { signedIn: boolean; bamboo?: n
         <div className="flex items-center gap-2">
           {signedIn && bamboo != null && <BambooCounter initial={bamboo} />}
           <ThemeToggle />
+          {signedIn && (
+            <Link href="/settings" aria-label="Settings" title="Settings" className="glass hidden h-9 w-9 place-items-center rounded-lg text-foreground transition hover:border-brand lg:grid">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
+            </Link>
+          )}
           {!signedIn && (
             <Link href="/signin" className="glass hidden rounded-lg px-3 py-2 font-display text-[15px] tracking-wider uppercase transition hover:border-brand sm:block">
               Sign in
             </Link>
           )}
           <Link href={signedIn ? "/play" : "/start"} className="hidden rounded-lg bg-brand px-4 py-2 font-display text-[15px] tracking-wider text-white uppercase dark:text-slate-950 shadow-[0_0_24px_rgba(0,181,226,0.35)] transition hover:bg-brand-2 sm:block">
-            {signedIn ? "Start playing" : "Get started"}
+            {signedIn ? "Play" : "Get started"}
           </Link>
           <button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Menu" className="glass grid h-9 w-9 place-items-center rounded-lg lg:hidden">
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d={open ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
@@ -111,7 +116,7 @@ export function SiteHeader({ signedIn, bamboo }: { signedIn: boolean; bamboo?: n
       </div>
       {open && (
         <nav className="glass mt-2 flex flex-col gap-2 rounded-2xl p-4 lg:hidden" aria-label="Main">
-          <Suspense><NavLinks signedIn={signedIn} onNavigate={() => setOpen(false)} /></Suspense>
+          <Suspense><NavLinks signedIn={signedIn} mobile onNavigate={() => setOpen(false)} /></Suspense>
           {!signedIn && <Link href="/signin" onClick={() => setOpen(false)} className="px-1 py-1 font-display text-[15px] tracking-wider text-brand uppercase">Sign in</Link>}
         </nav>
       )}

@@ -19,6 +19,7 @@ import { plantFlaw, PLANT_PROBABILITY } from "../collab/plant";
 import { actualDirection, isSpecificQuestion, type Prediction } from "../collab/score";
 import { createRng, newSeed } from "../rng";
 import type { CoachMeta, PlantedFlawRecord } from "@/db/schema";
+import { routeQuestion } from "./router";
 import { recordSignals, resolveOpenFlaws, toClientMessage, type SignalInput } from "./collab";
 import { getDimensions } from "../dimensions/loader";
 import { selectNext } from "../selector";
@@ -168,11 +169,19 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   let memory = startMemory;
   const dims = getDimensions();
 
-  const classified: { intent: Intent; skill?: string; alsoSkill?: string; pace?: Pace } = forecast
-    ? { intent: "forecast", skill: forecast.skill, pace: forecast.gamesPerWeek }
-    : question
-      ? classifyIntent(question)
-      : { intent: "debrief" };
+  // Step 1, understand: with AI consent an AI picks what to compute from a fixed menu (src/lib/server/router.ts);
+  // otherwise, or if it fails, the keyword rules do. Buttons and debriefs need no reading.
+  let routedBy: "ai" | "keywords" | undefined;
+  let classified: { intent: Intent; skill?: string; alsoSkill?: string; pace?: Pace } = { intent: "debrief" };
+  if (forecast) classified = { intent: "forecast", skill: forecast.skill, pace: forecast.gamesPerWeek };
+  else if (question && (await hasConsent(userId, "llm_coaching"))) {
+    const { routedBy: by, ...route } = await routeQuestion(question, dims.map((d) => ({ id: d.id, name: d.name })));
+    routedBy = by;
+    classified = route;
+  } else if (question) {
+    routedBy = "keywords";
+    classified = classifyIntent(question);
+  }
   const [lastRun] = await db
     .select({ dimensionId: schema.taskRuns.dimensionId })
     .from(schema.taskRuns)
@@ -328,6 +337,7 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
         unknownScience: final.unknownScience,
         prediction: predictionMeta,
         intent,
+        ...(routedBy ? { routedBy } : {}),
         ...(isDebrief ? { bet: prediction !== undefined } : {}),
       },
     })

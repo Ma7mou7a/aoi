@@ -210,6 +210,8 @@ export type CoachMeta = {
   unknownScience?: string[];
   /** What the user's message asked for (template coach or model). */
   intent?: Intent;
+  /** Who read the message: the AI router (fixed menu) or the keyword rules. */
+  routedBy?: "ai" | "keywords";
   /** True when this debrief offered the "Bet with Bao" card. */
   bet?: boolean;
 };

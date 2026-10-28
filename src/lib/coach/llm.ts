@@ -153,7 +153,7 @@ export type StructuredResult<T> = { ok: true; data: T; model: string } | { ok: f
  * prompt in, JSON matching `schema` out, validated by `parse`. Same providers and switches as the coach
  * (COACH_LLM=off disables it). Never throws.
  */
-export async function structuredWithLlm<T>(opts: { system: string; prompt: string; name: string; schema: Record<string, unknown>; parse: (x: unknown) => T | null; maxTokens?: number }): Promise<StructuredResult<T>> {
+export async function structuredWithLlm<T>(opts: { system: string; prompt: string; name: string; schema: Record<string, unknown>; parse: (x: unknown) => T | null; maxTokens?: number; timeoutMs?: number }): Promise<StructuredResult<T>> {
   if (process.env.COACH_LLM === "off") return { ok: false, reason: "llm_disabled" };
   const provider = activeProvider();
   const read = (text: string, model: string): StructuredResult<T> => {
@@ -175,7 +175,7 @@ export async function structuredWithLlm<T>(opts: { system: string; prompt: strin
         output_config: { effort: "low", format: { type: "json_schema", schema: opts.schema } },
         system: opts.system,
         messages: [{ role: "user", content: opts.prompt }],
-      });
+      }, { timeout: opts.timeoutMs ?? TIMEOUT_MS });
       if (res.stop_reason === "refusal") return { ok: false, reason: "refusal" };
       const text = res.content.find((b) => b.type === "text");
       return text && text.type === "text" ? read(text.text, CLAUDE_MODEL) : { ok: false, reason: "no_text" };
@@ -184,7 +184,7 @@ export async function structuredWithLlm<T>(opts: { system: string; prompt: strin
       const res = await fetch(GROQ_URL, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(opts.timeoutMs ?? TIMEOUT_MS),
         body: JSON.stringify({
           model: GROQ_MODEL,
           messages: [
