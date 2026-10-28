@@ -151,7 +151,7 @@ export function SecuritySection({ initial, highContrast }: { initial: SecurityOv
           <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             {/* Server-generated SVG of our own link: no user input inside. */}
             <div className="h-44 w-44 shrink-0 rounded-lg bg-white p-1" dangerouslySetInnerHTML={{ __html: link.qrSvg }} />
-            <div className="space-y-2 text-sm">
+            <div className="min-w-0 flex-1 basis-60 space-y-2 text-sm">
               <p>Scan this with the camera of your other device, or open <b>/signin</b> there and type this code:</p>
               <p className="font-mono text-2xl tracking-widest">{link.code}</p>
               <p className="text-slate-600 dark:text-slate-400">Works once, for {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")} more. Only show it to your own devices: anyone with it can open your profile.</p>
