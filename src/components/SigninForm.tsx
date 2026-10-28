@@ -47,7 +47,7 @@ export function SigninForm() {
           <button type="button" disabled={busy} onClick={() => finish(signInWithPasskey)} className="w-full rounded-xl bg-slate-900 py-3 font-medium text-white disabled:opacity-50 dark:bg-brand dark:text-slate-950">
             🔑 Sign in with a passkey
           </button>
-          <p className="text-center text-xs text-slate-500">If you added one in Settings: your fingerprint, face or device PIN.</p>
+          <p className="text-center text-xs text-slate-500">If you saved one at signup or in Settings: your fingerprint, face or device PIN.</p>
           <div className="flex items-center gap-3 text-xs text-slate-500" aria-hidden><span className="h-px flex-1 bg-slate-300 dark:bg-slate-700" />or<span className="h-px flex-1 bg-slate-300 dark:bg-slate-700" /></div>
         </>
       )}
@@ -60,9 +60,11 @@ export function SigninForm() {
         ))}
       </div>
       <form onSubmit={submit} className="space-y-4">
+        {/* Pairs with the username the key card offers to password managers, so a saved key fills itself in. */}
+        {mode === "key" && <input type="text" name="username" autoComplete="username" className="sr-only" tabIndex={-1} aria-hidden readOnly />}
         <label className="block">
           <span className="text-sm font-medium">{mode === "key" ? "Your sign-in key" : "The 10-character code"}</span>
-          <input value={value} onChange={(e) => setValue(e.target.value)} required autoFocus autoComplete="off" spellCheck={false}
+          <input value={value} onChange={(e) => setValue(e.target.value)} required autoFocus autoComplete={mode === "key" ? "current-password" : "one-time-code"} name={mode === "key" ? "password" : "code"} spellCheck={false}
             placeholder={mode === "key" ? "K7QM-2XRP-9TFD-W4HN" : "AB3DE-7GH9K"} aria-describedby="signin-help" maxLength={mode === "key" ? 64 : 32}
             className="mt-1 w-full rounded-xl border border-slate-300 bg-transparent px-3 py-3 font-mono text-lg tracking-widest uppercase dark:border-slate-700" />
         </label>

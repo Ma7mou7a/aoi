@@ -19,7 +19,7 @@ const body = z.object({
 
 /** Step 2 of signing in with a passkey: verify the signature, then open a session. */
 export const POST = handle(async (req: Request) => {
-  const attempt = await guardAttempt();
+  const attempt = await guardAttempt("passkey");
   const { credential } = await readJson(req, body, { maxBytes: 32 * 1024 });
   try {
     const { userId } = await finishAuthentication(credential, relyingParty(await headers(), req.url));

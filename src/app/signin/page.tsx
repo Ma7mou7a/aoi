@@ -11,7 +11,7 @@ export default async function SigninPage() {
       <div>
         <p className="font-display text-sm tracking-[0.25em] text-brand uppercase">Welcome back</p>
         <h1 className="text-5xl sm:text-6xl">Sign in</h1>
-        <p className="mx-auto mt-2 max-w-xl text-slate-600 dark:text-slate-300">No email, no password: open your Brain Twin on this browser with your private sign-in key.</p>
+        <p className="mx-auto mt-2 max-w-xl text-slate-600 dark:text-slate-300">No email, no password: open your Brain Twin with your passkey, or with your private sign-in key.</p>
       </div>
       {user ? (
         <p className="glass mx-auto max-w-md rounded-2xl p-6">

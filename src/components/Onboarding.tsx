@@ -7,6 +7,8 @@ import { takeFirstGame } from "@/lib/firstGame";
 import type { PandaState } from "@/lib/panda/bus";
 import { AI_CONSENT_COPY } from "./coach/AiConsentCard";
 import { Panda } from "./panda/Panda";
+import { PasskeyOffer } from "./PasskeyOffer";
+import { passkeysSupported } from "@/lib/passkeyClient";
 import { SigninKeyCard } from "./SigninKeyCard";
 
 const GOALS: Array<[string, string]> = [
@@ -45,7 +47,7 @@ async function carryOverFirstGame() {
   }
 }
 
-/** Signup as a short conversation with Bao: name, each consent as its own yes/no, a goal, then the sign-in key. */
+/** Signup as a short conversation with Bao: name, each consent as its own yes/no, a goal, then a passkey with the sign-in key as backup. */
 export function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -55,6 +57,9 @@ export function Onboarding() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [signinKey, setSigninKey] = useState<string | null>(null);
+  // After signup: "passkey" offers one first (where the browser can make one), then "key" shows the key.
+  const [afterSignup, setAfterSignup] = useState<"passkey" | "key">("passkey");
+  const [hasPasskey, setHasPasskey] = useState(false);
 
   async function create(goal: string) {
     setBusy(true);
@@ -64,6 +69,7 @@ export function Onboarding() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? "Couldn't create your twin. Please try again.");
       setSigninKey(json.signinKey);
+      setAfterSignup(passkeysSupported() ? "passkey" : "key");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -71,11 +77,17 @@ export function Onboarding() {
     }
   }
 
-  // Right after signup: show the sign-in key once, bring the first game over, then enter the app.
+  // Right after signup: offer a passkey, show the sign-in key once (as the backup if a passkey was saved),
+  // bring the first game over, then enter the app.
+  if (signinKey && afterSignup === "passkey") {
+    return <PasskeyOffer onDone={(added) => { setHasPasskey(added); setAfterSignup("key"); }} />;
+  }
   if (signinKey) {
     return (
       <SigninKeyCard
         signinKey={signinKey}
+        backup={hasPasskey}
+        username={`${name.trim()} · AI4Brain`}
         onDone={async () => {
           await carryOverFirstGame();
           router.refresh();

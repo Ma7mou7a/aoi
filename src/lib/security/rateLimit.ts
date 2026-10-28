@@ -51,9 +51,45 @@ export const signinLimiter = createLimiter({ windowMs: 15 * 60_000, maxFailures:
 /** Plain request cap for endpoints that create rows without a session (passkey challenges): 30 a minute per address. */
 export const challengeLimiter = createLimiter({ windowMs: 60_000, maxFailures: 30, freeFailures: 30, baseDelayMs: 0, maxDelayMs: 0 });
 
-/** The client address as seen by the app (first X-Forwarded-For hop when behind a proxy). Never stored. */
-export function clientAddress(h: Headers) {
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
+/**
+ * Server-wide cap on failed guesses of typed secrets (sign-in key, device code), whatever address they
+ * come from: spreading guesses over many addresses buys nothing past ~2 a second. Passkeys skip it (they
+ * can't be guessed), so someone flooding this can slow typed sign-ins down but never lock passkeys out.
+ */
+export const floodLimiter = createLimiter({ windowMs: 60_000, maxFailures: 120, freeFailures: 120, baseDelayMs: 0, maxDelayMs: 0 });
+export const FLOOD_KEY = "all";
+
+/**
+ * The client address as seen by the app, as a rate-limit key. Never stored.
+ *
+ * X-Forwarded-For is written by whoever sent the request, so only the hops added by our own proxies can
+ * be trusted: set AI4B_TRUSTED_PROXIES to how many sit in front of the app (1 behind nginx or Vercel)
+ * and the entry the outermost one added is used. With none set, Next.js fills the header from the socket
+ * only when the client didn't send one, so the value may be forged; the flood cap above still holds then.
+ * IPv6 addresses are grouped by /64, the block one home connection usually gets.
+ */
+export function clientAddress(h: Headers, trustedProxies = Number(process.env.AI4B_TRUSTED_PROXIES ?? 0)) {
+  const hops = (h.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const n = Number.isInteger(trustedProxies) && trustedProxies > 0 ? trustedProxies : 0;
+  const ip = n > 0 ? (hops[Math.max(0, hops.length - n)] ?? h.get("x-real-ip")) : hops[hops.length - 1];
+  return ip ? addressKey(ip) : "local";
+}
+
+/** Normalise one address: IPv4 as is, IPv6 cut to its /64 prefix (so a host can't rotate through its block). */
+export function addressKey(raw: string) {
+  let ip = raw.trim().toLowerCase();
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(ip);
+  if (bracketed) ip = bracketed[1];
+  else if (/^\d+\.\d+\.\d+\.\d+:\d+$/.test(ip)) ip = ip.slice(0, ip.lastIndexOf(":"));
+  ip = ip.replace(/%.*$/, "");
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(ip);
+  if (mapped) return mapped[1];
+  if (!ip.includes(":")) return ip;
+  const [head, tail = ""] = ip.split("::");
+  const left = head ? head.split(":") : [];
+  const right = ip.includes("::") && tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+  return `${groups.slice(0, 4).map((g) => parseInt(g || "0", 16).toString(16)).join(":")}::/64`;
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

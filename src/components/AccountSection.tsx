@@ -27,7 +27,7 @@ export function AccountSection({ hasKey, displayName }: { hasKey: boolean; displ
     router.refresh();
   }
 
-  if (key) return <SigninKeyCard signinKey={key} doneLabel="Done" onDone={() => { setKey(null); router.refresh(); }} />;
+  if (key) return <SigninKeyCard signinKey={key} username={`${displayName} · AI4Brain`} doneLabel="Done" onDone={() => { setKey(null); router.refresh(); }} />;
 
   return (
     <section className="space-y-3">

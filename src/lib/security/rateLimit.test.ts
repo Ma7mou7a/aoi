@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLimiter } from "./rateLimit";
+import { addressKey, clientAddress, createLimiter } from "./rateLimit";
 
 function setup() {
   let now = 0;
@@ -52,5 +52,51 @@ describe("sign-in rate limit with progressive delay", () => {
     tick(16 * 60_000);
     limiter.fail("new");
     expect(limiter.size()).toBe(1);
+  });
+});
+
+describe("client address used as the rate-limit key", () => {
+  const h = (xff?: string, realIp?: string) => new Headers({ ...(xff ? { "x-forwarded-for": xff } : {}), ...(realIp ? { "x-real-ip": realIp } : {}) });
+
+  it("behind one trusted proxy, uses the hop that proxy added and ignores what the client wrote", () => {
+    expect(clientAddress(h("6.6.6.6, 9.9.9.9, 203.0.113.7"), 1)).toBe("203.0.113.7");
+    expect(clientAddress(h("6.6.6.6, 203.0.113.7, 10.0.0.2"), 2)).toBe("203.0.113.7");
+  });
+
+  it("a client can't pick a fresh address per request behind a proxy", () => {
+    const keys = new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3"].map((fake) => clientAddress(h(`${fake}, 203.0.113.7`), 1)));
+    expect([...keys]).toEqual(["203.0.113.7"]);
+  });
+
+  it("without a configured proxy, trusts neither x-real-ip nor the first hop", () => {
+    expect(clientAddress(h("6.6.6.6, 198.51.100.4"), 0)).toBe("198.51.100.4");
+    expect(clientAddress(h(undefined, "6.6.6.6"), 0)).toBe("local");
+    expect(clientAddress(h(), 1)).toBe("local");
+  });
+
+  it("groups IPv6 addresses by /64 so one host can't rotate through its block", () => {
+    expect(addressKey("2001:db8:abcd:12:1::5")).toBe("2001:db8:abcd:12::/64");
+    expect(addressKey("2001:db8:abcd:12:ffff:ffff:ffff:ffff")).toBe("2001:db8:abcd:12::/64");
+    expect(addressKey("[2001:DB8::1]:443")).toBe("2001:db8:0:0::/64");
+    expect(addressKey("fe80::1%eth0")).toBe("fe80:0:0:0::/64");
+  });
+
+  it("keeps IPv4 as is, including IPv4-mapped IPv6 and a trailing port", () => {
+    expect(addressKey("203.0.113.7")).toBe("203.0.113.7");
+    expect(addressKey("::ffff:203.0.113.7")).toBe("203.0.113.7");
+    expect(addressKey("203.0.113.7:51234")).toBe("203.0.113.7");
+  });
+});
+
+describe("server-wide flood cap", () => {
+  it("refuses once too many failures pile up across all addresses, then recovers", () => {
+    let now = 0;
+    const flood = createLimiter({ windowMs: 60_000, maxFailures: 120, freeFailures: 120, baseDelayMs: 0, maxDelayMs: 0, clock: () => now });
+    for (let i = 0; i < 119; i++) flood.fail("all");
+    expect(flood.check("all")).toEqual({ allowed: true, delayMs: 0 });
+    flood.fail("all");
+    expect(flood.check("all").allowed).toBe(false);
+    now += 60_001;
+    expect(flood.check("all").allowed).toBe(true);
   });
 });
