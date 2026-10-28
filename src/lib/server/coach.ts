@@ -5,6 +5,7 @@ import { resolveActions } from "../coach/actions";
 import { applyClinicalGuard, finaliseDraft, type CoachDraft } from "../coach/claims";
 import { buildEvidencePack } from "../coach/evidence";
 import { fallbackDraft } from "../coach/fallback";
+import { ensureForecast } from "../coach/forecastGuard";
 import { classifyIntent, type Intent, type Pace } from "../coach/intent";
 import { EMPTY_MEMORY, shouldOfferBet, updateMemory, type CoachMemory } from "../coach/memory";
 import { buildCoachPrompt } from "../coach/prompt";
@@ -50,6 +51,17 @@ export async function buildPackForUser(userId: string, pace: Array<PaceForecast 
     .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed")))
     .orderBy(desc(schema.taskRuns.startedAt))
     .limit(RECENT_RUNS);
+  // A forecast is tied to its skill's latest game: include that game when it isn't among the recent ones.
+  for (const skill of new Set(pace.map((p) => p.skill))) {
+    if (runs.some((r) => r.dimensionId === skill)) continue;
+    const [latest] = await db
+      .select()
+      .from(schema.taskRuns)
+      .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed"), eq(schema.taskRuns.dimensionId, skill)))
+      .orderBy(desc(schema.taskRuns.startedAt))
+      .limit(1);
+    if (latest) runs.push(latest);
+  }
   const trials = runs.length
     ? await db.select().from(schema.trials).where(inArray(schema.trials.taskRunId, runs.map((r) => r.id)))
     : [];
@@ -251,6 +263,13 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   }
 
   const final = finaliseDraft(draft, pack, science, context, dims);
+  // A forecast question always gets the forecast range and buttons, whatever the model wrote.
+  if (classified.intent === "forecast") {
+    const g = ensureForecast({ content: final.content, actions: final.actions }, pack.pace, { skill: target, pace: classified.pace }, dims);
+    final.content = g.content;
+    final.actions = g.actions;
+    final.nextStep = final.nextStep || g.actions[0]?.label || "";
+  }
   // A forecast answer shouldn't offer the pace that was just asked about.
   if (classified.pace) final.actions = final.actions.filter((a) => a.forecast?.gamesPerWeek !== classified.pace);
   final.content = applyClinicalGuard(question, final.content);

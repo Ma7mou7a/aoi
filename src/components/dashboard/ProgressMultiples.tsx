@@ -1,7 +1,12 @@
 "use client";
 
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import Link from "next/link";
+import { Z90 } from "@/lib/profiler";
 import type { Projection } from "@/lib/profiler/projection";
+import { inSentence } from "@/lib/text";
+import { changeText, forecastText, paceText, trackText, trendLabel, unlockText } from "@/lib/progressWords";
+import type { SkillInsight } from "@/lib/server/dashboard";
 import type { ProfileView } from "@/lib/server/profile";
 import { ChartCard, DataTable } from "./ChartCard";
 
@@ -59,22 +64,37 @@ function TooltipBody({ active, payload, name }: { active?: boolean; payload?: Ar
   );
 }
 
-function Multiple({ d, from, now, projection }: { d: Dim; from: number; now: number; projection: Projection | null }) {
+const TREND_STYLE: Record<string, { bg: string; fg: string }> = {
+  Growing: { bg: "rgba(25,158,112,0.16)", fg: "var(--dim-processing_speed)" },
+  Steady: { bg: "var(--chart-empty)", fg: "var(--chart-ink-2)" },
+  Dipping: { bg: "rgba(201,133,0,0.16)", fg: "var(--dim-cognitive_flexibility)" },
+};
+
+function Multiple({ d, from, now, projection, insight }: { d: Dim; from: number; now: number; projection: Projection | null; insight?: SkillInsight }) {
   const history = seriesFor(d, from, now);
   const data = withForecast(history, d, projection, now);
   const end = projection ? now + projection.horizonDays * DAY : now;
   const color = `var(--dim-${d.id}, ${d.color})`;
-  // Change since the first real estimate in range (the starting prior is not a measurement).
+  const trend = projection ? trendLabel(projection.slopePerWeek, projection.slopeSePerWeek) : null;
+  // Change since the first real estimate in range (the starting prior is not a measurement), only when beyond the noise.
   const first = history.find((p) => p.measured);
-  const change = first && first !== history.at(-1) ? pct(d.mean) - first.mean! : 0;
+  const change =
+    first && first !== history.at(-1)
+      ? changeText({ mean: first.mean! / 100, sd: (first.band![1] - first.band![0]) / 200 / Z90 }, { mean: d.mean, sd: d.sd }, { games: insight?.games, trend: trend?.label })
+      : null;
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--chart-ink)" }}>
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} aria-hidden /> {d.name}
         </p>
-        <p className="text-xs tabular-nums" style={{ color: "var(--chart-ink-2)" }}>
-          {pct(d.mean)}% now{change !== 0 ? ` · ${change > 0 ? "+" : ""}${change} since your first game` : ""}
+        <p className="flex items-center gap-2 text-xs tabular-nums" style={{ color: "var(--chart-ink-2)" }}>
+          {trend && (
+            <span className="rounded-full px-2 py-0.5 font-semibold" style={{ background: TREND_STYLE[trend.label].bg, color: TREND_STYLE[trend.label].fg }} title={trend.note}>
+              {trend.label}
+            </span>
+          )}
+          <span>{pct(d.mean)}% now</span>
         </p>
       </div>
       {history.length ? (
@@ -99,11 +119,22 @@ function Multiple({ d, from, now, projection }: { d: Dim; from: number; now: num
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          {projection && (
-            <p className="text-xs" style={{ color: "var(--chart-ink-2)" }}>
-              In {projection.horizonDays} days: likely {pct(projection.ciLow)}–{pct(projection.ciHigh)}% if your current pace ({projection.slopePerWeek >= 0 ? "+" : ""}{(projection.slopePerWeek * 100).toFixed(1)} pts/week) continues. A forecast, not a promise.
+          <div className="space-y-1 text-sm" style={{ color: "var(--chart-ink-2)" }}>
+            {change && <p>{change}.</p>}
+            {projection && insight ? (
+              <>
+                <p style={{ color: "var(--chart-ink)" }}>{forecastText(projection, insight.games, d.sd, insight.obsSd)}</p>
+                {insight.everyDay && <p>{paceText(insight.everyDay)}</p>}
+                {trend && <p className="text-xs">{trend.note} A forecast, not a promise.</p>}
+              </>
+            ) : (
+              insight && <p>{unlockText(insight.games, insight.spanDays)}</p>
+            )}
+            <p className="flex flex-wrap gap-3 pt-1 text-xs font-semibold">
+              <Link href={`/play?focus=${d.id}&mode=training`} className="text-brand hover:underline">▶ Play {inSentence(d.name)}</Link>
+              <Link href={`/coach?ask=forecast&skill=${d.id}`} className="text-brand hover:underline">Ask Bao: what if I play every day?</Link>
             </p>
-          )}
+          </div>
         </>
       ) : (
         <div className="flex h-12 items-center justify-center rounded-lg text-xs" style={{ background: "var(--chart-empty)", color: "var(--chart-muted)" }}>
@@ -115,11 +146,12 @@ function Multiple({ d, from, now, projection }: { d: Dim; from: number; now: num
 }
 
 /** One small chart per skill on the same 0–100% scale: estimate (line), 90% credible band (wash), dashed forecast. */
-export function ProgressMultiples({ dims, rangeDays, now, projections, track }: {
+export function ProgressMultiples({ dims, rangeDays, now, projections, insight, track }: {
   dims: Dim[];
   rangeDays: number;
   now: number;
   projections: Record<string, Projection | null>;
+  insight: Record<string, SkillInsight>;
   track: { hitRate: number | null; checks: Array<{ skill: string; madeAt: string; forBand: [number, number]; actual: number; hit: boolean }> };
 }) {
   const from = now - rangeDays * DAY;
@@ -140,14 +172,14 @@ export function ProgressMultiples({ dims, rangeDays, now, projections, track }: 
     <ChartCard title="Progress and forecast" subtitle={`Last ${rangeDays} days, then a dashed ${Object.values(projections).find(Boolean)?.horizonDays ?? 7}-day forecast. Bands narrow with evidence and widen with time.`} table={table}>
       {track.checks.length > 0 && (
         <div className="rounded-xl p-3 text-sm" style={{ background: "var(--chart-empty)", color: "var(--chart-ink)" }}>
-          <b>Twin track record:</b> {track.checks.filter((c) => c.hit).length} of {track.checks.length} past weekly forecasts came true (the real score landed inside the forecast range).
+          <b>Track record:</b> {trackText(track.checks.filter((c) => c.hit).length, track.checks.length)}
           <span className="block text-xs" style={{ color: "var(--chart-ink-2)" }}>
             {track.checks.slice(0, 3).map((c) => `${c.skill}: forecast ${pct(c.forBand[0])}–${pct(c.forBand[1])}%, actual ${pct(c.actual)}% ${c.hit ? "✓" : "✗"}`).join(" · ")}
           </span>
         </div>
       )}
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-        {ordered.map((d) => <Multiple key={d.id} d={d} from={from} now={now} projection={projections[d.id] ?? null} />)}
+        {ordered.map((d) => <Multiple key={d.id} d={d} from={from} now={now} projection={projections[d.id] ?? null} insight={insight[d.id]} />)}
       </div>
     </ChartCard>
   );

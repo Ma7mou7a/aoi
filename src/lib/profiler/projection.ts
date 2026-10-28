@@ -9,6 +9,8 @@ export type Projection = {
   ciHigh: number;
   /** Estimated change per week (ability scale), for the explanation. */
   slopePerWeek: number;
+  /** Standard error of that weekly change: a trend is only "real" when clearly larger than this. */
+  slopeSePerWeek: number;
 };
 
 export const MIN_POINTS = 3;
@@ -63,7 +65,7 @@ export function projectGrowth(
   const mean = clamp01(current.mean + slope * h);
   const sd = Math.sqrt(current.sd ** 2 + (h * slopeSe) ** 2 + driftSdPerDay ** 2 * h);
   void now;
-  return { horizonDays: h, mean, ciLow: clamp01(mean - Z90 * sd), ciHigh: clamp01(mean + Z90 * sd), slopePerWeek: slope * 7 };
+  return { horizonDays: h, mean, ciLow: clamp01(mean - Z90 * sd), ciHigh: clamp01(mean + Z90 * sd), slopePerWeek: slope * 7, slopeSePerWeek: slopeSe * 7 };
 }
 
 /** Did a past forecast come true? (the actual estimate at the target date fell inside its band) */

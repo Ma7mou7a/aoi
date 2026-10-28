@@ -17,6 +17,12 @@ describe("projectGrowth", () => {
     expect(p.ciLow).toBeLessThan(p.mean);
     expect(p.ciHigh).toBeGreaterThan(p.mean);
   });
+  it("reports how uncertain the weekly trend is", () => {
+    const steady = projectGrowth(pts([0.4, 0.41, 0.42, 0.43, 0.44], 0.03), { mean: 0.44, sd: 0.03 }, 7, 0.03)!;
+    const noisy = projectGrowth(pts([0.4, 0.55, 0.38, 0.52, 0.44], 0.12), { mean: 0.44, sd: 0.12 }, 7, 0.03)!;
+    expect(steady.slopeSePerWeek).toBeGreaterThan(0);
+    expect(noisy.slopeSePerWeek).toBeGreaterThan(steady.slopeSePerWeek);
+  });
   it("band widens with the horizon", () => {
     const h = pts([0.4, 0.45, 0.43, 0.5, 0.52]);
     const near = projectGrowth(h, { mean: 0.52, sd: 0.06 }, 7, 0.03)!;

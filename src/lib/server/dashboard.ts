@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { getDimensions } from "../dimensions/loader";
 import { goalProgress, type GoalKind } from "../goals";
 import { generateWeeklyPlan, weekStartOf } from "../plan";
+import { forecastAtPace, type PaceForecast } from "../profiler/pace";
 import { checkForecast, projectGrowth, type Projection } from "../profiler/projection";
 import { AVAILABLE_PARADIGMS } from "../tasks/registry";
 import { currentCollabScore } from "./collab";
@@ -168,10 +169,14 @@ const CHECK_HORIZON_DAYS = 7;
  * Growth forecasts (shown) plus the twin's track record: once a week a 7-day forecast is stored;
  * when its date has passed, we check whether the estimate actually landed inside the forecast band.
  */
+export type SkillInsight = { games: number; spanDays: number; obsSd: number; everyDay: PaceForecast | null };
+
 async function forecasts(userId: string, profile: ProfileView) {
   const dims = getDimensions();
   const now = new Date();
   const byDim: Record<string, Projection | null> = {};
+  /** What the plain-words messages need per skill: games so far, days spanned, one game's noise, and the every-day forecast. */
+  const insight: Record<string, SkillInsight> = {};
   const toStore: Array<typeof schema.projections.$inferInsert> = [];
 
   const recent = await db
@@ -184,6 +189,12 @@ async function forecasts(userId: string, profile: ProfileView) {
     const history = d.history.filter((h) => h.measured).map((h) => ({ at: new Date(h.at), mean: h.mean, sd: (h.ciHigh - h.ciLow) / (2 * 1.6449) || 0.1 }));
     const drift = dim.profile.uncertainty.drift_sd_per_day;
     byDim[d.id] = projectGrowth(history, { mean: d.mean, sd: d.sd }, FORECAST_HORIZON_DAYS, drift, now);
+    insight[d.id] = {
+      games: history.length,
+      spanDays: history.length ? (history.at(-1)!.at.getTime() - history[0].at.getTime()) / DAY : 0,
+      obsSd: dim.profile.uncertainty.obs_sd,
+      everyDay: forecastAtPace(history, { mean: d.mean, sd: d.sd }, 7, drift),
+    };
     const weekly = projectGrowth(history, { mean: d.mean, sd: d.sd }, CHECK_HORIZON_DAYS, drift, now);
     if (weekly && !recent.some((r) => r.dimensionId === d.id)) {
       toStore.push({ userId, dimensionId: d.id, model: "trend_v1", horizonDays: CHECK_HORIZON_DAYS, mean: weekly.mean, ciLow: weekly.ciLow, ciHigh: weekly.ciHigh, fittedOnSnapshots: history.length });
@@ -202,7 +213,7 @@ async function forecasts(userId: string, profile: ProfileView) {
     if (!d || !after) continue;
     checks.push({ skill: d.name, madeAt: p.createdAt.toISOString(), forBand: [p.ciLow, p.ciHigh] as [number, number], actual: after.mean, hit: checkForecast(p, after.mean) });
   }
-  return { byDim, checks, hitRate: checks.length ? checks.filter((c) => c.hit).length / checks.length : null };
+  return { byDim, insight, checks, hitRate: checks.length ? checks.filter((c) => c.hit).length / checks.length : null };
 }
 
 export async function getDashboard(userId: string, rangeDays: RangeDays) {
