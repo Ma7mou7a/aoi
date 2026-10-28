@@ -8,7 +8,8 @@ import "server-only";
 type Report = { users: number; challenges: number; at: string };
 type Options = { run?: () => Promise<Report>; firstDelayMs?: number; intervalMs?: number; log?: (msg: string) => void };
 
-const g = globalThis as unknown as { __ai4bRetention?: { first: ReturnType<typeof setTimeout>; every?: ReturnType<typeof setInterval> } };
+type JobState = { first: ReturnType<typeof setTimeout>; every?: ReturnType<typeof setInterval> };
+const g = globalThis as unknown as { __ai4bRetention?: JobState };
 
 export function startRetentionJob(opts: Options = {}) {
   if (g.__ai4bRetention) return; // already running (dev hot reload)
@@ -22,7 +23,7 @@ export function startRetentionJob(opts: Options = {}) {
       log(`[retention] purge failed, will retry next time: ${(e as Error).message}`);
     }
   };
-  const state: NonNullable<typeof g.__ai4bRetention> = {
+  const state: JobState = {
     first: setTimeout(() => {
       void tick();
       state.every = setInterval(() => void tick(), opts.intervalMs ?? 6 * 3_600_000);

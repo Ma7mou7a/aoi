@@ -103,6 +103,59 @@
   color-scheme: dark;
 }
 
+/*
+ * High-contrast mode (Settings → Security & privacy → Display), saved per user and set on <html data-contrast="high">
+ * by the layout. Text reaches at least 7:1 (WCAG AAA) in both themes: pure black/white surfaces, no
+ * translucent glass, no background glow or grid, solid borders, underlined links and a thick focus ring.
+ */
+[data-theme="dark"][data-contrast="high"] {
+  --brand: #7fe3ff; /* 14.9:1 on black */
+  --brand-2: #b8f1ff;
+  --brand-deep: #7fe3ff;
+  --accent: #ffb27a;
+  --background: #000000;
+  --foreground: #ffffff;
+  --glass: #000000;
+  --glass-line: #d3e0e9;
+  --grid-line: transparent;
+  --glow: transparent;
+  --hc-muted: #e6eff5; /* 17:1 on black */
+  --chart-surface: #000000;
+  --chart-ink: #ffffff;
+  --chart-ink-2: #e6eff5;
+  --chart-muted: #d3e0e9;
+  --chart-grid: #688196;
+  --chart-axis: #aac0ce;
+}
+
+[data-theme="light"][data-contrast="high"] {
+  --brand: #004a75; /* 9.6:1 on white */
+  --brand-2: #003a5c;
+  --brand-deep: #00304d;
+  --accent: #8a3a00;
+  --background: #ffffff;
+  --foreground: #000000;
+  --glass: #ffffff;
+  --glass-line: #1d2733;
+  --grid-line: transparent;
+  --glow: transparent;
+  --hc-muted: #1b2a36; /* 15:1 on white */
+  --chart-surface: #ffffff;
+  --chart-ink: #000000;
+  --chart-ink-2: #1b2a36;
+  --chart-muted: #2b3d4b;
+  --chart-grid: #8aa2b3;
+  --chart-axis: #43596b;
+}
+
+/* Grey helper text becomes near-full contrast (elements with their own background keep their pairing). */
+[data-contrast="high"] [class*="text-slate-"]:not([class*="bg-"]) { color: var(--hc-muted) !important; }
+[data-contrast="high"] [class*="border-slate-"], [data-contrast="high"] .glass { border-color: var(--glass-line) !important; }
+[data-contrast="high"] .glass { backdrop-filter: none; }
+[data-contrast="high"] .text-gradient { background: none; color: var(--foreground); }
+[data-contrast="high"] main a:not([class*="bg-"]) { text-decoration: underline; text-underline-offset: 3px; }
+[data-contrast="high"] :focus-visible { outline: 3px solid var(--brand) !important; outline-offset: 3px; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Geist_Mono, Source_Sans_3 } from "next/font/google";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { LogoMark, SiteHeader } from "@/components/SiteHeader";
 import { getRewards } from "@/lib/server/rewards";
@@ -36,10 +37,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getCurrentUser();
+  // Per-request CSP nonce from the middleware: only scripts carrying it may run.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" data-contrast={user?.preferences.highContrast ? "high" : undefined} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className={`${display.variable} ${body.variable} ${geistMono.variable} antialiased`}>
         <SiteHeader signedIn={user != null} bamboo={user ? (await getRewards(user.id)).total : undefined} />
