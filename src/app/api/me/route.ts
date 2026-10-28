@@ -1,54 +1,45 @@
-import { createHash } from "node:crypto";
-import { count, eq } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
+import { readJson } from "@/lib/security/body";
+import { deleteAccount } from "@/lib/server/accounts";
+import { logSecurityEvent } from "@/lib/server/audit";
 import { purgeExpired, RETENTION_OPTIONS } from "@/lib/server/privacy";
-import { handle, HttpError, requireUser, USER_COOKIE } from "@/lib/server/user";
+import { clearSessionCookie, handle, requireUser } from "@/lib/server/user";
 
 const patch = z
   .object({
     retentionDays: z.number().int().refine((d) => (RETENTION_OPTIONS as readonly number[]).includes(d)).optional(),
     researchMode: z.boolean().optional(),
+    highContrast: z.boolean().optional(),
   })
-  .refine((p) => p.retentionDays !== undefined || p.researchMode !== undefined);
+  .strict()
+  .refine((p) => p.retentionDays !== undefined || p.researchMode !== undefined || p.highContrast !== undefined);
 
-/** Change how long data is kept; anything older than the new window is deleted right away. */
+/** Change how long data is kept (older data is deleted right away), Research mode or high-contrast display. */
 export const PATCH = handle(async (req: Request) => {
   const user = await requireUser();
-  const parsed = patch.safeParse(await req.json());
-  if (!parsed.success) throw new HttpError(400, `Retention must be one of ${RETENTION_OPTIONS.join(", ")} days.`);
-  const { retentionDays: days, researchMode } = parsed.data;
-  if (researchMode !== undefined) {
-    await db.update(schema.users).set({ preferences: { ...user.preferences, researchMode } }).where(eq(schema.users.id, user.id));
+  const { retentionDays: days, researchMode, highContrast } = await readJson(req, patch, { maxBytes: 1024, message: `Retention must be one of ${RETENTION_OPTIONS.join(", ")} days.` });
+  if (researchMode !== undefined || highContrast !== undefined) {
+    const preferences = { ...user.preferences, ...(researchMode !== undefined ? { researchMode } : {}), ...(highContrast !== undefined ? { highContrast } : {}) };
+    await db.update(schema.users).set({ preferences }).where(eq(schema.users.id, user.id));
   }
   if (days !== undefined) {
     await db.update(schema.users).set({ retentionDays: days }).where(eq(schema.users.id, user.id));
     await purgeExpired(user.id, days);
-    (await cookies()).set(USER_COOKIE, user.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: days * 86_400 });
+    await logSecurityEvent(user.id, "retention_changed", { days });
   }
-  return Response.json({ retentionDays: days ?? user.retentionDays, researchMode: researchMode ?? !!user.preferences.researchMode });
+  return Response.json({
+    retentionDays: days ?? user.retentionDays,
+    researchMode: researchMode ?? !!user.preferences.researchMode,
+    highContrast: highContrast ?? !!user.preferences.highContrast,
+  });
 });
 
-/** One-click delete: every user-owned row goes (FK cascade); only a salted hash and row counts remain as proof. */
+/** One-click delete: every user-owned row goes, the data key is destroyed; only a salted hash and row counts remain. */
 export const DELETE = handle(async () => {
   const user = await requireUser();
-  const tables = { trials: schema.trials, task_runs: schema.taskRuns, profile_snapshots: schema.profileSnapshots, sessions: schema.sessions, consents: schema.consents, coach_messages: schema.coachMessages, collab_events: schema.collabEvents, collab_scores: schema.collabScores, goals: schema.goals, plans: schema.plans, reward_events: schema.rewardEvents } as const;
-
-  const rowsDeleted: Record<string, number> = {};
-  await db.transaction(async (tx) => {
-    for (const [name, t] of Object.entries(tables)) {
-      const [{ n }] = await tx.select({ n: count() }).from(t).where(eq(t.userId, user.id));
-      rowsDeleted[name] = n;
-    }
-    await tx.delete(schema.users).where(eq(schema.users.id, user.id));
-    await tx.insert(schema.deletionLog).values({
-      userHash: createHash("sha256").update(`ai4brain:${user.id}`).digest("hex"),
-      reason: "user_request",
-      rowsDeleted,
-    });
-  });
-
-  (await cookies()).delete(USER_COOKIE);
+  const { rowsDeleted } = await deleteAccount(user.id, "user_request");
+  await clearSessionCookie();
   return Response.json({ deleted: true, rowsDeleted });
 });

@@ -32,10 +32,12 @@ export function loadKeyring(env: Env): Keyring {
   const keys = new Map<number, Buffer>();
   if (env.AI4B_MASTER_KEYS) {
     for (const part of env.AI4B_MASTER_KEYS.split(",")) {
-      const [v, b64] = part.trim().split(/:(.*)/s);
+      const trimmed = part.trim();
+      const colon = trimmed.indexOf(":");
+      const [v, b64] = colon < 0 ? [trimmed, ""] : [trimmed.slice(0, colon), trimmed.slice(colon + 1)];
       const version = Number(v);
       if (!Number.isInteger(version) || version < 1) throw new Error(`AI4B_MASTER_KEYS: bad version "${v}" (use 1, 2, 3…)`);
-      keys.set(version, decodeKey(`AI4B_MASTER_KEYS version ${version}`, b64 ?? ""));
+      keys.set(version, decodeKey(`AI4B_MASTER_KEYS version ${version}`, b64));
     }
   } else if (env.AI4B_MASTER_KEY) {
     keys.set(1, decodeKey("AI4B_MASTER_KEY", env.AI4B_MASTER_KEY));

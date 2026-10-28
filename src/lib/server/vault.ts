@@ -59,7 +59,7 @@ export async function cipherFor(userId: string, exec: Exec = db) {
     text: (plain: string, field: string) => seal(dek, plain, aad(field)),
     openText: (value: string, field: string) => open(dek, value, aad(field)),
     json: (value: unknown, field: string): SealedJson => sealJson(dek, value, aad(field)),
-    openJson: <T>(value: T | SealedJson | null | undefined, field: string): T | null => openJson<T>(dek, value ?? null, aad(field)),
+    openJson: <T>(value: unknown, field: string): T | null => openJson<T>(dek, (value ?? null) as T | null, aad(field)),
   };
 }
 export type UserCipher = Awaited<ReturnType<typeof cipherFor>>;

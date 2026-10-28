@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { COMPONENTS, computeCollabScore, SIGNALS, type CollabScore, type Component, type Signal } from "../collab/score";
 import { HttpError } from "./user";
+import { cipherFor, FIELDS } from "./vault";
 
 type CoachMessageRow = typeof schema.coachMessages.$inferSelect;
 
@@ -136,7 +137,8 @@ export async function handleClaimFeedback(userId: string, messageId: string, cla
 
   const [updated] = await db.update(schema.coachMessages).set({ ...update, meta }).where(eq(schema.coachMessages.id, m.id)).returning();
   const score = await recordSignals(userId, signals);
-  return { message: toClientMessage(updated), score };
+  const c = await cipherFor(userId);
+  return { message: toClientMessage({ ...updated, content: c.openText(updated.content, FIELDS.coachContent) }), score };
 }
 
 /** Coach suggestion → user started a session afterwards: that's iteration. */

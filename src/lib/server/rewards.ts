@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getDimensions } from "../dimensions/loader";
+import { cipherFor, FIELDS } from "./vault";
 import { BADGES, earnedBadges, gardenStalks, REWARD_AMOUNTS, streakBonus, streakWithFreeze, type RewardKind } from "../rewards";
 
 export type EarnedReward = { kind: RewardKind; amount: number; badge?: string };
@@ -83,7 +84,7 @@ async function badgeFacts(userId: string, runId: string) {
     caughtErrors,
     dailyDone,
     goalsSet,
-    playedAfterTough: !!previous?.affect?.easeOff,
+    playedAfterTough: !!(previous && (await cipherFor(userId)).openJson<{ easeOff?: boolean }>(previous.affect, FIELDS.affect)?.easeOff),
   };
 }
 
