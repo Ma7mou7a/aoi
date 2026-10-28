@@ -276,6 +276,27 @@ export const collabScores = pgTable("collab_scores", {
   createdAt: createdAt(),
 }, (t) => [index("collab_scores_user_idx").on(t.userId, t.createdAt)]);
 
+/**
+ * One round of an AI Lab game (real AI, see src/lib/aiLab). The answer key stays here on the server
+ * until the player has committed, so it can't be read from the page. Trivia only: no personal data.
+ */
+export const aiLabRounds = pgTable("ai_lab_rounds", {
+  id: id(),
+  userId: userRef(),
+  game: text("game").notNull(), // "persuader" | "hunt"
+  /** Groups the rounds of one game. */
+  gameId: uuid("game_id").notNull(),
+  itemId: text("item_id").notNull(),
+  /** What the player was shown (question, AI text), and the hidden key (answer, AI side, fake index). */
+  shown: jsonb("shown").$type<Record<string, unknown>>().notNull(),
+  key: jsonb("key").$type<Record<string, unknown>>().notNull(),
+  /** The player's answers, filled in step by step. */
+  play: jsonb("play").$type<Record<string, unknown>>().notNull().default({}),
+  model: text("model"),
+  createdAt: createdAt(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+}, (t) => [index("ai_lab_rounds_user_idx").on(t.userId, t.createdAt), index("ai_lab_rounds_game_idx").on(t.gameId)]);
+
 // ── Adaptive learning: plans & goals ────────────────────────────────────────
 
 export const planStatus = pgEnum("plan_status", ["active", "superseded", "completed"]);

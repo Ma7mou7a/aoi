@@ -50,6 +50,13 @@
       "when": 1793190967349,
       "tag": "0006_security_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793218179447,
+      "tag": "0007_ai_lab",
+      "breakpoints": true
     }
   ]
 }

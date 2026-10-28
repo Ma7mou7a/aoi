@@ -145,3 +145,65 @@ export async function draftWithLlm(userPrompt: string): Promise<LlmResult> {
   if (provider === "groq") return draftWithGroq(userPrompt);
   return { ok: false, reason: "no_api_access" };
 }
+
+export type StructuredResult<T> = { ok: true; data: T; model: string } | { ok: false; reason: string };
+
+/**
+ * One short structured-output request for anything other than the coach (the AI Lab games): system +
+ * prompt in, JSON matching `schema` out, validated by `parse`. Same providers and switches as the coach
+ * (COACH_LLM=off disables it). Never throws.
+ */
+export async function structuredWithLlm<T>(opts: { system: string; prompt: string; name: string; schema: Record<string, unknown>; parse: (x: unknown) => T | null; maxTokens?: number }): Promise<StructuredResult<T>> {
+  if (process.env.COACH_LLM === "off") return { ok: false, reason: "llm_disabled" };
+  const provider = activeProvider();
+  const read = (text: string, model: string): StructuredResult<T> => {
+    try {
+      const data = opts.parse(JSON.parse(text));
+      return data === null ? { ok: false, reason: "invalid_json" } : { ok: true, data, model };
+    } catch {
+      return { ok: false, reason: "invalid_json" };
+    }
+  };
+  try {
+    if (provider === "claude") {
+      anthropic ??= new Anthropic();
+      const res = await anthropic.beta.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: opts.maxTokens ?? 4000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        output_config: { effort: "low", format: { type: "json_schema", schema: opts.schema } },
+        system: opts.system,
+        messages: [{ role: "user", content: opts.prompt }],
+      });
+      if (res.stop_reason === "refusal") return { ok: false, reason: "refusal" };
+      const text = res.content.find((b) => b.type === "text");
+      return text && text.type === "text" ? read(text.text, CLAUDE_MODEL) : { ok: false, reason: "no_text" };
+    }
+    if (provider === "groq") {
+      const res = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [
+            { role: "system", content: opts.system },
+            { role: "user", content: opts.prompt },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: opts.name, strict: true, schema: opts.schema } },
+          reasoning_effort: "low",
+          max_completion_tokens: opts.maxTokens ?? 2048,
+        }),
+      });
+      if (!res.ok) return { ok: false, reason: `api_error_${res.status}` };
+      const json = (await res.json()) as { choices?: Array<{ message?: { content?: string | null } }> };
+      const content = json.choices?.[0]?.message?.content;
+      return content ? read(content, `${GROQ_MODEL} via Groq`) : { ok: false, reason: "no_text" };
+    }
+    return { ok: false, reason: "no_api_access" };
+  } catch (e) {
+    console.error(`[ai-lab] ${opts.name} request failed`, e instanceof Error ? e.message : e);
+    return { ok: false, reason: "network" };
+  }
+}

@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/play", label: "Assess" },
   { href: "/play?mode=training", label: "Train" },
   { href: "/coach", label: "Coach" },
+  { href: "/ai-lab", label: "AI Lab" },
   { href: "/skills", label: "Science" },
   { href: "/settings", label: "Settings" },
 ];

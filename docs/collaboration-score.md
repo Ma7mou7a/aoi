@@ -48,6 +48,11 @@ Every signal is emitted by a concrete action in the app and stored in `collab_ev
 | `clinical_question` | Responsible use | 0.3 | Asked about a health condition, which is outside a non-clinical tool's scope |
 | `reviewed_data_settings` | Responsible use | 1.0 | Opened privacy & data settings (at most once a week) |
 | `trust_kept_right_answer` | Critical verification | graded | Second-opinion game: the block's relative self-reliance (kept a right answer when the AI was wrong). One event per block with ≥ 2 such cases |
+| `persuader_resisted` | Critical verification | 1.0 | AI Lab, Resist the Persuader: kept a right answer while a real AI argued for the wrong one |
+| `persuader_misled` | Critical verification | 0.0 | AI Lab, Resist the Persuader: switched from a right answer to the AI's wrong one |
+| `persuader_updated` | Critical verification | 1.0 | AI Lab, Resist the Persuader: switched to the AI's answer when it argued for the truth |
+| `persuader_ignored_evidence` | Critical verification | 0.3 | AI Lab, Resist the Persuader: kept a wrong answer when the AI argued for the truth |
+| `caught_planted_flaw` / `missed_planted_flaw` | Critical verification | 1.0 / 0.0 | Also emitted by AI Lab's Fabrication Hunt, once per round (details carry `game: "hunt"` and the wager) |
 | `trust_used_right_help` | Responsible use | graded | Second-opinion game: the block's relative AI reliance (switched to the AI when it was right). One event per block with ≥ 2 such cases |
 
 ## Spot-the-error mode (planted flaws)

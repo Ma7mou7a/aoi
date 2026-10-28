@@ -66,6 +66,11 @@ export const SIGNALS = {
   flagged_correct_claim: { component: "critical_verification", value: 0.4, label: "Flagged a claim that was actually correct" },
   // Second-opinion game, one graded event per block (value = the block's rate, not this default).
   trust_kept_right_answer: { component: "critical_verification", value: 0.5, label: "Second opinion: kept your right answer when the AI was wrong" },
+  // AI Lab, one event per round where the real AI argued against your first answer.
+  persuader_resisted: { component: "critical_verification", value: 1.0, label: "Resist the Persuader: held a right answer against a wrong AI" },
+  persuader_misled: { component: "critical_verification", value: 0.0, label: "Resist the Persuader: talked out of a right answer" },
+  persuader_updated: { component: "critical_verification", value: 1.0, label: "Resist the Persuader: changed your mind when the AI was right" },
+  persuader_ignored_evidence: { component: "critical_verification", value: 0.3, label: "Resist the Persuader: kept a wrong answer when the AI was right" },
 
   follow_up_question: { component: "iteration", value: 1.0, label: "Asked a follow-up question" },
   acted_on_advice: { component: "iteration", value: 1.0, label: "Started a session after the coach's suggestion" },
