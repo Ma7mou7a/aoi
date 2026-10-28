@@ -5,6 +5,8 @@
  * Then open the dev-only sign-in link printed at the end.
  */
 import { closeDb, db, schema } from "../src/db";
+import { EMPTY_MEMORY } from "../src/lib/coach/memory";
+import { earnedBadges, REWARD_AMOUNTS, streakBonus, streakWithFreeze } from "../src/lib/rewards";
 import { loadDimensions } from "../src/lib/dimensions/loader";
 import { applyDrift, credibleInterval, priorFor, updatePosterior, type Posterior } from "../src/lib/profiler";
 import { projectGrowth, type SnapshotPoint } from "../src/lib/profiler/projection";
@@ -37,7 +39,10 @@ const simulate = (paradigm: Paradigm, params: Record<string, unknown>, ability: 
 
 async function main() {
   const start = Date.now() - 13 * DAY;
-  const [user] = await db.insert(schema.users).values({ displayName: "Demo", createdAt: new Date(start), lastActiveAt: new Date() }).returning();
+  const [user] = await db
+    .insert(schema.users)
+    .values({ displayName: "Sam", createdAt: new Date(start), lastActiveAt: new Date(), coachMemory: { ...EMPTY_MEMORY, goal: "working_memory", aiAsked: true } })
+    .returning();
   await db.insert(schema.consents).values(
     (["data_processing", "behavioural_signals", "llm_coaching", "planted_flaws"] as const).map((kind) => ({
       userId: user.id, kind, granted: kind !== "planted_flaws", policyVersion: "2026-10-26", createdAt: new Date(start),
@@ -48,6 +53,7 @@ async function main() {
   const hist: Record<string, SnapshotPoint[]> = Object.fromEntries(dims.map((d) => [d.id, []]));
   const playDays = [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 13];
   let blocks = 0;
+  const runsByDay: Record<string, string[]> = {};
 
   for (const day of playDays) {
     const sessionStart = start + day * DAY + (17 + rng.int(4)) * 3_600_000;
@@ -83,6 +89,7 @@ async function main() {
           startedAt: at, endedAt: new Date(at.getTime() + 90_000),
         })
         .returning({ id: schema.taskRuns.id });
+      (runsByDay[at.toISOString().slice(0, 10)] ??= []).push(run.id);
       await db.insert(schema.trials).values(
         trials.map((t) => ({
           taskRunId: run.id, userId: user.id, trialIndex: t.trialIndex, isPractice: t.isPractice ?? false, stimulus: t.stimulus,
@@ -117,6 +124,22 @@ async function main() {
     }
   }
   if (forecasts.length) await db.insert(schema.projections).values(forecasts);
+
+  // Bamboo history: a gift on every past play day (today's gift is left closed), 10 per game, streak
+  // bonuses and the badges earned so far, so the home page shows a real garden.
+  const today = new Date().toISOString().slice(0, 10);
+  const days = Object.keys(runsByDay).sort();
+  const rewardRows: Array<typeof schema.rewardEvents.$inferInsert> = [];
+  days.forEach((day, i) => {
+    if (day !== today) rewardRows.push({ userId: user.id, kind: "daily_visit", amount: REWARD_AMOUNTS.daily_visit, day, ref: "" });
+    for (const id of runsByDay[day]) rewardRows.push({ userId: user.id, kind: "game_completed", amount: REWARD_AMOUNTS.game_completed, day, ref: id });
+    const streak = streakWithFreeze(days.slice(0, i + 1), new Date(`${day}T12:00:00Z`)).streak;
+    if (streak >= 2) rewardRows.push({ userId: user.id, kind: "streak_day", amount: streakBonus(streak), day, ref: "" });
+  });
+  const played = [...new Set(Object.values(hist).flatMap((h, i) => (h.length ? [Object.keys(hist)[i]] : [])))];
+  const badges = earnedBadges({ skillsPlayed: played, streak: streakWithFreeze(days).streak, questionsAsked: 0, caughtErrors: 0, dailyDone: 0, goalsSet: 1, playedAfterTough: false }, dims.map((d) => d.id));
+  for (const b of badges) rewardRows.push({ userId: user.id, kind: "badge", amount: REWARD_AMOUNTS.badge, day: days.at(-1)!, ref: b });
+  await db.insert(schema.rewardEvents).values(rewardRows);
 
   const wm = posteriors.working_memory;
   await db.insert(schema.goals).values([
