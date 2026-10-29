@@ -73,6 +73,25 @@ export function createAwayTracker(minMs = AWAY_MIN_MS) {
   };
 }
 
+/** Looking away this long during a game brings up the "eyes back on the game" alert. */
+export const ALERT_AFTER_MS = 1500;
+
+/**
+ * Decides when to show the alert: on after ALERT_AFTER_MS of continuous looking away, off the moment
+ * the player looks back. A blink or a glance at the keyboard never triggers it.
+ */
+export function createAlertGate(afterMs = ALERT_AFTER_MS) {
+  let since: number | null = null;
+  return (t: number, away: boolean): boolean => {
+    if (!away) {
+      since = null;
+      return false;
+    }
+    since ??= t;
+    return t - since >= afterMs;
+  };
+}
+
 /** Default time a trial is "live" when it has no response time (a missed or timed-out trial). */
 export const TRIAL_WINDOW_MS = 2000;
 

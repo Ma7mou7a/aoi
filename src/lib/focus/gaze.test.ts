@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AWAY_FLAG_SHARE, AWAY_MIN_MS, createAwayTracker, eyeAwayScore, isLookingAway, markLookedAway, poseFromMatrix } from "./gaze";
+import { ALERT_AFTER_MS, AWAY_FLAG_SHARE, AWAY_MIN_MS, createAlertGate, createAwayTracker, eyeAwayScore, isLookingAway, markLookedAway, poseFromMatrix } from "./gaze";
 import { assessValidity } from "../scoring/validity";
 import type { TrialRecord } from "../scoring/types";
 
@@ -61,6 +61,24 @@ describe("Focus Guard: from frames to trials", () => {
     const marked = markLookedAway(trials, [{ start: 10_000 + 1400, end: 10_000 + 1500 }, { start: 10_000 + 3900, end: 10_000 + 4200 }]);
     expect(marked.map((t) => (t as { lookedAway?: boolean }).lookedAway ?? false)).toEqual([false, true, true, false]);
     expect(markLookedAway(trials, [])).toBe(trials);
+  });
+});
+
+describe("Focus Guard alert", () => {
+  it("comes on only after a sustained look away, and goes off the moment you look back", () => {
+    const gate = createAlertGate(1500);
+    expect(gate(0, true)).toBe(false);
+    expect(gate(1000, true)).toBe(false);
+    expect(gate(1500, true)).toBe(true);
+    expect(gate(1600, false)).toBe(false);
+    expect(gate(1700, true)).toBe(false); // a new look away starts the clock again
+    expect(gate(3300, true)).toBe(true);
+  });
+
+  it("ignores a quick glance", () => {
+    const gate = createAlertGate();
+    expect([gate(0, true), gate(800, true), gate(900, false)].some(Boolean)).toBe(false);
+    expect(ALERT_AFTER_MS).toBeGreaterThan(AWAY_MIN_MS);
   });
 });
 

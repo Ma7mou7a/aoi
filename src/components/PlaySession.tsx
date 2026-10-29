@@ -19,6 +19,7 @@ type Finished = Parameters<TaskFinish>[0];
 import { StroopTask } from "./tasks/StroopTask";
 import { markLookedAway } from "@/lib/focus/gaze";
 import { useFocusGuard, type FocusStatus } from "@/lib/focus/useFocusGuard";
+import { isChimeMuted, playFocusChime, setChimeMuted } from "@/lib/focus/chime";
 
 const FOCUS_TEXT: Record<Exclude<FocusStatus, "off">, string> = {
   starting: "Starting Focus Guard…",
@@ -107,8 +108,35 @@ export function PlaySession({ mode, focus, daily = false, focusGuard = false }: 
     else if (phase === "guess" || phase === "result") pandaBus.emit({ type: "block:end" });
   }, [phase]);
 
+  // Focus Guard's reminder: only during a game, after a sustained look away, with one chime per look away.
+  const [muted, setMuted] = useState(false);
+  useEffect(() => setMuted(isChimeMuted()), []);
+  const alertOn = guard.alert && state.kind === "block";
+  useEffect(() => {
+    if (alertOn && !muted) playFocusChime();
+  }, [alertOn, muted]);
+
   return (
     <>
+      {alertOn && (
+        <div role="alert" className="fixed inset-x-0 top-24 z-50 flex justify-center px-4">
+          <div className="flex items-center gap-4 rounded-2xl border-2 border-accent bg-white/95 px-5 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.35)] dark:bg-slate-900/95">
+            <span aria-hidden className="text-2xl">👀</span>
+            <div>
+              <p className="font-display text-xl tracking-wide text-accent uppercase">Eyes back on the game</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Rounds don&apos;t count while you look away.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setMuted(!muted); setChimeMuted(!muted); }}
+              aria-pressed={muted}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:border-brand dark:border-slate-600 dark:text-slate-300"
+            >
+              {muted ? "Sound off" : "Mute sound"}
+            </button>
+          </div>
+        </div>
+      )}
       {guard.status !== "off" && (
         <p role="status" className={`mx-auto mb-3 w-fit rounded-full border px-3 py-1 text-xs ${guard.status === "away" ? "border-accent text-accent" : "border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400"}`}>
           {FOCUS_TEXT[guard.status]}

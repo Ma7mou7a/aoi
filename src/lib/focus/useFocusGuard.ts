@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createAwayTracker, eyeAwayScore, isLookingAway, poseFromMatrix, type Interval } from "./gaze";
+import { createAlertGate, createAwayTracker, eyeAwayScore, isLookingAway, poseFromMatrix, type Interval } from "./gaze";
 
 export type FocusStatus = "off" | "starting" | "on" | "away" | "denied" | "unavailable";
 
@@ -15,6 +15,8 @@ const FRAME_MS = 100; // 10 checks a second is plenty to catch a glance away
  */
 export function useFocusGuard(active: boolean) {
   const [status, setStatus] = useState<FocusStatus>("off");
+  /** True while the player has been looking away long enough to be reminded. */
+  const [alert, setAlert] = useState(false);
   const tracker = useRef(createAwayTracker());
   const stopRef = useRef<() => void>(() => {});
 
@@ -72,6 +74,7 @@ export function useFocusGuard(active: boolean) {
       }
       if (cancelled) return stop();
       setStatus("on");
+      const gate = createAlertGate();
       timer = setInterval(() => {
         if (!landmarker || video.readyState < 2) return;
         const now = Date.now();
@@ -83,6 +86,7 @@ export function useFocusGuard(active: boolean) {
         const away = isLookingAway({ pose: m ? poseFromMatrix(m.data) : null, eyeAway: eyeAwayScore(r.faceBlendshapes?.[0]?.categories ?? []) });
         tracker.current.push(now, away);
         setStatus((s) => (s === "on" || s === "away" ? (away ? "away" : "on") : s));
+        setAlert(gate(now, away));
       }, FRAME_MS);
     })();
 
@@ -90,6 +94,7 @@ export function useFocusGuard(active: boolean) {
       stop();
       console.error = consoleError;
       setStatus("off");
+      setAlert(false);
     };
   }, [active]);
 
@@ -100,5 +105,5 @@ export function useFocusGuard(active: boolean) {
     return done;
   }, []);
 
-  return { status, takeIntervals };
+  return { status, alert, takeIntervals };
 }
