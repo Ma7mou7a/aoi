@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DeleteMyData } from "./DeleteMyData";
 import { LocalTime } from "./LocalTime";
 
-type Editable = "behavioural_signals" | "llm_coaching" | "planted_flaws" | "microphone";
+type Editable = "behavioural_signals" | "llm_coaching" | "planted_flaws" | "microphone" | "camera";
 type HistoryRow = { kind: string; granted: boolean; policyVersion: string; at: string };
 
 const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
@@ -22,6 +22,11 @@ const CONSENTS: Array<{ kind: Editable; title: string; text: string }> = [
     kind: "microphone",
     title: "Voice questions to the coach",
     text: "Lets you ask the coach by voice. Your browser turns speech into text (it may use its own online service); you review the text before sending. AI4Brain stores no audio and decides nothing from your voice. Listening to the coach needs no permission.",
+  },
+  {
+    kind: "camera",
+    title: "Focus Guard (camera)",
+    text: "During scored games, your camera checks one thing: were your eyes on the screen? Rounds where you looked away are left out, so a notification can't drag your score down. It runs entirely on this device: no image is ever stored or sent, only one yes-or-no per round. It never reads emotion, tiredness or who you are.",
   },
   {
     kind: "planted_flaws",
@@ -93,7 +98,7 @@ export function SettingsForm({ initial, retentionDays, history, researchMode }: 
         ))}
         <div className="flex gap-3 rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-500 dark:border-slate-800">
           <span>📷🎙️</span>
-          <span><b>Camera: never used. Microphone: only if you turn on voice questions above.</b> Profiling is fully non-biometric: no score or decision is ever based on your face or voice.</span>
+          <span><b>Camera: only if you turn on Focus Guard, and only on this device. Microphone: only if you turn on voice questions above.</b> No score is computed from your face or voice: the camera can only leave out rounds where you looked away.</span>
         </div>
         {saved && <p className="text-sm text-emerald-600">{saved}</p>}
       </section>

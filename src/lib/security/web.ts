@@ -34,7 +34,8 @@ export function checkSameOrigin(req: { method: string; origin: string | null; se
 export function buildCsp(nonce: string, opts: { dev: boolean; https: boolean }) {
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${opts.dev ? " 'unsafe-eval'" : ""}`,
+    // 'wasm-unsafe-eval' lets Focus Guard's on-device face model (WebAssembly) compile; it allows no JS eval.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${opts.dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
@@ -59,7 +60,7 @@ export function securityHeaders(opts: { https: boolean }): Record<string, string
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "same-origin",
     // Microphone only for the optional voice questions; everything else that could identify or track is off.
-    "Permissions-Policy": "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), magnetometer=(), gyroscope=(), accelerometer=(), display-capture=(), browsing-topics=(), interest-cohort=()",
+    "Permissions-Policy": "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), magnetometer=(), gyroscope=(), accelerometer=(), display-capture=(), browsing-topics=(), interest-cohort=()",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     "X-DNS-Prefetch-Control": "off",

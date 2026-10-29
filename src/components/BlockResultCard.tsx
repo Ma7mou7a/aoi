@@ -60,6 +60,7 @@ const FLAG_TEXT: Record<ValidityFlag, string> = {
   many_anticipations: "Many presses came faster than is humanly possible to react.",
   many_timeouts: "Many answers came too late.",
   focus_lost: "The window lost focus several times during the game.",
+  looked_away: "Focus Guard saw you look away from the screen during many rounds, so those rounds were left out.",
 };
 
 /** Share for the reliance rates (they use a small-sample correction, so show "about"). */

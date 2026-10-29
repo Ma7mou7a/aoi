@@ -216,6 +216,7 @@ export async function recordRun(input: {
           rtMs: t.rtMs == null ? null : Math.round(t.rtMs),
           behaviour: t.behaviour ? (cipher.json(t.behaviour, FIELDS.behaviour) as unknown as typeof t.behaviour) : null,
           shownAt: t.shownAt ? new Date(t.shownAt) : now,
+          lookedAway: t.lookedAway ?? false,
         })),
       );
     }

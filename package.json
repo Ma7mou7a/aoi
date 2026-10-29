@@ -22,11 +22,14 @@
     "audit:verify": "tsx --conditions=react-server scripts/keys.ts verify",
     "validate": "tsx scripts/validate.ts",
     "cards": "tsx scripts/cards.ts",
-    "new-dimension": "tsx scripts/new-dimension.ts"
+    "new-dimension": "tsx scripts/new-dimension.ts",
+    "predev": "node scripts/copy-mediapipe.mjs",
+    "prebuild": "node scripts/copy-mediapipe.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
     "@electric-sql/pglite": "^0.3.0",
+    "@mediapipe/tasks-vision": "1.1.1",
     "canvas-confetti": "1.9.4",
     "drizzle-orm": "^0.44.0",
     "motion": "14.2.0",

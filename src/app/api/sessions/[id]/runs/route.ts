@@ -19,6 +19,7 @@ const trial = z.object({
     .object({ hesitationMs: z.number().optional(), focusLost: z.boolean().optional(), changedAnswer: z.boolean().optional(), pointerDistancePx: z.number().optional() })
     .optional(),
   shownAt: z.string().datetime().optional(),
+  lookedAway: z.boolean().optional(),
 });
 
 const body = z.object({
@@ -46,15 +47,19 @@ export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: str
   // A block carries all its trials (up to 500), so it gets a larger, still bounded, body limit.
   const b = await readJson(req, body, { maxBytes: 512 * 1024 });
 
-  // Strip behaviour signals unless the user opted in to them.
-  const [latest] = await db
-    .select({ granted: schema.consents.granted })
-    .from(schema.consents)
-    .where(and(eq(schema.consents.userId, user.id), eq(schema.consents.kind, "behavioural_signals")))
-    .orderBy(desc(schema.consents.createdAt))
-    .limit(1);
-  const behaviourOk = latest?.granted ?? false;
-  const trials = b.trials.map((t) => ({ ...t, behaviour: behaviourOk ? t.behaviour : undefined }));
+  // Strip behaviour signals unless the user opted in to them, and Focus Guard flags without camera consent.
+  const consented = async (kind: "behavioural_signals" | "camera") => {
+    const [latest] = await db
+      .select({ granted: schema.consents.granted })
+      .from(schema.consents)
+      .where(and(eq(schema.consents.userId, user.id), eq(schema.consents.kind, kind)))
+      .orderBy(desc(schema.consents.createdAt))
+      .limit(1);
+    return latest?.granted ?? false;
+  };
+  const behaviourOk = await consented("behavioural_signals");
+  const cameraOk = await consented("camera");
+  const trials = b.trials.map((t) => ({ ...t, behaviour: behaviourOk ? t.behaviour : undefined, lookedAway: cameraOk ? t.lookedAway : undefined }));
 
   const result = await recordRun({ ...b, trials, userId: user.id, sessionId: session.id, startedAt: new Date(b.startedAt), behaviourOk, sessionStartedAt: session.startedAt });
   const next = await nextBlock(user.id, session.id, session.mode);

@@ -90,7 +90,7 @@ export const sessions = pgTable("sessions", {
 export type BlockValidity = {
   valid: boolean;
   validTrials: number;
-  flags: Array<"too_few_trials" | "near_chance" | "response_streak" | "many_anticipations" | "many_timeouts" | "focus_lost">;
+  flags: Array<"too_few_trials" | "near_chance" | "response_streak" | "many_anticipations" | "many_timeouts" | "focus_lost" | "looked_away">;
 };
 
 /** One block of one task at one difficulty level; produces one observation for the profiler. */
@@ -140,6 +140,8 @@ export const trials = pgTable("trials", {
   /** Behaviour signals (only stored with behavioural_signals consent). */
   behaviour: jsonb("behaviour").$type<{ hesitationMs?: number; focusLost?: boolean; changedAnswer?: boolean; pointerDistancePx?: number }>(),
   shownAt: timestamp("shown_at", { withTimezone: true }).notNull(),
+  /** Focus Guard: the camera saw the player look away during this trial (only with camera consent). */
+  lookedAway: boolean("looked_away").notNull().default(false),
 }, (t) => [
   uniqueIndex("trials_run_index_uq").on(t.taskRunId, t.trialIndex),
   index("trials_user_idx").on(t.userId),

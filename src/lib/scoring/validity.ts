@@ -1,4 +1,5 @@
 import type { DimensionTask } from "../dimensions/schema";
+import { AWAY_FLAG_SHARE } from "../focus/gaze";
 import type { Metrics, TrialRecord, Validity, ValidityFlag } from "./types";
 
 /** Longest run of identical responses (no response counts as its own value). */
@@ -24,7 +25,9 @@ export function assessValidity(trials: TrialRecord[], metrics: Metrics, rules: D
   const n = scored.length || 1;
   const anticipations = scored.filter((t) => t.outcome === "anticipation" || (t.rtMs != null && t.rtMs < rules.min_rt_ms));
   const timeouts = scored.filter((t) => t.outcome === "timeout" || (t.rtMs != null && t.rtMs > rules.max_rt_ms));
-  const validTrials = scored.length - anticipations.length - timeouts.length;
+  // Focus Guard: trials where the camera saw the player look away are excluded like anticipations.
+  const away = scored.filter((t) => t.lookedAway && !anticipations.includes(t) && !timeouts.includes(t));
+  const validTrials = scored.length - anticipations.length - timeouts.length - away.length;
 
   const flags: ValidityFlag[] = [];
   if (validTrials < rules.min_valid_trials) flags.push("too_few_trials");
@@ -38,6 +41,7 @@ export function assessValidity(trials: TrialRecord[], metrics: Metrics, rules: D
   if (anticipations.length / n > 0.2) flags.push("many_anticipations");
   if (timeouts.length / n > 0.3) flags.push("many_timeouts");
   if (scored.filter((t) => t.behaviour?.focusLost).length > 2) flags.push("focus_lost");
+  if (scored.filter((t) => t.lookedAway).length / n > AWAY_FLAG_SHARE) flags.push("looked_away");
 
   return { valid: flags.length === 0, validTrials: Math.max(validTrials, 0), flags };
 }

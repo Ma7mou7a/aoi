@@ -47,3 +47,6 @@ next-env.d.ts
 
 # Slides artifact source (lives in the Slides artifact)
 /deck/
+
+# Focus Guard runtime, copied from node_modules by scripts/copy-mediapipe.mjs
+public/mediapipe/wasm/

@@ -10,6 +10,8 @@ export type TrialRecord = {
   correct: boolean | null;
   rtMs: number | null;
   behaviour?: { hesitationMs?: number; focusLost?: boolean; changedAnswer?: boolean; pointerDistancePx?: number };
+  /** Focus Guard (camera consent): the player looked away during this trial. Excluded from scoring. */
+  lookedAway?: boolean;
   shownAt?: string;
 };
 
@@ -21,7 +23,8 @@ export type ValidityFlag =
   | "response_streak"
   | "many_anticipations"
   | "many_timeouts"
-  | "focus_lost";
+  | "focus_lost"
+  | "looked_away";
 
 export type Validity = { valid: boolean; validTrials: number; flags: ValidityFlag[] };
 

@@ -34,13 +34,14 @@ describe("CSRF: same-origin check for state-changing requests", () => {
 describe("security headers", () => {
   it("builds a nonce-based CSP that forbids framing, plugins and foreign scripts", () => {
     const csp = buildCsp("abc123", { dev: false, https: true });
-    expect(csp).toContain("script-src 'self' 'nonce-abc123' 'strict-dynamic'");
+    expect(csp).toContain("script-src 'self' 'nonce-abc123' 'strict-dynamic' 'wasm-unsafe-eval'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("upgrade-insecure-requests");
-    expect(csp).not.toContain("unsafe-eval");
+    // JS eval stays forbidden; 'wasm-unsafe-eval' only lets WebAssembly compile (Focus Guard).
+    expect(csp).not.toContain(" 'unsafe-eval'");
   });
 
   it("allows what Next's dev server needs only in development", () => {
@@ -55,7 +56,7 @@ describe("security headers", () => {
     expect(h["X-Content-Type-Options"]).toBe("nosniff");
     expect(h["X-Frame-Options"]).toBe("DENY");
     expect(h["Referrer-Policy"]).toBe("same-origin");
-    expect(h["Permissions-Policy"]).toContain("camera=()");
+    expect(h["Permissions-Policy"]).toContain("camera=(self)");
     expect(h["Permissions-Policy"]).toContain("geolocation=()");
     expect(h["Permissions-Policy"]).toContain("microphone=(self)");
     expect(h["Cross-Origin-Opener-Policy"]).toBe("same-origin");

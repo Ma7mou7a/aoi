@@ -17,6 +17,16 @@ import { NBackTask, type TaskFinish } from "./tasks/NBackTask";
 
 type Finished = Parameters<TaskFinish>[0];
 import { StroopTask } from "./tasks/StroopTask";
+import { markLookedAway } from "@/lib/focus/gaze";
+import { useFocusGuard, type FocusStatus } from "@/lib/focus/useFocusGuard";
+
+const FOCUS_TEXT: Record<Exclude<FocusStatus, "off">, string> = {
+  starting: "Starting Focus Guard…",
+  on: "Focus Guard on · on this device only",
+  away: "Focus Guard: looking away",
+  denied: "Camera blocked, so Focus Guard is off for this session",
+  unavailable: "Focus Guard can’t run on this device, so it’s off",
+};
 
 type State =
   | { kind: "loading" }
@@ -39,8 +49,11 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function PlaySession({ mode, focus, daily = false }: { mode: "assessment" | "training"; focus?: string; daily?: boolean }) {
+export function PlaySession({ mode, focus, daily = false, focusGuard = false }: { mode: "assessment" | "training"; focus?: string; daily?: boolean; focusGuard?: boolean }) {
   const [state, setState] = useState<State>({ kind: "loading" });
+  // Focus Guard (camera consent) watches scored games only; practice needs no protection.
+  const guard = useFocusGuard(focusGuard && mode === "assessment");
+  const takeIntervals = guard.takeIntervals;
   const sessionId = useRef<string | null>(null);
   const started = useRef(false);
 
@@ -55,8 +68,10 @@ export function PlaySession({ mode, focus, daily = false }: { mode: "assessment"
       .catch((e) => setState({ kind: "error", message: e.message }));
   }, [mode, focus, daily]);
 
-  const submit = useCallback((spec: BlockSpec, { trials, status, startedAt }: Finished, selfEstimate: number | null) => {
+  const submit = useCallback((spec: BlockSpec, { trials: raw, status, startedAt }: Finished, selfEstimate: number | null) => {
     setState({ kind: "loading" });
+    // Only one yes-or-no per trial leaves the device: did it overlap a moment of looking away?
+    const trials = markLookedAway(raw, takeIntervals());
     post<{ result: RunResult; next: BlockSpec | null }>(`/api/sessions/${sessionId.current}/runs`, {
       dimensionId: spec.dimension.id,
       taskId: spec.task.id,
@@ -70,7 +85,7 @@ export function PlaySession({ mode, focus, daily = false }: { mode: "assessment"
     })
       .then(({ result, next }) => setState(status === "abandoned" ? (next ? { kind: "block", spec: next } : { kind: "done" }) : { kind: "result", spec, result, next }))
       .catch((e) => setState({ kind: "error", message: e.message }));
-  }, []);
+  }, [takeIntervals]);
 
   // A finished block first asks "How sure are you?" (the guess must come before the score is shown).
   const onFinish = useCallback<TaskFinish>(
@@ -85,12 +100,20 @@ export function PlaySession({ mode, focus, daily = false }: { mode: "assessment"
   // Bao: a game starting or ending is an event; during the game he reacts only in training mode.
   const phase = state.kind === "block" ? `block:${state.spec.seed}` : state.kind;
   useEffect(() => {
+    if (phase.startsWith("block:")) takeIntervals(); // only count looking away during the game itself
+  }, [phase, takeIntervals]);
+  useEffect(() => {
     if (phase.startsWith("block:")) pandaBus.emit({ type: "block:start" });
     else if (phase === "guess" || phase === "result") pandaBus.emit({ type: "block:end" });
   }, [phase]);
 
   return (
     <>
+      {guard.status !== "off" && (
+        <p role="status" className={`mx-auto mb-3 w-fit rounded-full border px-3 py-1 text-xs ${guard.status === "away" ? "border-accent text-accent" : "border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400"}`}>
+          {FOCUS_TEXT[guard.status]}
+        </p>
+      )}
       {renderState()}
       <PandaCorner mode={mode === "assessment" ? "quiet" : "lively"} />
     </>

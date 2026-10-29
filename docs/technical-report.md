@@ -158,7 +158,7 @@ The game score is their mean, so "always follow the AI" and "always keep my answ
 ## 8. Bonus features
 
 - **Predictive growth:** forecasts with bands, a self-grading track record, and "what if I play N games a week" forecasts in the coach.
-- **Emotion-aware (from behaviour only):** fatigue and frustration are inferred with documented rules from timing, errors and abandoned games. They are shown with their cues as a dismissible guess, and used only to suggest a break or ease the next training game. No camera or microphone input is ever used.
+- **Emotion-aware (from behaviour only):** fatigue and frustration are inferred with documented rules from timing, errors and abandoned games. They are shown with their cues as a dismissible guess, and used only to suggest a break or ease the next training game. No camera or microphone input is used for these.
 - **Voice coaching:** Bao's replies can be read aloud, and questions can be dictated (with consent; the user reviews the transcript before sending). No audio is stored.
 
 ## 9. Validation with simulated users
@@ -218,7 +218,7 @@ The point forecast is no better than "no change" at one week. What the forecast 
   - badges never depend on score level
   - streaks have a freeze, and there are no notifications or loss framing
   - Bao is silent during measurement
-- **No decision from face or voice.** There is no camera; voice is only an input method for questions.
+- **No decision from face or voice.** The optional Focus Guard uses the camera on the device only to leave out trials where the player looked away (one yes-or-no per trial is sent, never an image); voice is only an input method for questions.
 - **Robustness.**
   - cold start from an explicit prior
   - invalid, abandoned and too-fast games are flagged and down-weighted

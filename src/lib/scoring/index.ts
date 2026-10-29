@@ -39,7 +39,9 @@ export function levelOf(task: DimensionTask, level: number) {
  * with noise obs_sd · √(reference_trials / valid_trials), widened for invalid or censored blocks.
  */
 export function scoreBlock(dim: Dimension, task: DimensionTask, level: number, trials: TrialRecord[]): BlockScore {
-  const metrics = computeMetrics(task.paradigm, trials, task.validity.min_rt_ms);
+  // Trials the player looked away from (Focus Guard) don't measure the skill: metrics skip them,
+  // and validity still sees them so a mostly-distracted game is flagged.
+  const metrics = computeMetrics(task.paradigm, trials.filter((t) => !t.lookedAway), task.validity.min_rt_ms);
   const validity = assessValidity(trials, metrics, task.validity);
   const { composite, components } = compositeScore(metrics, task);
 

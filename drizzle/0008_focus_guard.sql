@@ -1,0 +1,1 @@
+ALTER TABLE "trials" ADD COLUMN "looked_away" boolean DEFAULT false NOT NULL;

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PlaySession } from "@/components/PlaySession";
+import { getConsentState } from "@/lib/server/privacy";
 import { getCurrentUser } from "@/lib/server/user";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlayPage({ searchParams }: { searchParams: Promise<{ mode?: string; focus?: string }> }) {
-  if (!(await getCurrentUser())) redirect("/");
+  const user = await getCurrentUser();
+  if (!user) redirect("/");
+  const focusGuard = (await getConsentState(user.id)).current.camera;
   const { mode: m, focus } = await searchParams;
   const mode = m === "training" ? "training" : "assessment";
   const href = (m: "assessment" | "training") => `/play${m === "training" ? "?mode=training" : ""}${focus ? `${m === "training" ? "&" : "?"}focus=${focus}` : ""}`;
@@ -24,7 +27,7 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
       <p className="text-center text-xs text-slate-500">
         {mode === "assessment" ? "Bao picks the game that tells him most about you, and your scores update." : "Practise at the level where you grow fastest. Bao cheers you on as you play."}
       </p>
-      <PlaySession key={`${mode}:${focus ?? ""}`} mode={mode} focus={focus} />
+      <PlaySession key={`${mode}:${focus ?? ""}`} mode={mode} focus={focus} focusGuard={focusGuard} />
     </div>
   );
 }
