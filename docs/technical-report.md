@@ -230,7 +230,7 @@ Full details are in `docs/ethics.md`.
 
 Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API.
 
-**537 unit tests** cover:
+**544 unit tests** cover:
 - scoring, profiler calibration and the selector
 - task generators
 - coach safety, intents and actions

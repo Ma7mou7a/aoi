@@ -72,7 +72,7 @@ Every component is an explicit formula over configuration, so every number can b
 \vspace{0.4cm}
 \begin{center}
 \begin{tabular}{@{}cccc@{}}
-{\Huge\bfseries\color{brand}89--95\%} & {\Huge\bfseries\color{brand}10\%} & {\Huge\bfseries\color{brand}98\%} & {\Huge\bfseries\color{brand}537}\\[2pt]
+{\Huge\bfseries\color{brand}89--95\%} & {\Huge\bfseries\color{brand}10\%} & {\Huge\bfseries\color{brand}98\%} & {\Huge\bfseries\color{brand}544}\\[2pt]
 \small 90\% bands hold & \small lower error with & \small of invalid play & \small automated tests,\\
 \small the true ability & \small adaptive selection & \small flagged, $\approx$1\% false & \small all passing
 \end{tabular}
@@ -330,17 +330,18 @@ Both games feed the critical-verification component of the collaboration score, 
 \label{sec:focus}
 
 \begin{notebox}[title={Status}]
-Specified and scheduled; not yet part of the build validated in Section~\ref{sec:validation}. Everything below is the agreed design.
+Built and tested end to end in a browser with a simulated camera; its thresholds are still to be tuned on real faces. It is not part of the simulated validation in Section~\ref{sec:validation}, and it needs none for the estimates (see Scoring).
 \end{notebox}
 
 A notification glanced at mid-game silently drags a score down today. Focus Guard asks the camera exactly one question per trial: \emph{were the player's eyes on the screen?}
 
-\subsubsection{On-device pipeline} MediaPipe face landmarks~\cite{mediapipe} run in the browser in WebAssembly, served from the application itself so the strict content-security policy holds. From the landmarks we estimate head yaw and pitch and the iris position within each eye, and call a frame \emph{looking away} when either leaves a tolerance cone. A trial is \emph{away} if more than a fraction $\rho$ of its frames are. Only this boolean per trial is kept: no frame, landmark or image is stored or sent.
+\subsubsection{On-device pipeline} MediaPipe face landmarks~\cite{mediapipe} run in the browser in WebAssembly, served from the application itself so the strict content-security policy holds. Ten times a second, head yaw and pitch are read from the model's facial transformation matrix and eye direction from its eye-look blendshapes. A frame is \emph{looking away} when no face is found, $|\text{yaw}|>28^\circ$, $|\text{pitch}|>22^\circ$, or an eye-look score exceeds 0.65 (looking down to the keyboard counts at half weight). Spells shorter than 400\,ms are ignored, so blinks and quick glances do not count. A trial is \emph{away} if its live window, from stimulus onset to response, overlaps a spell. Only this boolean per trial leaves the device: no frame, landmark or image is stored or sent.
 
 \subsubsection{Scoring} Away trials are excluded like anticipations, and their share becomes one more data-quality rule:
 \begin{equation}
-n_{\text{valid}}=\#\{\text{trials valid}\ \wedge\ \neg\text{away}\},\qquad \text{flag if}\ \frac{\#\text{away}}{n}>\alpha .
+n_{\text{valid}}=\#\{\text{trials valid}\ \wedge\ \neg\text{away}\},\qquad \text{flag if}\ \frac{\#\text{away}}{n}>\alpha=0.25 .
 \end{equation}
+Metrics are computed without the away trials, and the API keeps the flag only when the camera consent is on.
 Because it only removes bad trials, the scoring model and its calibration are unchanged, and no new validation is needed for the estimates; thresholds are tuned on a short real-camera check.
 
 \subsubsection{Privacy and ethics} Off by default, behind its own consent like the microphone, and the app works identically without it. We deliberately do \emph{not} infer emotion, fatigue or identity from the face: a major review found facial movements do not reliably reveal emotional states~\cite{barrett}, and such inference would contradict the app's non-clinical stance.
@@ -454,7 +455,7 @@ Early user testing gave a blunt verdict, ``good as a concept, zero as user exper
 \section{Engineering and reproducibility}
 
 \begin{itemize}
-\item \textbf{537 automated tests} cover scoring, calibration, the selector, task generators, coach safety and routing, number and forecast checks, the collaboration score, the AI Lab, rewards, encryption, sessions, passkeys, rate limits and the security log; database tests run against a fresh in-memory PGlite.
+\item \textbf{544 automated tests} cover scoring, calibration, the selector, task generators, coach safety and routing, number and forecast checks, the collaboration score, the AI Lab, rewards, encryption, sessions, passkeys, rate limits and the security log; database tests run against a fresh in-memory PGlite.
 \item \textbf{Continuous integration} runs a configuration check, typecheck, lint, the tests, a 100-user validation smoke test and a production build.
 \item \textbf{Replayable}: every trial stores its RNG seed. \textbf{Extensible}: a new skill reusing any of the seven task types is one YAML file, scaffolded by \code{npm run new-dimension}, with no code change.
 \item \textbf{Reproducible numbers}: every result in Section~\ref{sec:validation} is regenerated by \code{npm run validate}; the figures in this report by \code{python docs/report/figures.py}.
@@ -470,7 +471,7 @@ Early user testing gave a blunt verdict, ``good as a concept, zero as user exper
 \item \textbf{Live-AI content} in the AI Lab is checked by construction for the truth, but an invented ``fake'' could occasionally be accidentally true; a review queue for reported rounds is planned.
 \item \textbf{Language and device.} Stroop needs fluent reading of English colour words, and response times depend on the device; users are compared only with themselves.
 \ifcamera
-\item \textbf{Focus Guard} is specified but not yet built; thresholds need a real-camera check, laptops first, phones second.
+\item \textbf{Focus Guard} is built and tested with a simulated camera; its thresholds still need a check on real faces and lighting, laptops first, phones second.
 \fi
 \end{itemize}
 
