@@ -6,7 +6,7 @@
 \usepackage{microtype}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
-\usepackage{booktabs,tabularx,multirow}
+\usepackage{booktabs,tabularx,multirow,array}
 \usepackage[table]{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
@@ -23,12 +23,17 @@
 \definecolor{muted}{HTML}{5B6B7B}
 \definecolor{soft}{HTML}{EEF3F8}
 \definecolor{rule}{HTML}{C9D6E3}
+\definecolor{gen}{HTML}{1F6FB2}    % generative AI
+\definecolor{per}{HTML}{E07B28}    % perception AI
+\definecolor{prob}{HTML}{2E8B6E}   % probabilistic AI
+\definecolor{guard}{HTML}{6B5BA8}  % guardrails
 
 \color{ink}
 \setlength{\parskip}{0.45em}
 \setlength{\parindent}{0pt}
 \setlist{itemsep=0.15em,topsep=0.3em,leftmargin=1.3em}
 \captionsetup{font=small,labelfont={bf,color=brand},labelsep=period}
+\renewcommand{\arraystretch}{1.18}
 
 \titleformat{\section}{\Large\bfseries\color{brand}}{\thesection}{0.7em}{}
 \titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
@@ -50,37 +55,45 @@
 \newcommand{\shot}[2]{\includegraphics[width=#1]{shots/#2.png}}
 \newcommand{\fig}[2]{\includegraphics[width=#1]{figures/#2.pdf}}
 \newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\aitag}[2]{{\color{#1}\textbf{#2}}}
+
+\tikzset{
+  ai/.style={draw=#1,line width=0.7pt,fill=#1!7,rounded corners=2pt,align=center,inner sep=4pt,minimum height=1.05cm,font=\small},
+  plain/.style={draw=muted,line width=0.6pt,fill=white,rounded corners=2pt,align=center,inner sep=4pt,minimum height=0.95cm,font=\small},
+  flow/.style={-{Stealth[length=2mm]},color=muted,line width=0.6pt},
+  lbl/.style={font=\scriptsize,color=muted,align=center},
+  tagl/.style={font=\scriptsize,color=muted,fill=white,inner sep=1.5pt},
+  aibox/.style={ai=#1,text width=2.95cm,minimum width=3.2cm},
+}
 
 \begin{document}
 
 % ---------------------------------------------------------------- title
 \begin{titlepage}
-\vspace*{1.2cm}
+\vspace*{0.2cm}
 {\color{brand}\large\bfseries CISTAC 1.0 \textperiodcentered{} AI4Brain challenge \textperiodcentered{} Technical report}\par
 \vspace{0.9cm}
 {\fontsize{34}{38}\selectfont\bfseries AI4Brain\par}
 \vspace{0.35cm}
-{\LARGE An uncertainty-aware, evidence-linked\\[2pt] cognitive growth agent\par}
+{\LARGE An AI cognitive coach that\\[2pt] can't invent a number\par}
 \vspace{0.6cm}
 {\large\color{muted} Anonymous submission\par}
 \vspace{1cm}
 \begin{keybox}
-\textbf{In one paragraph.} AI4Brain measures seven skills with classic cognitive-science tasks, keeps a Bayesian ``Brain Twin'' in which every score carries a 90\% band showing how sure we are, coaches through Bao, a panda whose every sentence is checked against the user's own games, and trains people to work with AI in two games played against a live language model.
-\ifcamera An optional, on-device \emph{Focus Guard} uses the camera only to drop trials where the player looked away, so scores stay accurate; no image ever leaves the device.\ \fi
-Every component is an explicit formula over configuration, so every number can be explained, and the whole pipeline was validated on 500 simulated users with known abilities.
+\textbf{In one paragraph.} AI4Brain combines \ifcamera four \else three \fi families of AI, each used only where it is the right tool. \textbf{Generative AI} (large language models) understands questions, writes the coach's explanations and powers two games that train people to judge persuasive and fabricating AI. \textbf{Probabilistic AI} (Bayesian inference and active learning) estimates seven cognitive skills with honest uncertainty and picks the most informative next game. \ifcamera\textbf{Perception AI} (an on-device face model) keeps scores clean by noticing when the player looks away. \fi\textbf{Guardrails} (deterministic verification and safety filters) sit between the models and the user, so a language model can never put a number, a diagnosis or an invented skill on screen.
 \end{keybox}
 \vspace{0.4cm}
 \begin{center}
 \begin{tabular}{@{}cccc@{}}
-{\Huge\bfseries\color{brand}89--95\%} & {\Huge\bfseries\color{brand}10\%} & {\Huge\bfseries\color{brand}98\%} & {\Huge\bfseries\color{brand}544}\\[2pt]
-\small 90\% bands hold & \small lower error with & \small of invalid play & \small automated tests,\\
-\small the true ability & \small adaptive selection & \small flagged, $\approx$1\% false & \small all passing
+{\Huge\bfseries\color{brand}\ifcamera 8\else 7\fi} & {\Huge\bfseries\color{brand}2} & {\Huge\bfseries\color{brand}89--95\%} & {\Huge\bfseries\color{brand}544}\\[2pt]
+\small AI components, & \small model calls at most & \small of 90\% bands hold & \small automated tests,\\
+\small each with a fallback & \small per coach answer & \small the true ability & \small all passing
 \end{tabular}
 \end{center}
 \vfill
-\begin{center}\includegraphics[height=6.6cm]{shots/dashboard.png}\end{center}
+\begin{center}\includegraphics[height=6.6cm]{shots/coach.png}\end{center}
 \vspace{0.2cm}
-{\small\color{muted} The Brain Twin dashboard of the running application (demo profile).}
+{\small\color{muted} Bao, the AI coach, answering ``What if I play memory every day?'' in the running application.}
 \end{titlepage}
 
 \setcounter{tocdepth}{2}
@@ -88,66 +101,295 @@ Every component is an explicit formula over configuration, so every number can b
 \newpage
 
 % ---------------------------------------------------------------- 1
-\section{Introduction}
+\section{Introduction: where AI belongs}
 
-Most ``brain training'' products make two promises they cannot keep: that a score is precise, and that practice makes a brain better. AI4Brain makes neither. It treats each skill as an \emph{estimate with an honest band}, speaks only of practice gains on these tasks, and lets the user check every claim it makes.
+A cognitive coach has two very different jobs. It must \emph{measure}: turn a minute of play into a skill estimate that is accurate and honest about its uncertainty. And it must \emph{talk}: understand what a person asks, explain results in plain words and keep them motivated. Today's language models are excellent at the second job and unreliable at the first: they write fluently, but they miscount, drift between runs and cannot attach a calibrated probability to an estimate.
 
-The design follows four principles, each of which shapes a section of this report:
-\begin{enumerate}
-\item \textbf{Transparent statistics.} Scoring, profiling, selection and forecasting are explicit formulas over a YAML configuration (Sections~\ref{sec:measure}--\ref{sec:adaptive}). Language models only write language, and code re-checks every number they write (Section~\ref{sec:coach}).
-\item \textbf{Measured, not claimed.} The full pipeline is validated on simulated users with known abilities (Section~\ref{sec:validation}).
-\item \textbf{AI literacy as a skill.} Relying on AI well is measured and trained, including against a live model that sometimes argues for the wrong answer (Section~\ref{sec:collab}).
-\item \textbf{Private by construction.} No email, no password, personal fields encrypted per user, and a tamper-evident security log (Section~\ref{sec:security}).
-\end{enumerate}
+AI4Brain is built on that observation. \textbf{Each kind of AI does the job it is good at, and code checks the seams between them}:
+\begin{itemize}
+\item \aitag{gen}{Generative AI} reads and writes language: it understands the user's message, drafts the coach's answer, and argues or fabricates on purpose in two training games.
+\item \aitag{prob}{Probabilistic AI} does the measuring: a Bayesian model of each skill and an active-learning selector that chooses the most informative next game.
+\ifcamera\item \aitag{per}{Perception AI} runs on the device: a face-landmark model that only answers ``were the player's eyes on the screen?''.\fi
+\item \aitag{guard}{Guardrails} are deterministic: schema validation, an evidence-and-number verifier, a clinical-language filter and rule-based fallbacks for every model.
+\end{itemize}
+Sections~\ref{sec:map}--\ref{sec:dataflow} describe each AI component, how it works and why we chose it. Section~\ref{sec:engine} summarises the measurement engine, Section~\ref{sec:validation} the evidence that it works, and Appendix~\ref{app:formulas} collects the formulas.
 
 % ---------------------------------------------------------------- 2
-\section{System overview}
+\section{The AI map}
+\label{sec:map}
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[
-  font=\small,
-  box/.style={draw=brand,fill=white,rounded corners=2pt,minimum height=0.85cm,align=center,inner sep=4pt,line width=0.6pt},
-  ext/.style={draw=muted,dashed,fill=white,rounded corners=2pt,minimum height=0.85cm,align=center,inner sep=4pt},
-  flow/.style={-{Stealth[length=2mm]},color=muted,line width=0.6pt},
-  node distance=0.45cm and 0.5cm]
-% Explicit coordinates (cm) so no two boxes can touch.
-\node[box,fill=soft,minimum width=9cm] (ui) at (7.6,0) {Browser\\\scriptsize tasks \textperiodcentered{} dashboard \textperiodcentered{} coach \textperiodcentered{} AI Lab\ifcamera\ \textperiodcentered{} Focus Guard\fi};
-\node[box,minimum width=2.6cm] (score) at (1.6,-2.4) {Scoring \&\\data quality};
-\node[box,minimum width=2.6cm] (prof) at (5.0,-2.4) {Bayesian\\profiler};
-\node[box,minimum width=2.6cm] (sel) at (8.4,-2.4) {Selector \&\\planner};
-\node[box,minimum width=3.6cm] (coach) at (12.6,-2.4) {Coach\\\scriptsize understand $\rightarrow$ compute\\\scriptsize $\rightarrow$ write $\rightarrow$ check};
-\node[box,minimum width=2.6cm] (cfg) at (1.6,-4.4) {YAML config\\\scriptsize skills \textperiodcentered{} levels};
-\node[box,minimum width=3.4cm] (sec) at (5.4,-4.4) {Security layer\\\scriptsize sessions \textperiodcentered{} passkeys \textperiodcentered{} vault};
-\node[box,minimum width=2.6cm] (lab) at (9.4,-4.4) {AI Lab\\\scriptsize two live-AI games};
-\node[box,fill=soft,minimum width=7.6cm] (db) at (4.6,-6.9) {PostgreSQL / PGlite\\\scriptsize personal fields AES-256-GCM, per-user keys \textperiodcentered{} hash-chained log};
-\node[ext,minimum width=3.2cm] (llm) at (12.6,-6.9) {LLM provider\\\scriptsize Claude or Groq};
-\begin{scope}[on background layer]
-\node[draw=rule,fill=soft!35,rounded corners=4pt,fit=(score)(coach)(cfg)(sec)(lab),inner sep=9pt,label={[font=\scriptsize\color{muted},anchor=south west]north west:Next.js server (TypeScript)}] {};
-\end{scope}
-\draw[flow] (ui.south) -- node[right,font=\scriptsize]{trials, questions} (ui.south |- 0,-1.35);
-\draw[flow] (score) -- (prof);
-\draw[flow] (prof) -- (sel);
-\draw[flow] (sel) -- (coach);
-\draw[flow] (cfg) -- (score);
-\draw[flow] (coach.south) -- (llm.north);
-\draw[flow] (lab.south) |- (12.6,-5.6);
-\draw[flow] (sec.south) -- (sec.south |- db.north);
+\begin{tikzpicture}[x=1cm,y=1cm]
+% band labels
+\node[lbl,anchor=east,text width=2.5cm,align=right,color=gen] at (1.75,0) {\textbf{Generative AI}\\LLMs, server};
+\node[lbl,anchor=east,text width=2.5cm,align=right,color=prob] at (1.75,-1.75) {\textbf{Probabilistic AI}\\engine, server};
+\node[lbl,anchor=east,text width=2.5cm,align=right,color=per] at (1.75,-3.5) {\textbf{Perception AI}\\on the device};
+\node[lbl,anchor=east,text width=2.5cm,align=right,color=guard] at (1.75,-5.25) {\textbf{Guardrails}\\deterministic code};
+% generative
+\node[aibox=gen] at (3.55,0) {Intent router\\\scriptsize what to compute};
+\node[aibox=gen] at (7.0,0) {Coach writer\\\scriptsize cited explanations};
+\node[aibox=gen] at (10.45,0) {Persuader\\\scriptsize argues true or false};
+\node[aibox=gen] at (13.9,0) {Fabricator\\\scriptsize invents one fake fact};
+% probabilistic
+\node[aibox=prob] at (3.55,-1.75) {Brain Twin\\\scriptsize Bayesian skill model};
+\node[aibox=prob] at (7.0,-1.75) {Game selector\\\scriptsize active learning};
+\node[aibox=prob] at (10.45,-1.75) {Forecaster\\\scriptsize trend with a band};
+\node[aibox=prob] at (13.9,-1.75) {Simulated advisor\\\scriptsize Second opinion game};
+% perception
+\ifcamera
+\node[aibox=per] at (3.55,-3.5) {Focus Guard\\\scriptsize face landmarks};
+\node[aibox=per] at (7.0,-3.5) {Speech to text\\\scriptsize browser, optional};
+\node[aibox=per] at (10.45,-3.5) {Text to speech\\\scriptsize browser, optional};
+\else
+\node[aibox=per] at (3.55,-3.5) {Speech to text\\\scriptsize browser, optional};
+\node[aibox=per] at (7.0,-3.5) {Text to speech\\\scriptsize browser, optional};
+\fi
+% guardrails
+\node[aibox=guard] at (3.55,-5.25) {Schema validation\\\scriptsize JSON schema, menus};
+\node[aibox=guard] at (7.0,-5.25) {Evidence verifier\\\scriptsize claims and numbers};
+\node[aibox=guard] at (10.45,-5.25) {Clinical filter\\\scriptsize and norm filter};
+\node[aibox=guard] at (13.9,-5.25) {Rule fallbacks\\\scriptsize for every model};
 \end{tikzpicture}
-\caption{Architecture. Every number is computed by the engine (row of boxes); the LLM only reads a menu or writes text, and both are checked in code.}
-\label{fig:arch}
+\caption{Every AI component in AI4Brain, grouped by kind. Language models never compute a number, a score or a diagnosis: those come from the probabilistic engine, and the guardrails enforce it.}
+\label{fig:map}
 \end{figure}
 
-A \emph{game} (internally a \emph{block}) is one run of one task at one difficulty level, typically 30--90 seconds. Each trial stores the stimulus, the response, its correctness, its response time measured from the frame that painted the stimulus, and behavioural signals (focus loss, answer changes). Games are scored, flagged if unreliable, and turned into one observation for the profiler. The selector then picks the most informative next game, and the coach explains what happened.
+\begin{table}[h]
+\centering\small
+\caption{The AI components. ``Sees'' is everything the component receives.}
+\label{tab:components}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{2.35cm} >{\raggedright}p{3.1cm} >{\raggedright}X >{\raggedright}p{2.5cm} >{\raggedright\arraybackslash}p{2.6cm}@{}}
+\toprule
+Component & Model / technique & Sees $\rightarrow$ produces & Runs & Fallback\\
+\midrule
+Intent router & Claude or \code{gpt-oss-120b} (Groq), strict JSON & the user's message $\rightarrow$ one menu item, a skill, a pace & server, 6\,s budget & keyword rules\\
+Coach writer & same providers, strict JSON & evidence pack without identifiers $\rightarrow$ reply, 0--3 cited claims, buttons & server & template coach\\
+Persuader & same providers & a trivia question and a side $\rightarrow$ 70-word argument + technique & server & pre-written argument\\
+Fabricator & same providers & a topic and 3 true facts $\rightarrow$ one plausible fake & server & pre-written fake\\
+Brain Twin & 1-D Kalman filter & game observations $\rightarrow$ mean and 90\% band & server & n/a (exact)\\
+Game selector & expected information gain & current bands $\rightarrow$ next game + reason & server & n/a\\
+Forecaster & Bayesian linear trend & skill history $\rightarrow$ range at 7 days & server & n/a\\
+\ifcamera Focus Guard & MediaPipe Face Landmarker (WASM) & camera frames $\rightarrow$ one boolean per trial & device only & guard off\\ \fi
+Speech I/O & Web Speech API & speech $\leftrightarrow$ text & browser & typing\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-The stack is Next.js~15 with TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Zod schemas at every boundary, and either Claude or an open-weight model on Groq behind one interface.
+\subsubsection{One interface, two providers} All language-model calls go through one module with two interchangeable back ends: Claude (Anthropic) when an Anthropic key is set, otherwise the open-weight \code{gpt-oss-120b} served by Groq; a single setting forces either. Both are called with \emph{strict JSON-schema structured output}, so a reply that does not match the schema is rejected before any code reads it. Calls never throw: every failure returns a reason, and the caller switches to its rule-based fallback, so the product works with no AI provider at all.
 
 % ---------------------------------------------------------------- 3
-\section{Measuring cognition}
-\label{sec:measure}
+\section{Why these AI choices}
+\label{sec:why}
 
-\subsection{Skills and tasks}
-Six widely studied skills are measured with classic paradigms that run in a browser in about a minute; a seventh, \emph{AI reliance}, is a collaboration skill (Table~\ref{tab:tasks}). Each skill has a \emph{measurement card}, generated from its configuration, that states its definition, what it is \emph{not}, its levels, scoring, uncertainty model, data-quality checks and known biases.
+Each AI decision was made against concrete alternatives. Table~\ref{tab:decisions} records them, because the rejected options are as informative as the chosen ones.
+
+\begin{table}[h]
+\centering\small
+\caption{Design decisions for the AI, and the alternatives we rejected.}
+\label{tab:decisions}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{3.3cm} >{\raggedright}p{3.6cm} >{\raggedright\arraybackslash}X@{}}
+\toprule
+We chose & Instead of & Because\\
+\midrule
+LLMs for language only & an LLM that scores games or estimates skills & LLMs miscount, vary between runs and give no calibrated uncertainty; the Bayesian engine is exact, reproducible and was validated (Section~\ref{sec:validation}).\\
+A bounded pipeline: at most 2 model calls & an open agent loop with tools & An agent makes 3--6 calls per question: 5--15\,s latency and free-tier rate limits during a live demo, and behaviour no deterministic test can cover. The bounded design answers in about 2\,s and is fully tested.\\
+An AI router over a fixed menu & keyword rules alone & Keywords miss indirect wording (Table~\ref{tab:router}); a menu keeps the model from asking for anything the engine cannot compute.\\
+Retrieval from the user's own data and 13 vetted findings & open-web retrieval or the model's memory & Every sentence must be traceable to the user's games or a reviewed paper; open retrieval cannot be verified per claim.\\
+A deterministic verifier & an LLM-as-judge & A second model can hallucinate too; string-and-number checks cannot, and run in milliseconds.\\
+Hosted frontier and open-weight models & fine-tuning a small local model & No GPU on the target laptop, no real conversations to learn from yet, and the verifier already catches model errors. Distillation is a later step (Section~\ref{sec:limits}).\\
+Truth from a vetted bank in the AI Lab & letting the model decide what is true & The score must never depend on the model being right; testing showed a model can slip a false detail into ``true'' text.\\
+Bayesian skill model & a neural network & 500 simulated users, no real data, and the need for calibrated 90\% bands: a conjugate model is the right size.\\
+\ifcamera On-device perception, one bit per trial & cloud vision, or emotion recognition & Images never leave the device; and facial expressions do not reliably reveal emotions~\cite{barrett}, so we infer none.\\ \fi
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------- 4
+\section{The AI coach}
+\label{sec:coach}
+
+Bao answers questions, debriefs games, starts the right game and looks ahead. Figure~\ref{fig:sequence} shows one question end to end.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\foreach \x/\name/\c in {0/User/ink, 2.85/Server/ink, 5.7/Router LLM/gen, 8.55/Engine/prob, 11.4/Writer LLM/gen, 14.25/Verifier/guard} {
+  \node[draw=\c,fill=\c!8,rounded corners=2pt,minimum width=2.25cm,minimum height=0.7cm,font=\small\bfseries,text=\c] at (\x,0) {\name};
+  \draw[color=\c!45,line width=0.6pt,dashed] (\x,-0.35) -- (\x,-7.4);
+}
+\draw[flow] (0,-0.95) -- node[tagl,above=1pt]{a question} (2.85,-0.95);
+\draw[flow] (2.85,-1.6) -- node[tagl,above=1pt]{message, skill names} (5.7,-1.6);
+\draw[flow] (5.7,-2.2) -- node[tagl,above=1pt]{forecast, attention, 4/week} (2.85,-2.2);
+\draw[flow] (2.85,-2.9) -- node[tagl,above=1pt]{compute} (8.55,-2.9);
+\draw[flow] (8.55,-3.5) -- node[tagl,above=1pt]{evidence pack: R1, T3, P2\,\ldots} (2.85,-3.5);
+\draw[flow] (2.85,-4.2) -- node[tagl,above=1pt]{pack, research cards, memory} (11.4,-4.2);
+\draw[flow] (11.4,-4.8) -- node[tagl,above=1pt]{reply, claims citing P2, buttons} (2.85,-4.8);
+\draw[flow] (2.85,-5.5) -- node[tagl,above=1pt]{draft} (14.25,-5.5);
+\draw[flow] (14.25,-6.1) -- node[tagl,above=1pt]{only claims that pass} (2.85,-6.1);
+\draw[flow] (2.85,-6.85) -- node[tagl,above=1pt]{answer, Why?, play} (0,-6.85);
+\node[lbl,anchor=west] at (5.85,-2.45) {0.5\,s};
+\node[lbl,anchor=west] at (11.55,-4.5) {1--2\,s};
+\end{tikzpicture}
+\caption{One coach answer. Two model calls (blue) are fenced by the engine, which computes every number (green), and the verifier, which checks everything the writer says (purple).}
+\label{fig:sequence}
+\end{figure}
+
+\subsection{Step 1: the intent router}
+With the user's consent, one structured call reads the message and chooses \emph{what to compute} from a fixed menu: debrief, progress, forecast (at 2, 4 or 7 games a week), goal, explain, play, help or chat, plus the skill concerned. The JSON schema allows nothing else; an off-menu intent or an invented skill id is rejected in code. Any failure, or more than 6 seconds, falls back to keyword rules with typo tolerance. Table~\ref{tab:router} shows why the AI earns its place.
+
+\begin{table}[h]
+\centering\small
+\caption{Router evaluation on indirect wording, against the live model (about 0.3--0.6\,s per call).}
+\label{tab:router}
+\begin{tabularx}{\linewidth}{@{}X >{\raggedright}p{3.6cm} >{\raggedright\arraybackslash}p{4.6cm}@{}}
+\toprule
+Message & Keyword rules & AI router\\
+\midrule
+``am I getting any sharper at remembering stuff lately'' & chat (missed) & progress \textperiodcentered{} working memory\\
+``if I did this three times a week would my focus get better'' & play (wrong) & forecast \textperiodcentered{} attention \textperiodcentered{} 4/week\\
+``why do I keep messing up when the rules change mid-game'' & explain, no skill & explain \textperiodcentered{} cognitive flexibility\\
+``what's the deal with that trust-the-robot game'' & play (wrong) & explain \textperiodcentered{} AI reliance\\
+``I'm wiped out today, should I even bother playing?'' & chat & chat\\
+``can this tell me if I have ADHD'' & chat & chat (then the clinical filter answers)\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Step 2: retrieval from the user's own data}
+The engine builds an \emph{evidence pack}, the only material the writer may use: skill scores with bands, the last six games with metrics and reliability, grouped trial facts (``5 matches you caught''), exact ``what it would take'' recalculations (``1 more match caught $\rightarrow$ 68\% instead of 60\%''), forecasts at three paces, and up to 8 of 13 reviewed research findings selected for the topic. Each item has a short reference (R1, T3, W2, P1, S4). No name or database id leaves the server; the last 12 messages and a small memory (goal, favourite skill, recent topics) keep the conversation coherent without repeating itself.
+
+\subsection{Step 3: the writer}
+The writer receives the pack and a system prompt of explicit rules: cite at least one R/T/W/P reference per claim, use only numbers in the pack, mention the band with any estimate, compare the user only with their own past, never use medical terms, and keep the reply to three sentences. It returns structured JSON: an intent, a reply, 0--3 claims (each with a ``why'' and references), up to 3 action buttons and Bao's mood.
+
+\subsection{Step 4: the verifier}
+The verifier is the reason the coach can be trusted. In code, without a second model:
+\begin{enumerate}
+\item map every cited reference back to a game or trial group; \textbf{drop a claim with no valid evidence}, or backed only by research findings (``science explains, your data decides'');
+\item extract every number from the claim and accept it only if it appears in the evidence that claim cites, within rounding ($\pm1$ for values $\ge10$, $\pm0.05$ below), or is the difference of two such numbers; dates are removed first so their digits cannot vouch for anything;
+\item remove diagnostic terms and comparisons with other people; a health question receives a fixed, kind, non-clinical answer first;
+\item accept only buttons that name real skills.
+\end{enumerate}
+This is a deterministic chain-of-verification~\cite{cove}: it cannot itself hallucinate, and the user can perform the same check by tapping ``Why?''. In an opt-in research mode, about 35\% of debriefs carry one deliberate, always-revealed number error, so that \emph{checking the AI} becomes measurable.
+
+\subsection{When there is no AI}
+Without consent, provider or network, the same intents are answered by a template coach with six or more phrasings per intent, through the same verifier. The user always gets an answer; it is simply less fluent.
+
+% ---------------------------------------------------------------- 5
+\section{AI that trains people to judge AI}
+\label{sec:collab}
+
+Relying on AI well is treated as a skill to measure and train, in three games.
+
+\subsection{Second opinion: a simulated advisor}
+The player picks the larger of two sums under time pressure, sees an AI helper's answer, then decides again. The helper is a \emph{simulated} advisor whose accuracy is controlled per trial, so that both kinds of disagreement occur in every game. Following~\cite{schemmer}, only disagreements are scored: keeping a right answer when the helper is wrong, and switching to the helper when it is right. ``Always follow'' and ``always keep'' both score at chance.
+
+\subsection{The AI Lab: two games against a live model}
+Persuasive AI is real: GPT-4 with a few personal facts won 64\% of the debates that had a clear winner~\cite{salvi}. And practising against named manipulation techniques builds resistance~\cite{roozenbeek}. The AI Lab turns both findings into games played against the live model (Figure~\ref{fig:lab}).
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[plain,minimum width=2.9cm] (bank) at (0,0) {Vetted bank\\\scriptsize questions, true facts};
+\node[ai=guard,minimum width=3.1cm] (srv) at (4.6,0) {Server\\\scriptsize keeps the answer key};
+\node[ai=gen,minimum width=2.9cm] (llm) at (11.6,0) {Live LLM\\\scriptsize writes the round};
+\node[plain,minimum width=2.9cm] (player) at (4.6,-2.7) {Player\\\scriptsize answers, bets};
+\node[plain,minimum width=3.4cm] (score) at (11.6,-2.7) {Collaboration score\\\scriptsize critical verification};
+\draw[flow] (bank) -- node[tagl,above=1pt]{truth} (srv);
+\draw[flow] ([yshift=6pt]srv.east) -- node[tagl,above=1pt]{trivia only} ([yshift=6pt]llm.west);
+\draw[flow] ([yshift=-6pt]llm.west) -- node[tagl,below=1pt]{argument or fake} ([yshift=-6pt]srv.east);
+\draw[flow] ([xshift=-8pt]srv.south) -- node[tagl,left=2pt]{round, no key} ([xshift=-8pt]player.north);
+\draw[flow] ([xshift=8pt]player.north) -- node[tagl,right=2pt]{commit, then reveal} ([xshift=8pt]srv.south);
+\draw[flow] (player.east) -- node[tagl,above=1pt]{signals} (score.west);
+\end{tikzpicture}
+\caption{AI Lab architecture. The model writes every round live, but the truth always comes from the vetted bank and the answer key stays on the server until the player commits.}
+\label{fig:lab}
+\end{figure}
+
+\subsubsection{Resist the Persuader} The player answers a surprising question (``Can you see the Great Wall from space?''). The model then argues, half the time for the truth with checkable evidence, half the time for the wrong answer with one named technique: fake expert, false precision, bandwagon, vivid story or cherry-picking. The server decides which side the model argues and overrides its label: a true side is always ``real evidence''. After the final answer the reveal names the technique (prebunking). Only rounds where the model argued against the first answer count, so the score is a \emph{discernment} rate in the sense of~\cite{pennycook}.
+
+\subsubsection{Fabrication Hunt} Three true sentences from the bank are shown word for word; the model invents one plausible, clearly false sentence on the same topic, and the server places it at a random position. The player picks the fake and wagers 1--3 tokens: post-decision wagering measures whether people know when they are right~\cite{persaud}. Testing shaped this design: when the model was allowed to reword the true facts, it once slipped in a false detail (``the shortest day of any planet''), which would have marked a correct player wrong. True sentences are therefore never rewritten, and the model is asked for fakes that are unambiguously false (a wrong date, count or name) rather than approximately true.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{persuader}\caption{Resist the Persuader}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{hunt}\caption{Fabrication Hunt}\end{subfigure}
+\caption{The AI Lab in the running application. Live AI writes both rounds in about half a second.}
+\end{figure}
+
+\subsection{The AI Collaboration Score}
+How well the user works with AI is scored from 19 concrete signals: opening the evidence behind a claim, follow-up questions, predicting a result before asking the AI, staying within the coach's scope, catching a deliberate error, and the three games above. Each signal belongs to one of five components weighted as in the brief (clarification 20\%, critical verification 25\%, iteration 20\%, autonomy 20\%, responsible use 15\%), with Bayesian smoothing so a few interactions cannot swing the score (Appendix~\ref{app:formulas}). The AI Lab feeds this score rather than the calibrated skill estimates: live text varies between rounds, which would invalidate a measurement model.
+
+\ifcamera
+% ---------------------------------------------------------------- perception
+\section{Perception AI: Focus Guard}
+\label{sec:focus}
+
+A notification glanced at mid-game silently drags a score down. Focus Guard asks the camera exactly one question per trial: \emph{were the player's eyes on the screen?}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[plain,minimum width=1.8cm] (cam) at (0,0) {Camera\\\scriptsize 10 frames/s};
+\node[ai=per,minimum width=2.8cm] (mp) at (3.05,0) {Face Landmarker\\\scriptsize MediaPipe, WASM};
+\node[ai=per,minimum width=2.6cm] (pose) at (6.3,0) {Head pose \&\\\scriptsize eye-look scores};
+\node[ai=guard,minimum width=2.4cm] (rule) at (9.4,0) {Away rule\\\scriptsize cone + 400\,ms};
+\node[ai=guard,minimum width=2.4cm] (trial) at (12.35,0) {Trial overlap\\\scriptsize 1 bit per trial};
+\node[ai=prob,minimum width=3.4cm] (srv) at (12.35,-2.4) {Scoring on the server\\\scriptsize away trials left out};
+\begin{scope}[on background layer]
+\node[draw=per,dashed,rounded corners=4pt,fit=(cam)(trial),inner sep=8pt,label={[lbl,anchor=south west]north west:on the device: no image is stored or sent}] {};
+\end{scope}
+\draw[flow] (cam) -- (mp);
+\draw[flow] (mp) -- (pose);
+\draw[flow] (pose) -- (rule);
+\draw[flow] (rule) -- (trial);
+\draw[flow] (trial) -- node[tagl,left=2pt]{looked away: yes/no} (srv);
+\end{tikzpicture}
+\caption{Focus Guard. Everything inside the dashed box runs in the browser; only one boolean per trial reaches the server, and only with the camera consent.}
+\label{fig:focus}
+\end{figure}
+
+\subsubsection{How it works} Google's MediaPipe Face Landmarker~\cite{mediapipe} runs in the browser as WebAssembly; the model and runtime are served by the application itself, so the strict content-security policy holds and no third party is contacted. Ten times a second, head yaw and pitch are read from the model's facial transformation matrix and eye direction from its eye-look blendshapes. A frame is \emph{looking away} when no face is found, $|\text{yaw}|>28^\circ$, $|\text{pitch}|>22^\circ$, or an eye-look score exceeds 0.65 (looking down to the keyboard counts at half weight). Spells under 400\,ms are ignored, so blinks and quick glances do not count. A trial is \emph{away} when its live window, from stimulus to response, overlaps a spell.
+
+\subsubsection{Why this design} The camera is the most sensitive sensor a learning app can use, so its job is reduced to the minimum that improves data quality. Away trials are excluded like too-fast answers, and a game is flagged when more than 25\% of its trials were away. Because it only removes bad trials, the calibrated measurement model is unchanged. It is off by default with its own consent, the app works identically without it, and it never infers emotion, fatigue or identity.
+
+\subsubsection{Status} Built, unit-tested, and tested end to end in a browser with a simulated camera; the thresholds are still to be tuned on real faces and lighting.
+\fi
+
+\ifcamera\subsection*{Voice}\else\section{Perception AI: voice}\fi
+Questions can be dictated and answers read aloud with the browser's built-in Web Speech API. Dictation needs its own consent; the user reviews the transcript before sending, and no audio is stored. Voice is only an input method: nothing is inferred from it.
+
+% ---------------------------------------------------------------- data flow
+\section{What each AI sees}
+\label{sec:dataflow}
+
+Privacy for AI is a question of data flow. Table~\ref{tab:dataflow} lists, for every model, exactly what reaches it.
+
+\begin{table}[h]
+\centering\small
+\caption{Data flow to each AI component.}
+\label{tab:dataflow}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{2.6cm} >{\raggedright}X >{\raggedright}p{2.6cm} >{\raggedright\arraybackslash}p{2.6cm}@{}}
+\toprule
+AI & Receives & Never receives & Requires\\
+\midrule
+Intent router & the question text and the list of skill names & name, id, scores & AI-coaching consent\\
+Coach writer & evidence pack with short references, research cards, recent conversation & name, database ids & AI-coaching consent\\
+Persuader, Fabricator & trivia from the vetted bank & anything about the player & nothing personal is sent\\
+\ifcamera Focus Guard & camera frames, on the device only & (server) any image or landmark & camera consent\\ \fi
+Speech to text & the user's speech, in the browser (the browser may use its own service) & & microphone consent\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Personal fields stored by the app (name, coach memory and conversation, behaviour signals) are encrypted per user with AES-256-GCM under a key that belongs to that profile alone, wrapped by a master key outside the database; deleting a profile destroys its key, so even backups become unreadable. Sign-in uses passkeys or a random backup key, never an email or password. Details and the threat model are in Appendix~\ref{app:formulas} and the security documentation.
+
+% ---------------------------------------------------------------- engine
+\section{The measurement engine (probabilistic AI)}
+\label{sec:engine}
+
+\subsection{From trials to an observation}
+Seven skills are measured with classic paradigms that run in about a minute each (Table~\ref{tab:tasks}). A game's metrics are normalised and weighted into a composite $c\in[0,1]$, which a calibrated level range turns into one observation on a common ability scale, so harder levels count for more. Games with too few valid trials, chance-level accuracy, long identical-answer streaks, many anticipations or timeouts, or repeated focus loss\ifcamera{} or looking away\fi{} are flagged and count with 2.5$\times$ the noise.
 
 \begin{table}[h]
 \centering\small
@@ -158,322 +400,97 @@ Six widely studied skills are measured with classic paradigms that run in a brow
 Skill & Task & Primary measures & Reference\\
 \midrule
 Working memory & Letter $N$-back (1/2/3) & $d'$ (log-linear corrected), hit RT & \cite{kirchner,owen}\\
-Attention \& inhibition & Colour-word Stroop & proportional interference, incongruent accuracy & \cite{stroop,macleod}\\
+Attention \& inhibition & Colour-word Stroop & proportional interference & \cite{stroop,macleod}\\
 Processing speed & Symbol-digit coding & correct per minute, accuracy & \cite{smith,salthouse}\\
-Cognitive flexibility & Parity/magnitude switching & switch cost (RT and errors) & \cite{rogers}\\
-Visuospatial memory & Corsi blocks, in-game staircase & span, total score & \cite{corsi,kessels}\\
+Cognitive flexibility & Parity/magnitude switching & proportional switch cost & \cite{rogers}\\
+Visuospatial memory & Corsi blocks & span, total score & \cite{corsi,kessels}\\
 Reasoning & Generated 3$\times$3 matrices & accuracy & \cite{raven,matzen}\\
-AI reliance & Second opinion (judge--advisor) & appropriate reliance on disagreements & \cite{schemmer}\\
+AI reliance & Second opinion & appropriate reliance & \cite{schemmer}\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{From trials to a game score}
-Each task's raw metrics $m_k$ are normalised to $[0,1]$ with configured bounds and combined into a composite
-\begin{equation}
-c = \sum_k w_k\,\tilde m_k,\qquad \tilde m_k = \operatorname{clip}\!\left(\frac{m_k-a_k}{b_k-a_k},0,1\right),\qquad \sum_k w_k = 1 .
-\end{equation}
-Three measures deserve a formula. For the $N$-back, sensitivity uses the log-linear correction for extreme proportions~\cite{hautus}:
-\begin{equation}
-H=\frac{\text{hits}+0.5}{\text{targets}+1},\quad F=\frac{\text{false alarms}+0.5}{\text{lures}+1},\quad d'=\Phi^{-1}(H)-\Phi^{-1}(F).
-\end{equation}
-For Stroop and task switching, costs are \emph{proportional to the person's own speed}, which removes a fairness problem found in validation (Section~\ref{sec:validation}, Fairness):
-\begin{equation}
-I_{\text{Stroop}}=\frac{\overline{RT}_{\text{incongruent}}-\overline{RT}_{\text{congruent}}}{\overline{RT}_{\text{congruent}}},\qquad
-S_{\text{switch}}=\frac{\overline{RT}_{\text{switch}}-\overline{RT}_{\text{repeat}}}{\overline{RT}_{\text{repeat}}}.
-\end{equation}
-
-\subsection{From a game score to an ability observation}
-Difficulty levels cover different ranges of ability. Each level $\ell$ has a calibrated range $[\text{lo}_\ell,\text{hi}_\ell]$, and the game becomes one observation on the common 0--1 ability scale:
-\begin{equation}
-x = \text{lo}_\ell + (\text{hi}_\ell-\text{lo}_\ell)\,c .
-\end{equation}
-So a strong 3-back game counts for more than an equally good 1-back game, and raising the difficulty never lowers an estimate. The ranges are not hand-set: they come from a measurement model fitted per level (Section~\ref{sec:validation}).
-
-\subsection{Data quality}
-A game is flagged as unreliable when it has too few valid trials, accuracy not above chance (a one-sided test at a configured $z$), long runs of identical answers, many anticipations ($RT<$ a per-task minimum) or timeouts, or repeated loss of window focus\ifcamera, or, with Focus Guard on, too many trials where the player looked away (Section~\ref{sec:focus})\fi. A flagged game still counts, with its noise multiplied by $\kappa=2.5$, so a false alarm costs little.
-
-% ---------------------------------------------------------------- 4
-\section{The Brain Twin: a Bayesian profile}
-\label{sec:twin}
-
-Each skill's ability $\theta$ is a Normal belief $\mathcal N(\mu,\sigma^2)$ starting from an explicit prior ($\mu_0=0.5$, $\sigma_0=0.2$, about $\pm33$ points at 90\%). A game is an observation $x$ with noise
-\begin{equation}
-\sigma_x=\sigma_{\text{obs}}\sqrt{\frac{n_{\text{ref}}}{n_{\text{valid}}}}\cdot\begin{cases}\kappa & \text{if flagged}\\ 1 & \text{otherwise}\end{cases}
-\end{equation}
-where $\sigma_{\text{obs}}$ is the fitted residual noise of that task and $n_{\text{ref}}$ the reference trial count. The update is the precision-weighted (one-dimensional Kalman) rule
-\begin{equation}
-\mu'=\frac{\mu/\sigma^2+x/\sigma_x^2}{1/\sigma^2+1/\sigma_x^2},\qquad \sigma'^2=\left(\frac1{\sigma^2}+\frac1{\sigma_x^2}\right)^{-1}.
-\end{equation}
-Ability can change, so between sessions the band widens again with a random-walk drift:
-\begin{equation}
-\sigma^2(t+\Delta t)=\sigma^2(t)+q^2\,\Delta t,\qquad q=0.02\ \text{per day},
-\end{equation}
-the smallest value that keeps 90\% coverage while users improve (Figure~\ref{fig:drift}). The user sees $\mu$ and the band $\mu\pm1.645\,\sigma$, in words: ``fairly sure it is between 55 and 68''. Snapshots are append-only, which gives the history behind every chart.
+\subsection{The Brain Twin}
+Each skill is a Normal belief updated by a precision-weighted (one-dimensional Kalman) rule; between sessions the band widens with a drift of 0.02 per day, because ability can change. The user sees the estimate and its 90\% band in words: ``fairly sure it is between 55 and 68''.
 
 \begin{figure}[h]
 \centering\fig{\linewidth}{twin_update}
-\caption{One skill's estimate for a simulated user over ten games. The band narrows with each game and widens during a six-day gap, because ability may have changed.}
-\label{fig:twinupdate}
+\caption{One skill's estimate for a simulated user: the band narrows with each game and widens during a six-day gap.}
 \end{figure}
 
-\subsubsection{Goals} A score goal $g$ counts as reached only when the whole band is above it. Until then the app shows the probability the user is already there, $P(\theta\ge g)=1-\Phi\!\left((g-\mu)/\sigma\right)$, e.g.\ ``6\% likely you're already at 70+''.
+\subsection{Active learning and forecasts}
+For every skill, task and level, the selector computes how much one more game would narrow the band and plays the largest gain, with a plain reason (``We're least sure about your attention so far ($\pm$33\%). One Stroop game at level 2 should bring that to about $\pm$18\%.''). Training instead targets the weakest skill at the level with about 75\% expected success. A Bayesian linear trend gives a 7-day forecast \emph{range}, and the dashboard later checks each forecast against the real estimate.
 
-\subsubsection{Forecasts} A weighted linear trend over the twin's history, with a Normal prior on the slope that shrinks noisy trends towards ``no change'', is extended from today's estimate. Its band combines today's uncertainty, the slope's uncertainty and the drift. Every week a 7-day forecast is stored and later checked against the real estimate: the dashboard shows this \emph{track record}. Forecasts are labelled ``a forecast, not a promise''.
-
-% ---------------------------------------------------------------- 5
-\section{Adaptive assessment and training}
-\label{sec:adaptive}
-
-\subsubsection{Which game next} For every playable skill, task and level, the selector computes the expected narrowing of the band from one more game,
-\begin{equation}
-\Delta\sigma=\sigma-\left(\sigma^{-2}+\tilde\sigma_x^{-2}\right)^{-1/2},
-\end{equation}
-where $\tilde\sigma_x$ is inflated when a floor or ceiling effect is likely at that level, and picks the largest. Every choice carries a plain reason: ``We're least sure about your attention so far ($\pm33\%$). One Stroop game at level 2 should bring that to about $\pm18\%$.''
-
-\subsubsection{Training} Training targets the weakest skill at the level whose expected success is closest to 75\%, then follows a 1-up/1-down staircase.
-
-\subsubsection{Weekly plan} Twelve games are allocated by
-\begin{equation}
-\text{priority}_s = 0.6\,\frac{\text{band width}_s}{\text{prior width}_s} + 0.4\,(1-\mu_s),
-\end{equation}
-with a target level and a reason per item. The plan records the snapshots it came from.
-
-% ---------------------------------------------------------------- 6
-\section{The AI coach}
-\label{sec:coach}
-
-Bao explains games in plain words, answers questions, starts the right game and looks ahead. The architecture separates what a language model is good at, \emph{understanding and writing language}, from what it must never do, \emph{invent a number}.
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[font=\small,
-  st/.style={draw=brand,fill=soft,rounded corners=2pt,minimum width=2.75cm,minimum height=1.25cm,align=center,inner sep=3pt},
-  flow/.style={-{Stealth[length=2mm]},color=muted,line width=0.6pt},node distance=0.42cm]
-\node[st] (u) {\textbf{1. Understand}\\\scriptsize AI picks from a\\\scriptsize fixed menu};
-\node[st,right=of u] (c) {\textbf{2. Compute}\\\scriptsize engine builds the\\\scriptsize evidence pack};
-\node[st,right=of c] (w) {\textbf{3. Write}\\\scriptsize LLM drafts reply\\\scriptsize with citations};
-\node[st,right=of w] (k) {\textbf{4. Check}\\\scriptsize evidence, numbers,\\\scriptsize safety filters};
-\draw[flow] (u) -- (c); \draw[flow] (c) -- (w); \draw[flow] (w) -- (k);
-\node[below=0.25cm of u,font=\scriptsize,color=muted,text width=2.8cm,align=center] {fallback: keyword rules};
-\node[below=0.25cm of w,font=\scriptsize,color=muted,text width=2.8cm,align=center] {fallback: template coach};
-\end{tikzpicture}
-\caption{The bounded ``AI brain'': at most two model calls per message, every number from the engine.}
-\label{fig:coach}
-\end{figure}
-
-\subsection{Step 1: understanding}
-With the user's consent, one structured call reads the message and chooses \emph{what to compute} from a fixed menu: debrief, progress, forecast at a pace of 2, 4 or 7 games a week, goal, explain, play, help or chat, plus the skill concerned. The schema allows nothing else; an off-menu choice, an invented skill id, an error or a 6-second timeout falls back to keyword rules. On indirect wording the router clearly wins: ``am I getting any sharper at remembering stuff'' is \emph{progress, working memory} (keywords: small talk), and ``three times a week, would my focus get better'' is \emph{forecast, attention, 4 per week} (keywords: play). A routing call takes about 0.5\,s.
-
-\subsection{Steps 2--4: compute, write, check}
-The engine builds an \emph{evidence pack}: scores with bands, the last six games with metrics and reliability, grouped trial facts (``5 matches you caught''), exact ``what it would take'' recalculations (``1 more match caught $\rightarrow$ 68\% instead of 60\%''), forecasts, and up to 8 of 13 reviewed research findings. Each item has a short reference (R1, T3, W2, P1, S4); no names or database ids leave the server. The model (Claude, or \code{gpt-oss-120b} on Groq, both with strict JSON-schema output) returns an intent, a short reply, 0--3 claims with references, up to 3 action buttons and Bao's mood. Then code:
-\begin{itemize}
-\item drops any claim without valid evidence, or backed only by research findings (``science explains, your data decides'');
-\item checks \emph{every number} against the evidence that claim cites, within rounding, a deterministic chain-of-verification~\cite{cove} that cannot itself hallucinate;
-\item removes clinical terms and comparisons with other people, and answers health questions with a fixed non-clinical reply;
-\item accepts only actions that name real skills.
-\end{itemize}
-Without consent or provider, a template coach answers the same intents through the same checks.
-
-\begin{figure}[h]
-\centering\shot{0.82\linewidth}{coach}
-\caption{The coach answering ``What if I play memory every day?'': a ranged forecast from the user's own trend, a play button, and the label ``Written with AI, checked against your games''.}
-\end{figure}
-
-% ---------------------------------------------------------------- 7
-\section{Working with AI}
-\label{sec:collab}
-
-\subsection{AI Collaboration Score}
-How well the user works with the coach is scored from 19 concrete signals (opening the evidence, follow-up questions, predictions before debriefs, in-scope questions, catching a deliberate error, and the AI Lab games below). Each signal has a value $v_i\in[0,1]$ and belongs to one of five components $c$ with the weights proposed in the brief:
-\begin{equation}
-\text{score}=\operatorname{round}\!\Big(100\sum_c w_c\,s_c\Big),\qquad s_c=\frac{\sum_{i\in c}v_i+m\,k}{n_c+k},\quad m=0.5,\ k=2,
-\end{equation}
-with $w=(0.20,0.25,0.20,0.20,0.15)$ for clarification, critical verification, iteration, autonomy and responsible use. The smoothing keeps a few interactions from swinging the score to 0 or 100.
-
-\subsection{Second opinion: appropriate reliance}
-The player picks the larger of two sums under time pressure, sees an AI helper's answer (described honestly as ``sometimes wrong on purpose''), then decides again. Following~\cite{schemmer}, only disagreements are informative, conditional on the first answer:
-\begin{gather}
-\text{RSR}=P(\text{keep}\mid\text{first right},\ \text{AI wrong}),\qquad
-\text{RAIR}=P(\text{switch}\mid\text{first wrong},\ \text{AI right}),\\
-\text{AR}=\tfrac12(\text{RSR}+\text{RAIR}).
-\end{gather}
-``Always follow the AI'' and ``always keep my answer'' both land at chance by construction (Figure~\ref{fig:reliance}).
-
-\subsection{AI Lab: two games against a live model}
-The AI Lab turns two research findings into games. Persuasive AI is real: in a preregistered study, GPT-4 with personal information out-argued humans in 64\% of debates that had a clear winner~\cite{salvi}. And people resist manipulation better after practising against named techniques: ``inoculation'' games reduce the perceived reliability of fake headlines~\cite{roozenbeek}. In both games the live model writes every round, while the truth always comes from a vetted bank, so the score never depends on the model being right. Answer keys stay on the server until the player commits, and the model only ever sees trivia.
-
-\begin{figure}[h]
-\centering
-\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{persuader}\caption{Resist the Persuader}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{hunt}\caption{Fabrication Hunt}\end{subfigure}
-\caption{The AI Lab. Left: the live model argues for an answer the player must judge. Right: three checked facts and one sentence the model invented.}
-\end{figure}
-
-\subsubsection{Resist the Persuader} The player answers a surprising question (``Can you see the Great Wall from space?''), then the model argues, half the time for the truth with checkable evidence, half the time for the wrong answer with one named technique: fake expert, false precision, bandwagon, vivid story or cherry-picking. After the final answer the reveal names the technique (prebunking). As in Second opinion, only challenged rounds count, so the score is a \emph{discernment} rate in the sense of~\cite{pennycook}:
-\begin{equation}
-D=\frac{\#\{\text{final answer correct}\ \wedge\ \text{AI argued against the first answer}\}}{\#\{\text{AI argued against the first answer}\}} .
-\end{equation}
-Holding firm against a wrong AI and switching to a right one both count as good judgment, so neither blind strategy beats $D=0.5$.
-
-\subsubsection{Fabrication Hunt} Three true sentences from the bank are shown word for word, and the model invents one plausible, clearly false sentence on the same topic, which the server places at a random position. The player picks the fake and wagers 1--3 tokens on it. Post-decision wagering measures awareness of one's own accuracy~\cite{persaud}; we summarise it as the wager gap
-\begin{equation}
-G=\mathbb E[\text{wager}\mid\text{caught}]-\mathbb E[\text{wager}\mid\text{missed}]\in[-2,2],
-\end{equation}
-where $G>0$ means the player's confidence tracks their hits. Testing exposed a subtle failure that shaped the design: when the model was allowed to \emph{reword} the true facts, it once slipped in a false detail (``the shortest day of any planet''), which would have marked a correct player wrong. The true sentences are therefore never rewritten.
-
-Both games feed the critical-verification component of the collaboration score, not the calibrated skill estimates: live text varies between rounds, which would invalidate the measurement model.
-
-\ifcamera
-% ---------------------------------------------------------------- camera
-\section{Focus Guard: the camera as a data-quality sensor}
-\label{sec:focus}
-
-\begin{notebox}[title={Status}]
-Built and tested end to end in a browser with a simulated camera; its thresholds are still to be tuned on real faces. It is not part of the simulated validation in Section~\ref{sec:validation}, and it needs none for the estimates (see Scoring).
-\end{notebox}
-
-A notification glanced at mid-game silently drags a score down today. Focus Guard asks the camera exactly one question per trial: \emph{were the player's eyes on the screen?}
-
-\subsubsection{On-device pipeline} MediaPipe face landmarks~\cite{mediapipe} run in the browser in WebAssembly, served from the application itself so the strict content-security policy holds. Ten times a second, head yaw and pitch are read from the model's facial transformation matrix and eye direction from its eye-look blendshapes. A frame is \emph{looking away} when no face is found, $|\text{yaw}|>28^\circ$, $|\text{pitch}|>22^\circ$, or an eye-look score exceeds 0.65 (looking down to the keyboard counts at half weight). Spells shorter than 400\,ms are ignored, so blinks and quick glances do not count. A trial is \emph{away} if its live window, from stimulus onset to response, overlaps a spell. Only this boolean per trial leaves the device: no frame, landmark or image is stored or sent.
-
-\subsubsection{Scoring} Away trials are excluded like anticipations, and their share becomes one more data-quality rule:
-\begin{equation}
-n_{\text{valid}}=\#\{\text{trials valid}\ \wedge\ \neg\text{away}\},\qquad \text{flag if}\ \frac{\#\text{away}}{n}>\alpha=0.25 .
-\end{equation}
-Metrics are computed without the away trials, and the API keeps the flag only when the camera consent is on.
-Because it only removes bad trials, the scoring model and its calibration are unchanged, and no new validation is needed for the estimates; thresholds are tuned on a short real-camera check.
-
-\subsubsection{Privacy and ethics} Off by default, behind its own consent like the microphone, and the app works identically without it. We deliberately do \emph{not} infer emotion, fatigue or identity from the face: a major review found facial movements do not reliably reveal emotional states~\cite{barrett}, and such inference would contradict the app's non-clinical stance.
-\fi
-
-% ---------------------------------------------------------------- 8
-\section{Validation with simulated users}
+% ---------------------------------------------------------------- validation
+\section{Validation}
 \label{sec:validation}
 
-\subsubsection{Set-up} Each of 500 simulated users has a known ability per skill, $\theta\sim\mathcal N(0.5,0.18)$ clamped to $[0,1]$. Task simulators turn ability into trial-level behaviour, and every user plays 18 games through the \emph{real} selector, scoring and profiler. Calibration is fitted on 250 users and every result is reported on the other 250 (\code{npm run validate}).
-
-\subsubsection{Calibration} The first run's bands covered the truth only 52--82\% of the time, because the hand-set level ranges were biased. For each level we fitted the measurement model
-\begin{equation}
-c=a+b\,\theta+\varepsilon,\qquad \varepsilon\sim\mathcal N(0,\sigma_{\text{obs}}^2),
-\end{equation}
-on games played at \emph{random} levels, and inverted it into the level's range, $\text{lo}_\ell=-a/b$, $\text{hi}_\ell=(1-a)/b$. The fit is written back to the YAML, so pilot data can refit it without code changes.
+500 simulated users with known abilities played 18 games each through the \emph{real} selector, scoring and profiler; calibration was fitted on 250 and every result is reported on the other 250. The first run's bands covered the truth only 52--82\% of the time; fitting a measurement model per level fixed it (Figure~\ref{fig:coverage}).
 
 \begin{figure}[h]
 \centering\fig{\linewidth}{coverage}
-\caption{E1: 90\% band coverage on held-out users, before and after calibration. Every skill lands at 89--95\%.}
+\caption{90\% band coverage on held-out users, before and after calibration. Every skill lands at 89--95\%.}
 \label{fig:coverage}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{recovery}\caption{E1: recovery and error per skill}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{adaptive}\caption{E2: adaptive vs random order}\end{subfigure}
-\caption{Accuracy. Cognitive skills reach $r=0.68$--$0.94$ with $\pm6$--$10$ points error; adaptive selection is 10\% more accurate than random order at equal effort (10.1 vs 11.2 RMSE after 18 games).}
+\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{adaptive}\caption{Active learning vs random order}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{reliance}\caption{Second opinion: blind vs calibrated}\end{subfigure}
+\caption{Left: adaptive game choice is 10\% more accurate than random order at equal effort. Right: blind strategies toward the AI advisor score at chance; calibrated players score well.}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{robustness}\caption{E3: invalid play detection}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{drift}\caption{E4: choosing the drift}\label{fig:drift}\end{subfigure}
-\caption{Robustness and growth. Random, same-key, no-response and too-fast play are flagged in 82--100\% of games (98\% overall) with 0--2\% false alarms on genuine play. A drift of 0.02 per day is the smallest that keeps 90\% coverage while users improve by 15 points over a month.}
+\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{robustness}\caption{Invalid play detection}\end{subfigure}\hfill
+\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{fairness}\caption{Bias by circumstance}\end{subfigure}
+\caption{Left: 98\% of random, same-key, no-response and too-fast play is flagged, with 0--2\% false alarms. Right: proportional costs keep a slower but equally accurate person within 2 points except on processing speed, which by design \emph{is} speed.}
 \end{figure}
 
-\subsubsection{Forecasts} Across 1{,}200 seven-day forecasts, scored as in the TADPOLE forecasting challenge~\cite{tadpole} by mean absolute error and coverage probability accuracy $\text{CPA}=|\text{coverage}-\text{nominal}|$, the trend forecast has MAE 8.0 points (no-change baseline 7.3) and its 50\% and 90\% bands hold the truth 56\% and 94\% of the time (CPA 0.06 and 0.04). At one week the point forecast is no better than ``no change''; what it adds is an \emph{honest range}, and the app presents it that way.
+Seven-day forecasts (1{,}200, scored as in the TADPOLE challenge~\cite{tadpole}) have 50\% and 90\% bands holding the truth 56\% and 94\% of the time; the point forecast is no better than ``no change'' at one week, so the app presents a range, not a promise. The AI components are evaluated where they act: the router on indirect wording (Table~\ref{tab:router}), the verifier and clinical filter by 544 automated tests including a red-team set of 49 risky and 36 safe phrasings, and the AI Lab by construction (truth never comes from the model).
 
-\subsubsection{Fairness}Raw-millisecond scoring put a slower but equally accurate person's attention 14 points too low. With costs proportional to the person's own speed, bias is under 2 points outside processing speed, which by design \emph{is} speed (Figure~\ref{fig:fairness}). The price is some accuracy for typical users (attention $r$ 0.90 $\rightarrow$ 0.77); we chose fairness and say so.
-
-\begin{figure}[h]
-\centering
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{fairness}\caption{E6: bias by circumstance}\label{fig:fairness}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\centering\fig{\linewidth}{reliance}\caption{E7: blind vs calibrated reliance}\label{fig:reliance}\end{subfigure}
-\caption{Fairness and the Second-opinion game. Its score correlates with simulated reliance skill ($r=0.61$), not with arithmetic ($r=0.07$); the twin's estimate reaches $r=0.76$ after 6 games and $0.81$ after 10, with 90--93\% coverage.}
-\end{figure}
-
-% ---------------------------------------------------------------- 9
-\section{Security and privacy engineering}
-\label{sec:security}
-
-\subsubsection{Accounts without personal data} No email, no password, no real name. A profile is opened with a \textbf{passkey} (WebAuthn, implemented on Node's own crypto: ES256, EdDSA and RS256 with strict CBOR parsing), offered first at signup, or a random 80-bit \textbf{backup key} that can be saved to a password manager, downloaded or printed. A signed-in device can show a QR link or a 10-character code (50 bits, single use, 5 minutes) to sign in another one. Only hashes of keys, codes and session tokens are stored.
-
-\subsubsection{Envelope encryption and crypto-shredding} Personal fields (name, coach memory and conversation, behaviour signals, affect guesses) are encrypted with AES-256-GCM~\cite{gcm} under a per-user data key $K_u$, itself wrapped by a versioned master key $M_v$ kept outside the database:
-\begin{equation}
-C=\operatorname{AES\text{-}GCM}_{K_u}(m;\ \text{iv},\ \text{aad}=\text{field}),\qquad W_u=\operatorname{AES\text{-}GCM}_{M_v}(K_u).
-\end{equation}
-Binding the field name as associated data stops ciphertexts being swapped between columns. Deleting a profile destroys $K_u$, so its data becomes unreadable everywhere, backups included. Game scores stay in clear because the profiler needs them and they identify no one.
-
-\subsubsection{Sessions and the security log} Sessions are opaque random tokens, stored hashed, with idle and absolute expiry, rotated at sign-in and revocable per device. Security events form a hash chain,
-\begin{equation}
-h_i=\operatorname{HMAC}_{k}\!\left(h_{i-1}\,\|\,e_i\right),
-\end{equation}
-so any edit or deletion is detectable, while personal details inside events can still be erased.
-
-\subsubsection{Brute force} Every typed secret is behind a progressive rate limit: after $f=3$ free failures the wait before the next check doubles, $d_n=\min(250\,\text{ms}\cdot2^{\,n-f},\,8\,\text{s})$, and 10 failures lock the address for 15 minutes. Addresses come only from hops added by declared proxies (a client cannot forge them), IPv6 is grouped by /64, and a server-wide cap of 120 failed guesses per minute bounds distributed attacks; passkeys are exempt, so a flood never locks their users out. Even ignoring all limits, with $N$ users and $G$ guesses the chance of hitting any backup key is $N G/2^{80}$: about $10^{-10}$ per day at 1{,}000 guesses per second and a million users.
-
-\subsubsection{Web hardening} Per-request CSP nonces, HSTS and strict security headers, an origin check against cross-site requests, and body-size limits in middleware.
-
-\begin{figure}[h]
-\centering\shot{0.82\linewidth}{settings-security}
-\caption{Settings $\rightarrow$ Security \& privacy explains all of this in plain words: encryption status, signed-in devices, another-device sign-in, passkeys and the verified security log.}
-\end{figure}
-
-% ---------------------------------------------------------------- 10
-\section{The experience layer}
-
-Early user testing gave a blunt verdict, ``good as a concept, zero as user experience'', and the experience was rebuilt around one companion and three rules: plain words, one clear next step, no dark patterns.
-\begin{itemize}
-\item \textbf{A 60-second first game before any signup}, explained in one plain sentence. Signup is a short chat with Bao, one consent per step, nothing pre-ticked, and the first game becomes the new profile's first real game.
-\item \textbf{Plain navigation}: My progress, Ask Bao, AI Lab, How it works, and one Play button whose page offers \emph{Measure me} or \emph{Just practise}.
-\item \textbf{Bao} cheers during practice and only blinks during scored games, so he never distracts from a measurement; a reduced-motion setting makes him static.
-\item \textbf{Three-line results}: what you did, what it means (with a ``sure-o-meter''), and what's next.
-\item \textbf{Honest motivation}: bamboo for showing up, badges for consistency and curiosity, never for high scores; a weekly streak freeze; no loss framing or notifications.
-\end{itemize}
-
-\begin{figure}[h]
-\centering
-\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{home}\caption{Home: one clear next step}\end{subfigure}\hfill
-\begin{subfigure}{0.49\linewidth}\centering\shot{\linewidth}{play}\caption{Play: measure or practise}\end{subfigure}
-\caption{The signed-in home page and the Play page.}
-\end{figure}
-
-% ---------------------------------------------------------------- 11
+% ---------------------------------------------------------------- ethics
 \section{Ethics and safety}
 
 \begin{itemize}
-\item \textbf{Non-clinical.} A clinical-term filter (tested on 49 risky and 36 safe phrasings, including paraphrases and misspellings), a fixed answer to health questions, a ``what it is not'' on every card, no population norms, and claims limited to practice on these tasks.
-\item \textbf{Consent and data.} Granular, opt-in consents with an append-only history; an 18+ step; user-chosen retention (30--365 days) enforced by purge jobs for every user; JSON export; one-click deletion through every table.
-\item \textbf{Language models.} Only evidence packs without identifiers, or trivia, are sent, and only with consent.
-\item \textbf{Accessibility.} Every chart has a table view, the palette is checked for colour-vision deficiency, and a WCAG AAA high-contrast theme is available.
-\ifcamera
-\item \textbf{Camera.} Focus Guard is opt-in and on-device, keeps one boolean per trial, and never infers emotion, fatigue or identity.
-\else
-\item \textbf{No face or voice decisions.} There is no camera; voice is only an input method for questions, with the transcript reviewed before sending and no audio stored.
-\fi
+\item \textbf{Non-clinical.} The clinical filter, a fixed answer to health questions, no population norms, and claims limited to practice on these tasks.
+\item \textbf{Consent for every AI.} The coach's models, the camera and the microphone each have their own opt-in consent; the app is fully usable with all of them off.
+\item \textbf{Honest AI.} The coach labels its answers (``Written with AI, checked against your games''), the AI Lab tells players the model is sometimes wrong on purpose, and research-mode errors are always revealed.
+\item \textbf{No dark patterns.} Rewards for showing up, never for high scores; no loss framing or notifications; Bao stays quiet during scored games.
 \end{itemize}
 
-% ---------------------------------------------------------------- 12
-\section{Engineering and reproducibility}
-
-\begin{itemize}
-\item \textbf{544 automated tests} cover scoring, calibration, the selector, task generators, coach safety and routing, number and forecast checks, the collaboration score, the AI Lab, rewards, encryption, sessions, passkeys, rate limits and the security log; database tests run against a fresh in-memory PGlite.
-\item \textbf{Continuous integration} runs a configuration check, typecheck, lint, the tests, a 100-user validation smoke test and a production build.
-\item \textbf{Replayable}: every trial stores its RNG seed. \textbf{Extensible}: a new skill reusing any of the seven task types is one YAML file, scaffolded by \code{npm run new-dimension}, with no code change.
-\item \textbf{Reproducible numbers}: every result in Section~\ref{sec:validation} is regenerated by \code{npm run validate}; the figures in this report by \code{python docs/report/figures.py}.
-\end{itemize}
-
-% ---------------------------------------------------------------- 13
+% ---------------------------------------------------------------- limits
 \section{Limitations and next steps}
+\label{sec:limits}
 
 \begin{itemize}
-\item \textbf{Simulated, not human, validation.} The study shows the pipeline is consistent, calibrated and robust; it does not show the tasks measure cognition in real people. Next: a pilot (e.g.\ 30 people $\times$ 2 sessions) to refit calibration and estimate test--retest reliability.
-\item \textbf{Independent skills.} Real skills correlate; a hierarchical model could share information between them. With pilot data, fitted item models and a learning game selector are the honest way to outperform today's rules.
-\item \textbf{AI reliance} needs several games, because only disagreements are informative; \textbf{cognitive flexibility} recovers least well ($r=0.68$), as switch costs are noisy~\cite{hedge}.
-\item \textbf{Live-AI content} in the AI Lab is checked by construction for the truth, but an invented ``fake'' could occasionally be accidentally true; a review queue for reported rounds is planned.
-\item \textbf{Language and device.} Stroop needs fluent reading of English colour words, and response times depend on the device; users are compared only with themselves.
-\ifcamera
-\item \textbf{Focus Guard} is built and tested with a simulated camera; its thresholds still need a check on real faces and lighting, laptops first, phones second.
-\fi
+\item \textbf{Simulated, not human, validation} of the engine; next, a pilot of about 30 people over two sessions to refit calibration and measure test--retest reliability.
+\item \textbf{AI after data.} With real (consented) conversations, a small open model can be distilled from verified coach outputs and served locally; with real players, a learning game selector and skills that inform each other can outperform today's rules.
+\item \textbf{Live-AI content.} The AI Lab's truth is fixed by construction, but an invented ``fake'' could occasionally be accidentally true; reported rounds will go to a review queue.
+\item \textbf{The router} is evaluated on a small set; a larger labelled set of real questions is needed.
+\ifcamera\item \textbf{Focus Guard} thresholds need tuning on real faces and lighting, laptops first, then phones.\fi
 \end{itemize}
+
+% ---------------------------------------------------------------- appendix
+\appendix
+\section{Formulas}
+\label{app:formulas}
+
+\subsubsection{Game score} $c=\sum_k w_k\tilde m_k$ with $\tilde m_k=\operatorname{clip}((m_k-a_k)/(b_k-a_k),0,1)$; observation $x=\text{lo}_\ell+(\text{hi}_\ell-\text{lo}_\ell)\,c$. $N$-back sensitivity $d'=\Phi^{-1}(H)-\Phi^{-1}(F)$ with $H=(\text{hits}+0.5)/(\text{targets}+1)$~\cite{hautus}. Stroop and switching costs are proportional: $(\overline{RT}_{\text{hard}}-\overline{RT}_{\text{easy}})/\overline{RT}_{\text{easy}}$.
+
+\subsubsection{Brain Twin} Observation noise $\sigma_x=\sigma_{\text{obs}}\sqrt{n_{\text{ref}}/n_{\text{valid}}}$ ($\times2.5$ if flagged). Update
+\begin{equation}
+\mu'=\frac{\mu/\sigma^2+x/\sigma_x^2}{1/\sigma^2+1/\sigma_x^2},\qquad \sigma'^2=\left(\sigma^{-2}+\sigma_x^{-2}\right)^{-1},\qquad \sigma^2(t+\Delta t)=\sigma^2(t)+q^2\Delta t .
+\end{equation}
+Band $\mu\pm1.645\sigma$; goal probability $P(\theta\ge g)=1-\Phi((g-\mu)/\sigma)$. Calibration fits $c=a+b\theta+\varepsilon$ per level and sets $\text{lo}_\ell=-a/b$, $\text{hi}_\ell=(1-a)/b$.
+
+\subsubsection{Active learning} The expected narrowing from one more game is $\Delta\sigma=\sigma-(\sigma^{-2}+\tilde\sigma_x^{-2})^{-1/2}$, and the weekly plan ranks skills by $0.6\,(\text{band}/\text{prior band})+0.4\,(1-\mu)$.
+
+\subsubsection{Working with AI} Collaboration score $\operatorname{round}(100\sum_c w_c s_c)$, $s_c=(\sum v_i+0.5\cdot2)/(n_c+2)$. Appropriate reliance $\tfrac12(\text{RSR}+\text{RAIR})$. Discernment $D=\#\{\text{final correct}\wedge\text{AI disagreed}\}/\#\{\text{AI disagreed}\}$. Wager gap $G=\mathbb E[w\mid\text{caught}]-\mathbb E[w\mid\text{missed}]$.
+
+\ifcamera\subsubsection{Focus Guard} Yaw $=\operatorname{atan2}(-r_{20},\sqrt{r_{00}^2+r_{10}^2})$, pitch $=\operatorname{atan2}(r_{21},r_{22})$ from the rotation part of the transformation matrix; $n_{\text{valid}}$ excludes away trials; flag if $\#\text{away}/n>0.25$.\fi
+
+\subsubsection{Security} Each personal field is stored as $C=\operatorname{AES\text{-}GCM}_{K_u}(m;\ \text{aad}=\text{field})$ under the user's key, itself wrapped as $W_u=\operatorname{AES\text{-}GCM}_{M_v}(K_u)$. The security log chains $h_i=\operatorname{HMAC}_k(h_{i-1}\,\|\,e_i)$. Failed sign-ins wait $d_n=\min(250\,\text{ms}\cdot2^{\,n-3},\,8\,\text{s})$, and the chance of guessing any of $N$ backup keys in $G$ tries is $NG/2^{80}$.
 
 % ---------------------------------------------------------------- references
 \begin{thebibliography}{99}\small
@@ -481,12 +498,9 @@ Early user testing gave a blunt verdict, ``good as a concept, zero as user exper
 \bibitem{barrett} L.~F.~Barrett, R.~Adolphs, S.~Marsella, A.~M.~Martinez, S.~D.~Pollak. Emotional expressions reconsidered: challenges to inferring emotion from human facial movements. \emph{Psychological Science in the Public Interest}, 20(1):1--68, 2019.
 \bibitem{corsi} P.~M.~Corsi. \emph{Human memory and the medial temporal region of the brain}. PhD thesis, McGill University, 1972.
 \bibitem{cove} S.~Dhuliawala et al. Chain-of-verification reduces hallucination in large language models. \emph{Findings of ACL}, 2024.
-\bibitem{gcm} M.~Dworkin. Recommendation for block cipher modes of operation: Galois/Counter Mode (GCM) and GMAC. NIST SP 800-38D, 2007.
 \bibitem{hautus} M.~J.~Hautus. Corrections for extreme proportions and their biasing effects on estimated values of $d'$. \emph{Behavior Research Methods, Instruments, \& Computers}, 27(1):46--51, 1995.
-\bibitem{hedge} C.~Hedge, G.~Powell, P.~Sumner. The reliability paradox. \emph{Behavior Research Methods}, 50:1166--1186, 2018.
 \bibitem{kessels} R.~P.~C.~Kessels et al. The Corsi block-tapping task: standardization and normative data. \emph{Applied Neuropsychology}, 7(4):252--258, 2000.
 \bibitem{kirchner} W.~K.~Kirchner. Age differences in short-term retention of rapidly changing information. \emph{Journal of Experimental Psychology}, 55(4):352--358, 1958.
-\bibitem{leesee} J.~D.~Lee, K.~A.~See. Trust in automation: designing for appropriate reliance. \emph{Human Factors}, 46(1):50--80, 2004.
 \bibitem{macleod} C.~M.~MacLeod. Half a century of research on the Stroop effect. \emph{Psychological Bulletin}, 109(2):163--203, 1991.
 \bibitem{tadpole} R.~V.~Marinescu et al. TADPOLE Challenge: prediction of longitudinal evolution in Alzheimer's disease. arXiv:1805.03909, 2018.
 \bibitem{matzen} L.~E.~Matzen et al. Recreating Raven's: software for systematically generating large numbers of Raven-like matrix problems. \emph{Behavior Research Methods}, 42(2):525--541, 2010.
