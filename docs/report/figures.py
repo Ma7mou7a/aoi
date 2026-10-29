@@ -47,11 +47,11 @@ x = np.arange(len(SKILLS))
 ax.bar(x - 0.19, before, 0.36, color=LIGHT, edgecolor=GREY, linewidth=0.5, label="Hand-set level ranges")
 ax.bar(x + 0.19, after, 0.36, color=BLUE, label="Fitted calibration")
 ax.axhline(90, color=ORANGE, linewidth=1, linestyle="--")
-ax.text(len(SKILLS) - 0.45, 91.5, "90% target", color=ORANGE, ha="right", fontsize=8)
+ax.text(-0.45, 91.2, "90% target", color=ORANGE, ha="left", fontsize=8)
 ax.set_xticks(x, SKILLS, fontsize=7.5)
 ax.set_ylim(40, 100)
 ax.set_ylabel("90% band coverage (%)")
-ax.legend(loc="lower left", ncol=2, fontsize=8)
+ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=8)
 save(fig, "coverage")
 
 # E1: recovery r and mean absolute error per skill.
@@ -60,8 +60,9 @@ mae = [7.1, 9.1, 5.7, 10.0, 5.7, 6.0, 12.6]
 fig, ax = plt.subplots(figsize=(3.1, 2.4))
 ax.scatter(r, mae, s=36, color=BLUE, zorder=3)
 labels = ["WM", "Att", "Speed", "Flex", "Visuo", "Reas", "AI rel."]
+offsets = {"WM": (5, 3), "Att": (5, 3), "Speed": (6, -10), "Flex": (5, 3), "Visuo": (-30, -11), "Reas": (-26, 6), "AI rel.": (5, 3)}
 for xi, yi, l in zip(r, mae, labels):
-    ax.annotate(l, (xi, yi), textcoords="offset points", xytext=(5, 3), fontsize=7.5, color=INK)
+    ax.annotate(l, (xi, yi), textcoords="offset points", xytext=offsets[l], fontsize=7.5, color=INK)
 ax.set_xlabel("Recovery of true ability (Pearson r)")
 ax.set_ylabel("Mean abs. error (points)")
 ax.set_xlim(0.3, 1.0)
@@ -95,7 +96,7 @@ ax.barh(y - 0.19, genuine, 0.36, color=BLUE, label="Genuine play (false alarms)"
 ax.set_yticks(y, tasks, fontsize=7.5)
 ax.set_xlabel("Games flagged as unreliable (%)")
 ax.set_xlim(0, 105)
-ax.legend(fontsize=7, loc="lower right")
+ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=2)
 ax.invert_yaxis()
 save(fig, "robustness")
 
@@ -135,7 +136,7 @@ ax.legend(fontsize=7, loc="lower left")
 save(fig, "fairness")
 
 # E7: blind strategies vs calibrated players in the Second-opinion game.
-strat = ["Always follow\nthe AI", "Always keep\nmy answer", "Calibrated\n(average)", "Calibrated\n(high skill)"]
+strat = ["Always\nfollow AI", "Always\nkeep own", "Calibrated\naverage", "Calibrated\nhigh skill"]
 ar = [0.507, 0.492, 0.667, 0.787]
 fig, ax = plt.subplots(figsize=(3.1, 2.4))
 ax.bar(range(4), ar, color=[GREY, GREY, BLUE, BLUE], width=0.6)
