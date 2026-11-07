@@ -1,3 +1,4 @@
+import type { SelectionReason } from "../selector";
 import type { Paradigm } from "../dimensions/schema";
 
 /** Paradigms with a working renderer. The selector only schedules these. */
@@ -11,5 +12,5 @@ export type BlockSpec = {
   /** task.params merged with the level's params. */
   params: Record<string, unknown>;
   seed: number;
-  reason: { rule: string; expectedSdReduction: number; note: string };
+  reason: SelectionReason;
 };

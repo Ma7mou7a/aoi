@@ -3,7 +3,7 @@
  * (no AI consent or no API) and as a hint to the LLM, so both answer the same kinds of request.
  */
 
-export type Intent = "debrief" | "play" | "progress" | "forecast" | "goal" | "explain" | "chat" | "help";
+export type Intent = "debrief" | "play" | "progress" | "forecast" | "goal" | "explain" | "chat" | "help" | "why" | "dispute";
 /** Games per week a forecast is computed at. */
 export type Pace = 2 | 4 | 7;
 

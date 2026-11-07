@@ -1,6 +1,14 @@
 "use client";
 
-export const QUICK_CHIPS = ["How am I doing?", "Let's play", "What if I play every day?", "Debrief my last game"] as const;
+export const QUICK_CHIPS = [
+  "How am I doing?",
+  "Let's play",
+  "Why this exercise today?",
+  "That last game wasn't fair, I was distracted",
+  "What exactly will my score be next month?",
+  "I'm stuck, my score never moves",
+  "Debrief my last game",
+] as const;
 
 /** One-tap starters above the input, so nobody has to think of what to type. */
 export function QuickChips({ onPick, disabled }: { onPick: (text: (typeof QUICK_CHIPS)[number]) => void; disabled?: boolean }) {

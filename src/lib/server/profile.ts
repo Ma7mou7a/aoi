@@ -10,7 +10,8 @@ export async function getPosteriors(userId: string, now = new Date()): Promise<R
     .selectDistinctOn([schema.profileSnapshots.dimensionId])
     .from(schema.profileSnapshots)
     .where(eq(schema.profileSnapshots.userId, userId))
-    .orderBy(schema.profileSnapshots.dimensionId, desc(schema.profileSnapshots.createdAt));
+    // Ties on time (same millisecond) go to the snapshot with more observations, never back to the prior.
+    .orderBy(schema.profileSnapshots.dimensionId, desc(schema.profileSnapshots.createdAt), desc(schema.profileSnapshots.nObservations));
   const byDim = new Map(latest.map((s) => [s.dimensionId, s]));
 
   return Object.fromEntries(

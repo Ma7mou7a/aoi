@@ -18,7 +18,7 @@ const GLOSSARY: Array<[RegExp, string]> = [
   [/score/i, "Your score is my current best guess for a skill, based only on your own games, never on other people."],
 ];
 
-const MOOD: Record<Intent, Mood> = { debrief: "proud", play: "cheer", progress: "proud", forecast: "think", goal: "cheer", explain: "think", chat: "wave", help: "wave" };
+const MOOD: Record<Intent, Mood> = { debrief: "proud", play: "cheer", progress: "proud", forecast: "think", goal: "cheer", explain: "think", chat: "wave", help: "wave", why: "think", dispute: "calm" };
 
 /** The skill to suggest when the user didn't name one: their goal, what they play most, else the least-measured skill. */
 function suggestSkill(pack: EvidencePack, memory: CoachMemory): string {

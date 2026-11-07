@@ -22,7 +22,7 @@ import path from "node:path";
 import { parseDocument } from "yaml";
 import { DIMENSIONS_DIR, loadDimensions } from "../src/lib/dimensions/loader";
 import type { Dimension, Paradigm } from "../src/lib/dimensions/schema";
-import { applyDrift, credibleInterval, priorFor, updatePosterior, Z90, type Posterior } from "../src/lib/profiler";
+import { applyDrift, credibleInterval, priorFor, robustUpdate, Z90, type Posterior } from "../src/lib/profiler";
 import { projectGrowth, type SnapshotPoint } from "../src/lib/profiler/projection";
 import type { TrialRecord } from "../src/lib/scoring/types";
 import { createRng, type Rng } from "../src/lib/rng";
@@ -109,7 +109,7 @@ function runUser(dims: Dimension[], truth: Truth, policy: "adaptive" | "random",
     const ability = clamp01(truth[dim.id] + 0.03 * rng.normal()); // day-to-day state noise
     const simulated = simulateBlock(task.paradigm as Paradigm, params, ability, rng.int(2 ** 31));
     const score = scoreBlock(dim, task, level, tweak ? tweak(simulated) : simulated);
-    posteriors[dim.id] = updatePosterior(posteriors[dim.id], score.observation, score.observationSd, score.validity.validTrials, T0);
+    posteriors[dim.id] = robustUpdate(posteriors[dim.id], score.observation, score.observationSd, score.validity.validTrials, T0).posterior;
     blocks.push({ dim: dim.id, level, composite: score.composite, raw: score.rawObservation, validTrials: score.validity.validTrials, valid: score.validity.valid, censored: score.censored, truth: truth[dim.id] });
     recent.push(dim.id);
     const errs = dims.map((d) => (posteriors[d.id].mean - truth[d.id]) ** 2);
@@ -255,7 +255,7 @@ const growth = Array.from({ length: 100 }, () => {
     const sel = selectNext({ dimensions: [wm], posteriors: { [wm.id]: p }, mode: "assessment", available: AVAILABLE_PARADIGMS, targetSd: 0 })!;
     const params = { ...wm.tasks[0].params, ...levelOf(wm.tasks[0], sel.level).params };
     const sc = scoreBlock(wm, wm.tasks[0], sel.level, simulateBlock("n_back", params, clamp01(truth + 0.03 * rngGrow.normal()), rngGrow.int(2 ** 31)));
-    p = updatePosterior(p, sc.observation, sc.observationSd, sc.validity.validTrials, at);
+    p = robustUpdate(p, sc.observation, sc.observationSd, sc.validity.validTrials, at).posterior;
     if (s === 2) firstEst = p.mean;
   }
   const finalTruth = clamp01(start + gain);
@@ -304,7 +304,7 @@ function forecastStudy() {
         const task = dim.tasks[0];
         const params = { ...task.params, ...levelOf(task, s.level).params };
         const sc = scoreBlock(dim, task, s.level, simulateBlock(task.paradigm as Paradigm, params, clamp01(truthOn(dim.id, day) + 0.03 * rng.normal()), rng.int(2 ** 31)));
-        posteriors[dim.id] = updatePosterior(posteriors[dim.id], sc.observation, sc.observationSd, sc.validity.validTrials, at);
+        posteriors[dim.id] = robustUpdate(posteriors[dim.id], sc.observation, sc.observationSd, sc.validity.validTrials, at).posterior;
         hist[dim.id].push({ at, mean: posteriors[dim.id].mean, sd: posteriors[dim.id].sd });
         recent.push(dim.id);
       }
@@ -437,7 +437,7 @@ function trustStudy() {
         const s = selectNext({ dimensions: [dim], posteriors: { [dim.id]: post }, mode: "assessment", available: AVAILABLE_PARADIGMS, targetSd: 0 })!;
         const params = { ...task.params, ...levelOf(task, s.level).params };
         const sc = scoreBlock(dim, task, s.level, simulateBlock("trust_machine", params, clamp01(t[dim.id] + 0.03 * rng.normal()), rng.int(2 ** 31)));
-        post = updatePosterior(post, sc.observation, sc.observationSd, sc.validity.validTrials, T0);
+        post = robustUpdate(post, sc.observation, sc.observationSd, sc.validity.validTrials, T0).posterior;
       }
       const [lo, hi] = credibleInterval(post);
       truth.push(t[dim.id]);

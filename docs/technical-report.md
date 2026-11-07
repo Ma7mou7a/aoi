@@ -85,7 +85,7 @@ Every week a 7-day forecast is stored. Once it is due, the dashboard shows wheth
    - forecasts at 2, 4 and 7 games a week
 
    Each item gets a short reference (R1, T3, W2, P1). No names or database IDs leave the server.
-2. **Structured output.** The LLM (Claude `claude-opus-5-5` when an Anthropic key is set, otherwise `gpt-oss-120b` on Groq; both with strict JSON-schema output) returns:
+2. **Structured output.** The LLM (`gpt-oss-120b`, open-weight, on Groq, with strict JSON-schema output) returns:
    - the user's **intent**
    - a short **reply** (at most 3 sentences)
    - 0–3 **claims**, each with a "why" and references
@@ -211,7 +211,7 @@ The point forecast is no better than "no change" at one week. What the forecast 
   - JSON export
   - one-click deletion through every table, rewards and coach memory included
   - no email, password, real name, audio or images collected
-  - only an evidence pack with no identifiers goes to Anthropic or Groq, and only with consent
+  - only an evidence pack with no identifiers goes to Groq, and only with consent
 - **Accounts without personal data.** A random 80-bit sign-in key is shown once, and only its SHA-256 is stored. Passkeys (WebAuthn) and a QR link or short code from a signed-in device are optional ways back in; sessions are opaque hashed tokens with idle and absolute expiry.
 - **Motivation without dark patterns.**
   - rewards never change a score
@@ -228,7 +228,7 @@ Full details are in `docs/ethics.md`.
 
 ## 11. Engineering
 
-Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, the Anthropic SDK and Groq's OpenAI-compatible API.
+Next.js 15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for zero-setup demos), Recharts, Zod, Groq's OpenAI-compatible API.
 
 **544 unit tests** cover:
 - scoring, profiler calibration and the selector

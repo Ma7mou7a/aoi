@@ -89,8 +89,9 @@ export function emitTrial(correct: boolean | null | undefined) {
   pandaBus.emit({ type: correct ? "trial:correct" : "trial:wrong" });
 }
 
-/** Record a trial and tell Bao about it. */
-export function pushTrial<T extends { correct: boolean | null }>(list: T[], record: T) {
+/** Record a trial and tell Bao about it (and the live rush check, which only sees timing and correctness). */
+export function pushTrial<T extends { correct: boolean | null; rtMs?: number | null; isPractice?: boolean; outcome?: string }>(list: T[], record: T) {
   list.push(record);
   emitTrial(record.correct);
+  pandaBus.emit({ type: "trial:data", rtMs: record.rtMs ?? null, correct: record.correct, isPractice: record.isPractice, outcome: record.outcome });
 }

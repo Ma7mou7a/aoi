@@ -18,6 +18,8 @@ export const ROUTE_MENU: Record<Intent, string> = {
   play: "which game to play now, or how to train a skill",
   help: "what Bao or the app can do",
   chat: "anything else: greetings, feelings, small talk, or whether to play at all today",
+  why: "why the app chose a specific game, level or plan for them (\"why this exercise today?\")",
+  dispute: "they disagree with a result or say it was not representative (distracted, interrupted, tired, unfair)",
 };
 
 export const ROUTE_JSON_SCHEMA = {

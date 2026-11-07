@@ -163,7 +163,7 @@ Can a camera read emotion? & Facial movements do not reliably reveal emotional s
 % Layout: browser and the external LLM on top, three pillars in the server, the database underneath.
 % Every arrow is straight or one elbow, and none crosses another.
 \node[plain,minimum width=7.2cm,fill=soft,text width=7.0cm] (ui) at (3.9,0) {Browser \textperiodcentered{} games \textperiodcentered{} coach \textperiodcentered{} AI Lab\\\scriptsize\textcolor{per}{Focus Guard: on-device face model}};
-\node[plain,minimum width=3.4cm,dashed] (llm) at (13.0,0) {LLM provider\\\scriptsize Claude or Groq};
+\node[plain,minimum width=3.4cm,dashed] (llm) at (13.0,0) {LLM provider\\\scriptsize open-weight, Groq};
 \node[ai=prob,text width=3.7cm,minimum height=2.2cm] (m) at (2.25,-2.9) {\textbf{Measurement}\\\scriptsize scoring \textperiodcentered{} data quality\\\scriptsize Bayesian Brain Twin\\\scriptsize active-learning selector};
 \node[ai=gen,text width=3.7cm,minimum height=2.2cm] (a) at (7.6,-2.9) {\textbf{AI}\\\scriptsize router \textperiodcentered{} coach writer\\\scriptsize Persuader \textperiodcentered{} Fabricator\\\scriptsize verifier \textperiodcentered{} safety filters};
 \node[ai=guard,text width=3.7cm,minimum height=2.2cm] (s) at (12.95,-2.9) {\textbf{Security}\\\scriptsize passkeys \textperiodcentered{} sessions\\\scriptsize per-user encryption\\\scriptsize tamper-evident log};
@@ -183,7 +183,7 @@ Can a camera read emotion? & Facial movements do not reliably reveal emotional s
 \label{fig:arch}
 \end{figure}
 
-A \emph{game} (internally a \emph{block}) is one run of one task at one difficulty level, about a minute. Every trial stores the stimulus, the response, its correctness, its response time measured from the frame that painted the stimulus, and whether the player looked away (Focus Guard). The engine scores the game and updates the Brain Twin; the selector picks the next game; the coach explains. The stack is Next.js~15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for demos), Zod validation at every boundary, and either Claude or an open-weight model on Groq behind one interface.
+A \emph{game} (internally a \emph{block}) is one run of one task at one difficulty level, about a minute. Every trial stores the stimulus, the response, its correctness, its response time measured from the frame that painted the stimulus, and whether the player looked away (Focus Guard). The engine scores the game and updates the Brain Twin; the selector picks the next game; the coach explains. The stack is Next.js~15 and TypeScript, Drizzle ORM on PostgreSQL (embedded PGlite for demos), Zod validation at every boundary, and an open-weight model on Groq behind one interface.
 
 % ================================================================ 4
 \section{Measurement: the maths}
@@ -286,7 +286,7 @@ Language models are excellent at understanding and writing, and unreliable at co
 \toprule
 Component & Model / technique & Sees $\rightarrow$ produces & Runs & Fallback\\
 \midrule
-Intent router & Claude or \code{gpt-oss-120b} (Groq), strict JSON & the question $\rightarrow$ one menu item, a skill, a pace & server, 6\,s budget & keyword rules\\
+Intent router & \code{gpt-oss-120b} (Groq), strict JSON & the question $\rightarrow$ one menu item, a skill, a pace & server, 6\,s budget & keyword rules\\
 Coach writer & same, strict JSON & evidence pack without identifiers $\rightarrow$ reply, cited claims, buttons & server & template coach\\
 Persuader & same & a trivia question and a side $\rightarrow$ argument + technique & server & pre-written\\
 Fabricator & same & a topic and 3 true facts $\rightarrow$ one fake & server & pre-written\\
@@ -298,7 +298,7 @@ Speech I/O & Web Speech API & speech $\leftrightarrow$ text & browser & typing\\
 \end{tabularx}
 \end{table}
 
-\subsubsection{One interface, two providers} Every language-model call goes through one module with two interchangeable back ends, Claude (Anthropic) or the open-weight \code{gpt-oss-120b} on Groq, always with strict JSON-schema output. Calls never throw: any failure returns a reason and the caller switches to its rule-based fallback, so the product works with no AI provider at all.
+\subsubsection{One interface, swappable model} Every language-model call goes through one module, today the open-weight \code{gpt-oss-120b} on Groq, always with strict JSON-schema output. Calls never throw: any failure returns a reason and the caller switches to its rule-based fallback, so the product works with no AI provider at all.
 
 \subsection{Why these AI choices}
 

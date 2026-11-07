@@ -1,5 +1,6 @@
 import type { DimensionTask } from "../dimensions/schema";
 import { AWAY_FLAG_SHARE } from "../focus/gaze";
+import { rushProfile } from "../scenarios/rush";
 import type { Metrics, TrialRecord, Validity, ValidityFlag } from "./types";
 
 /** Longest run of identical responses (no response counts as its own value). */
@@ -42,6 +43,8 @@ export function assessValidity(trials: TrialRecord[], metrics: Metrics, rules: D
   if (timeouts.length / n > 0.3) flags.push("many_timeouts");
   if (scored.filter((t) => t.behaviour?.focusLost).length > 2) flags.push("focus_lost");
   if (scored.filter((t) => t.lookedAway).length / n > AWAY_FLAG_SHARE) flags.push("looked_away");
+  // Fast AND wrong is guessing (a button masher); fast and right is just a fast player, never flagged.
+  if (rushProfile(scored, rules.min_rt_ms).rushing) flags.push("rushing");
 
   return { valid: flags.length === 0, validTrials: Math.max(validTrials, 0), flags };
 }

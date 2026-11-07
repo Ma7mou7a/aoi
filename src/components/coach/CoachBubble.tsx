@@ -9,6 +9,7 @@ import { Panda } from "../panda/Panda";
 import { ActionButtons } from "./ActionButtons";
 import { ClaimCard, type FeedbackFn } from "./ClaimCard";
 import { spokenText, type useSpeaker } from "./voice";
+import { ScenarioChart } from "./ScenarioChart";
 
 const MOODS: PandaState[] = ["cheer", "think", "proud", "calm", "wave"];
 
@@ -60,6 +61,7 @@ export function CoachBubble({
           </p>
         )}
         <Reply text={m.content} animate={fresh} />
+        {m.meta?.chart && <ScenarioChart chart={m.meta.chart} />}
         <ActionButtons actions={actions} onForecast={onForecast} disabled={busy} />
         {m.claims.length > 0 && (
           <div>
@@ -80,7 +82,8 @@ export function CoachBubble({
               {voice.speakingId === m.id ? "■ Stop" : "Listen"}
             </button>
           )}
-          {m.meta?.source === "llm" ? "Written with AI, checked against your games" : "Bao's built-in replies"} · <LocalTime at={m.createdAt} />
+          {m.meta?.scenario ? "Computed from your games and my saved decisions (no AI guesswork)" : m.meta?.source === "llm" ? "Written with AI, checked against your games" : "Bao's built-in replies"} · <LocalTime at={m.createdAt} />
+          {!!m.meta?.certaintyRewrites && ` · ${m.meta.certaintyRewrites} over-confident phrase${m.meta.certaintyRewrites > 1 ? "s" : ""} softened`}
           {dropped > 0 && ` · ${dropped} statement${dropped > 1 ? "s" : ""} removed because they didn't match your games`}
         </p>
       </div>

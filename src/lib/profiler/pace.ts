@@ -23,6 +23,15 @@ export function forecastAtPace(
   driftSdPerDay: number,
 ): PaceForecast | null {
   if (history.length < MIN_GAMES_FOR_PACE) return null;
+  const { slope, slopeSe } = perGameTrend(history);
+  const g = gamesPerWeek;
+  const to = clamp01(current.mean + slope * g);
+  const sd = Math.sqrt(current.sd ** 2 + (g * slopeSe) ** 2 + driftSdPerDay ** 2 * HORIZON_DAYS);
+  return { gamesPerWeek, fromPct: pct(current.mean), toPct: pct(to), lowPct: pct(to - Z90 * sd), highPct: pct(to + Z90 * sd), perGamePct: Math.round(slope * 1000) / 10 };
+}
+
+/** The per-game trend behind `forecastAtPace` (shrunk toward no change, capped), with its standard error. */
+export function perGameTrend(history: Array<{ mean: number; sd: number }>): { slope: number; slopeSe: number } {
   const xs = history.map((_, i) => i);
   const ws = history.map((h) => 1 / h.sd ** 2);
   const sw = ws.reduce((a, b) => a + b, 0);
@@ -39,9 +48,5 @@ export function forecastAtPace(
   const shrink = Number.isFinite(se) ? SLOPE_PRIOR_SD ** 2 / (SLOPE_PRIOR_SD ** 2 + se ** 2) : 0;
   const slope = Math.max(-MAX_SLOPE_PER_DAY, Math.min(MAX_SLOPE_PER_DAY, rawSlope * shrink));
   const slopeSe = Number.isFinite(se) ? Math.sqrt(shrink) * se : SLOPE_PRIOR_SD;
-
-  const g = gamesPerWeek;
-  const to = clamp01(current.mean + slope * g);
-  const sd = Math.sqrt(current.sd ** 2 + (g * slopeSe) ** 2 + driftSdPerDay ** 2 * HORIZON_DAYS);
-  return { gamesPerWeek, fromPct: pct(current.mean), toPct: pct(to), lowPct: pct(to - Z90 * sd), highPct: pct(to + Z90 * sd), perGamePct: Math.round(slope * 1000) / 10 };
+  return { slope, slopeSe };
 }

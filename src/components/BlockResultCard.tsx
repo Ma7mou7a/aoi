@@ -15,6 +15,9 @@ import { celebrate } from "./motion/celebrate";
 import { SureMeter } from "./SureMeter";
 import { RewardFloat } from "./rewards/RewardFloat";
 import { ShareDaily } from "./ShareDaily";
+import { UncertainBlockCard } from "./scenarios/UncertainBlockCard";
+import { ExperimentCard } from "./scenarios/ExperimentCard";
+import { BetResult } from "./scenarios/BetCard";
 
 /** Typical noise of one game in the skill configs (obs_sd ~ 0.2), for the "N more games" wording only. */
 const TYPICAL_OBS_SD = 0.2;
@@ -61,7 +64,16 @@ const FLAG_TEXT: Record<ValidityFlag, string> = {
   many_timeouts: "Many answers came too late.",
   focus_lost: "The window lost focus several times during the game.",
   looked_away: "Focus Guard saw you look away from the screen during many rounds, so those rounds were left out.",
+  rushing: "Many answers came in faster than the task can be read, and most of those were wrong.",
 };
+
+/** "What you did": a masher's game leads with the speed, not with a near-zero accuracy that came from guessing. */
+function didText(paradigm: string, score: RunResult["score"]) {
+  const flags = score.validity.flags;
+  if (!flags.includes("rushing") && !flags.includes("many_anticipations")) return plainDid(paradigm, score.metrics);
+  const acc = score.metrics.accuracy;
+  return `Most answers came in faster than the screen can be read${Number.isFinite(acc) && acc > 0.05 ? `, and only ${Math.round(acc * 100)}% of the readable ones were right` : ", so very few of them could be scored"}.`;
+}
 
 /** Share for the reliance rates (they use a small-sample correction, so show "about"). */
 const fmtShare = (v: number) => (Number.isFinite(v) ? `about ${pct(v)} of the time` : "(no such cases this game)");
@@ -97,7 +109,7 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
 
         <div>
           <h2 className="text-sm font-semibold tracking-wide text-slate-500 dark:text-slate-400">What you did</h2>
-          <p className="mt-1 text-lg">{plainDid(spec.task.paradigm, score.metrics)}</p>
+          <p className="mt-1 text-lg">{didText(spec.task.paradigm, score)}</p>
         </div>
 
         {after ? (
@@ -131,6 +143,8 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </div>
       </section>
 
+      {result.bet && <BetResult {...result.bet} actual={score.composite} color={spec.dimension.color} />}
+
       <RewardFloat rewards={result.rewards ?? []} />
 
       {spec.reason.rule === "daily" && <ShareDaily taskName={spec.task.name} score={score.composite} detail={spec.dimension.name} />}
@@ -141,11 +155,11 @@ export function BlockResultCard({ spec, result, next, onContinue, onEnd }: { spe
         </ul>
       )}
 
-      {!score.validity.valid && (
-        <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-base text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-          <b>Counted a little less:</b> {score.validity.flags.map((f) => FLAG_TEXT[f]).join(" ")}
-        </p>
+      {!score.validity.valid && after && (
+        <UncertainBlockCard runId={result.taskRunId} flags={score.validity.flags} flagText={FLAG_TEXT} rush={result.rush} shield={result.shield} skill={skill} engagement={result.engagement} />
       )}
+
+      {result.experiment && <ExperimentCard e={result.experiment} />}
 
       {result.affect?.suggestion && (
         <div className="space-y-2 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-base text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">

@@ -5,7 +5,7 @@ import { scienceToPrompt, type ScienceRef } from "./science";
 import { inSentence } from "../text";
 import { resolveActions, type ClientAction } from "./actions";
 
-export const INTENTS = ["debrief", "play", "progress", "forecast", "goal", "explain", "chat", "help"] as const;
+export const INTENTS = ["debrief", "play", "progress", "forecast", "goal", "explain", "chat", "help", "why", "dispute"] as const;
 export const MOODS = ["cheer", "think", "proud", "calm", "wave"] as const;
 export type Mood = (typeof MOODS)[number];
 export const MAX_CLAIMS = 3;
