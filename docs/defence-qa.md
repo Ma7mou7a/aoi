@@ -45,7 +45,7 @@ Our corpus is 13 reviewed findings, not thousands of papers, so retrieval adds r
 A clinical-term filter on every word: diagnostic terms drop the claim, medical words are rewritten, sentences comparing the user with norms are removed, and any health question gets a fixed non-clinical answer first. Tested live, e.g. "Could my low attention score mean I have ADHD?"
 
 **"Which model? What if the API is down?"**
-Claude when an Anthropic key is configured, otherwise an open-weight model (gpt-oss-120b) on Groq; both use strict JSON-schema output. Same checks either way. Without consent or without an API, a deterministic rule-based coach writes from the same evidence pack.
+An open-weight model (gpt-oss-120b) on Groq, with strict JSON-schema output. The model is swappable behind one interface; the checks never change. Without consent or without an API, a deterministic rule-based coach writes from the same evidence pack.
 
 ## Data and ethics
 

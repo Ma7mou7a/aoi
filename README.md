@@ -14,7 +14,7 @@
 | **Validated** | 500 simulated users through the real pipeline: band coverage **89–94%** (target 90%), mean error ±6–10% on the cognitive skills, **98% of invalid play caught** with 1% false alarms (`/validation`, [docs/validation.md](docs/validation.md)) |
 | **A coach that acts** | Bao answers what you ask with a short reply and buttons: play the right game ("I want to improve my memory" → ▶ Play: Working memory), show progress, set a goal, or "what if I play every day?" (a ranged forecast from your own trend). Works without AI too: a template coach with intent detection and a varied line bank |
 | **Experience without dark patterns** | A 60-second first game before signup, a plain-words result card (what you did / what it means / what's next) with a "sure-o-meter", conversational signup, bamboo rewards for consistency and curiosity (never for score level), a weekly streak freeze, and a daily shared puzzle. Bao is quiet during scored games ([docs/ethics.md](docs/ethics.md)) |
-| **Evidence-linked coach** | Claude or an open-weight model on Groq writes claims that must cite the exact blocks and trials, and may add published findings (13 reviewed science cards) to explain why; science alone never counts as evidence; every number in a claim is checked against the evidence it cites; unsupported claims are dropped; a clinical-term filter guards every word and norm comparisons are removed; falls back to a rule-based coach |
+| **Evidence-linked coach** | An open-weight model on Groq writes claims that must cite the exact blocks and trials, and may add published findings (13 reviewed science cards) to explain why; science alone never counts as evidence; every number in a claim is checked against the evidence it cites; unsupported claims are dropped; a clinical-term filter guards every word and norm comparisons are removed; falls back to a rule-based coach |
 | **No-email accounts** | Sign up with a nickname; a private sign-in key (only its hash is stored) opens your Brain Twin on any device. Sign out and key replacement in Settings |
 | **How sure are you?** | After every block you guess your score before seeing it; the app tracks how well you know your own performance (metacognitive calibration, Carpenter et al. 2019) and shows it on the dashboard |
 | **AI Collaboration Score** | Documented formula over 19 behaviour signals, including your self-estimates and graded results from the second-opinion game, plus an opt-in **spot-the-error mode** that measures whether you check the AI ([docs/collaboration-score.md](docs/collaboration-score.md)) |
@@ -45,7 +45,7 @@ flowchart LR
   SC --> P[Bayesian profiler<br/>Kalman update + drift]
   P --> BT[(Brain Twin<br/>snapshots · forecasts)]
   BT --> D[Dashboard<br/>radar · curves · heatmap · goals · plan]
-  BT --> C[Coach<br/>evidence pack → Claude · Groq / rules<br/>→ evidence check → clinical filter]
+  BT --> C[Coach<br/>evidence pack → open-weight LLM (Groq) / rules<br/>→ evidence check → clinical filter]
   C --> CS[AI Collaboration Score]
   SC --> A[Behaviour-only affect<br/>fatigue · frustration]
   A --> S
@@ -63,7 +63,7 @@ npm run seed:demo       # optional: a demo user with 2 weeks of history (prints 
 npm run dev             # http://localhost:3000
 ```
 
-Optional: `ANTHROPIC_API_KEY` or `GROQ_API_KEY` in `.env.local` enables the AI coach (Claude is preferred when both are set; `COACH_PROVIDER` forces one) (see `.env.example`). For production-like data use real Postgres: `docker compose up -d` and set `DATABASE_URL`.
+Optional: `GROQ_API_KEY` in `.env.local` enables the AI coach (see `.env.example`). For production-like data use real Postgres: `docker compose up -d` and set `DATABASE_URL`.
 
 > **PGlite tip:** stop the dev server with Ctrl+C, not by killing the process. If the app logs `PGlite could not open ./.pglite`, rename that folder and re-run `npm run db:migrate`.
 
@@ -91,6 +91,6 @@ Optional: `ANTHROPIC_API_KEY` or `GROQ_API_KEY` in `.env.local` enables the AI c
 
 ## Stack
 
-Next.js 15 · TypeScript · Drizzle ORM · PostgreSQL / PGlite · Recharts · Zod · Anthropic SDK (Claude) · Groq · Vitest.
+Next.js 15 · TypeScript · Drizzle ORM · PostgreSQL / PGlite · Recharts · Zod · Groq (open-weight LLM) · Vitest.
 
 *AI4Brain is a learning tool. It does not diagnose or assess any health condition.*

@@ -15,6 +15,8 @@ import {
 import type { ClientAction } from "../lib/coach/actions";
 import type { Intent } from "../lib/coach/intent";
 import type { CoachMemory } from "../lib/coach/memory";
+import type { BlockVariant, DecisionTrace } from "../lib/selector";
+import type { CoachChart, Scenario } from "../lib/scenarios/chart";
 
 // Dimension and task ids are plain text, not foreign keys: they come from
 // dimensions/*.yaml so a new dimension needs no migration.
@@ -90,7 +92,11 @@ export const sessions = pgTable("sessions", {
 export type BlockValidity = {
   valid: boolean;
   validTrials: number;
-  flags: Array<"too_few_trials" | "near_chance" | "response_streak" | "many_anticipations" | "many_timeouts" | "focus_lost" | "looked_away">;
+  flags: Array<"too_few_trials" | "near_chance" | "response_streak" | "many_anticipations" | "many_timeouts" | "focus_lost" | "looked_away" | "rushing">;
+  /** The player's own account of a flagged block ("I was rushing", "distracted"...), asked right after it. */
+  context?: "rushing" | "distracted" | "testing" | "fine";
+  /** The player contested this block; it now counts with `multiplier` × its noise. */
+  contested?: { reason: string; at: string; supported: boolean; notes: string[]; multiplier: number };
 };
 
 /** One block of one task at one difficulty level; produces one observation for the profiler. */
@@ -105,7 +111,7 @@ export const taskRuns = pgTable("task_runs", {
   /** Fully resolved params incl. RNG seed, so a block can be replayed exactly. */
   params: jsonb("params").$type<Record<string, unknown>>().notNull(),
   /** Why the adaptive selector chose this block (expected uncertainty reduction etc.), shown to the user. */
-  selectionReason: jsonb("selection_reason").$type<{ rule: string; expectedSdReduction?: number; note?: string }>(),
+  selectionReason: jsonb("selection_reason").$type<{ rule: string; expectedSdReduction?: number; note?: string; trace?: DecisionTrace; variant?: BlockVariant }>(),
   status: runStatus("status").notNull().default("active"),
   metrics: jsonb("metrics").$type<Record<string, number>>(),
   composite: real("composite"), // 0..1, weighted per scoring.components
@@ -149,7 +155,8 @@ export const trials = pgTable("trials", {
 
 // ── Brain Twin: historised profile + projections ────────────────────────────
 
-export const snapshotTrigger = pgEnum("snapshot_trigger", ["prior", "task_run", "session_end", "time_decay"]);
+/** `reweigh`: the player contested a block and the Twin was recomputed with that block counting less. */
+export const snapshotTrigger = pgEnum("snapshot_trigger", ["prior", "task_run", "session_end", "time_decay", "reweigh"]);
 
 /** Posterior per dimension after each update. Never updated in place: this table IS the history. */
 export const profileSnapshots = pgTable("profile_snapshots", {
@@ -216,6 +223,12 @@ export type CoachMeta = {
   routedBy?: "ai" | "keywords";
   /** True when this debrief offered the "Bet with Bao" card. */
   bet?: boolean;
+  /** Which surprise scenario produced this reply (deterministic, computed from data, no model). */
+  scenario?: Scenario;
+  /** Numbers for the chart drawn under the reply (forecast fan, decision record, re-weighing). */
+  chart?: CoachChart;
+  /** Absolute claims rewritten into probabilistic language by the certainty guard. */
+  certaintyRewrites?: number;
 };
 
 export type PlantedFlawRecord = {

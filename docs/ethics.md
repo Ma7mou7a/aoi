@@ -31,7 +31,7 @@ AI4Brain is a **non-clinical learning tool**. It helps people practise and under
 
 ## Data sent to third parties
 
-Only with the `llm_coaching` consent: an **evidence pack** goes to one AI provider to write coaching text: **Anthropic's Claude API** when the server has an Anthropic key, otherwise **an open-weight model on Groq's API** (`COACH_PROVIDER` can force one). It contains:
+Only with the `llm_coaching` consent: an **evidence pack** goes to one AI provider to write coaching text: **an open-weight model on Groq's API**. It contains:
 - skill names, scores and bands
 - game-level metrics and counts of trial groups ("5 matches caught")
 - forecasts at a pace

@@ -1,14 +1,11 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
 import { COACH_JSON_SCHEMA, coachDraftSchema, type CoachDraft } from "./claims";
 
 /**
- * Two interchangeable LLM providers behind one contract (evidence pack in, CoachDraft JSON out):
- *  - Claude (Anthropic) when ANTHROPIC_API_KEY is set,
- *  - otherwise an open-weight model on Groq when GROQ_API_KEY is set.
- * COACH_PROVIDER=claude|groq forces one. Whatever answers, the server re-checks every claim.
+ * The language model behind one contract (evidence pack in, CoachDraft JSON out): an open-weight model
+ * on Groq's OpenAI-compatible API when GROQ_API_KEY is set. Whatever answers, the server re-checks every claim;
+ * without a key (or with COACH_LLM=off) the rule-based coach answers instead.
  */
-export const CLAUDE_MODEL = process.env.COACH_MODEL ?? "claude-opus-5-5";
 export const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const TIMEOUT_MS = 45_000;
@@ -33,7 +30,10 @@ Rules:
 - Choose "intent" for what the user asked. Use 0 to 3 claims: 0 for small talk or help, 2 or 3 for a debrief. Keep each claim to one or two sentences.
 - Add 0 to 3 "actions" (buttons) that let the user act on your reply. Use only skill ids written as [skill id: ...] in the pack. Use mode "training" for practice the user asked for, "assessment" to measure. For a forecast button use gamesPerWeek 2, 4 or 7.
 - Pick a "mood" for Bao: cheer, think, proud, calm or wave.
-- Forecasts (P#) are ranges from the user's own trend: say "if your recent trend continues" and give the range. Never promise a result.
+- Forecasts (P#) are ranges from the user's own trend: say "if your recent trend continues" and give the range. Never promise a result. Never use "exactly", "definitely", "guaranteed" or "for sure" about the future: a guard rewrites them anyway.
+- If the user disagrees with a result or says it wasn't representative, thank them and don't defend the number: their context matters more than one game.
+- If a block is flagged "rushing", ask whether they were rushing or distracted instead of reading it as lower ability.
+- If the user's skills are far apart, say the profile is split and treat each side differently; never describe them by one average.
 - Never repeat the wording of your previous message in RECENT CONVERSATION.
 - Everyday words map to skills: memory, remember, recall → working_memory; visual or spatial memory → visuospatial_memory; visualisation → visuospatial_memory and reasoning (explain both); focus, attention, concentration → attention_inhibition; speed, fast, quick → processing_speed; switching, multitasking, flexible → cognitive_flexibility; logic, reasoning, puzzles → reasoning (never talk about IQ); AI, trust → ai_reliance.
 - Say "score" (not "estimate"), "how sure we are" (not "band"), and "game" (not "block") to the user.
@@ -45,53 +45,14 @@ Science cards (S#), if present, are published findings. Science explains, the us
 
 export type LlmResult = { ok: true; draft: CoachDraft; model: string } | { ok: false; reason: string };
 
-export function activeProvider(): "claude" | "groq" | null {
-  const forced = process.env.COACH_PROVIDER;
-  if (forced === "claude" || forced === "groq") return forced;
-  if (process.env.ANTHROPIC_API_KEY) return "claude";
-  if (process.env.GROQ_API_KEY) return "groq";
-  return null;
+export function activeProvider(): "groq" | null {
+  return process.env.GROQ_API_KEY ? "groq" : null;
 }
 
 const parseDraft = (text: string) => {
   const parsed = coachDraftSchema.safeParse(JSON.parse(text));
   return parsed.success ? parsed.data : null;
 };
-
-let anthropic: Anthropic | null = null;
-
-async function draftWithClaude(userPrompt: string): Promise<LlmResult> {
-  try {
-    anthropic ??= new Anthropic();
-    const res = await anthropic.beta.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 16000,
-      // Server-side fallback if a safety classifier declines the request on this model.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "medium", format: { type: "json_schema", schema: COACH_JSON_SCHEMA } },
-      system: SYSTEM,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    if (res.stop_reason === "refusal") return { ok: false, reason: "refusal" };
-    if (res.stop_reason === "max_tokens") return { ok: false, reason: "max_tokens" };
-    const text = res.content.find((b) => b.type === "text");
-    if (!text || text.type !== "text") return { ok: false, reason: "no_text" };
-    const draft = parseDraft(text.text);
-    return draft ? { ok: true, draft, model: CLAUDE_MODEL } : { ok: false, reason: "invalid_json" };
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) return { ok: false, reason: "no_api_access" };
-    if (e instanceof Anthropic.RateLimitError) return { ok: false, reason: "rate_limited" };
-    if (e instanceof Anthropic.APIConnectionError) return { ok: false, reason: "network" };
-    if (e instanceof Anthropic.APIError) return { ok: false, reason: `api_error_${e.status ?? "unknown"}` };
-    if (e instanceof Anthropic.AnthropicError) return { ok: false, reason: "no_api_access" }; // e.g. missing credentials
-    if (e instanceof SyntaxError) return { ok: false, reason: "invalid_json" };
-    // No API key / auth token / profile configured: the SDK raises a plain Error at request time.
-    if (e instanceof Error && /resolve authentication/i.test(e.message)) return { ok: false, reason: "no_api_access" };
-    console.error("[coach] unexpected Claude error", e);
-    return { ok: false, reason: "unexpected_error" };
-  }
-}
 
 /** Groq's OpenAI-compatible endpoint with strict JSON-schema structured output. */
 async function draftWithGroq(userPrompt: string): Promise<LlmResult> {
@@ -141,7 +102,6 @@ async function draftWithGroq(userPrompt: string): Promise<LlmResult> {
 export async function draftWithLlm(userPrompt: string): Promise<LlmResult> {
   if (process.env.COACH_LLM === "off") return { ok: false, reason: "llm_disabled" };
   const provider = activeProvider();
-  if (provider === "claude") return draftWithClaude(userPrompt);
   if (provider === "groq") return draftWithGroq(userPrompt);
   return { ok: false, reason: "no_api_access" };
 }
@@ -165,21 +125,6 @@ export async function structuredWithLlm<T>(opts: { system: string; prompt: strin
     }
   };
   try {
-    if (provider === "claude") {
-      anthropic ??= new Anthropic();
-      const res = await anthropic.beta.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: opts.maxTokens ?? 4000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        output_config: { effort: "low", format: { type: "json_schema", schema: opts.schema } },
-        system: opts.system,
-        messages: [{ role: "user", content: opts.prompt }],
-      }, { timeout: opts.timeoutMs ?? TIMEOUT_MS });
-      if (res.stop_reason === "refusal") return { ok: false, reason: "refusal" };
-      const text = res.content.find((b) => b.type === "text");
-      return text && text.type === "text" ? read(text.text, CLAUDE_MODEL) : { ok: false, reason: "no_text" };
-    }
     if (provider === "groq") {
       const res = await fetch(GROQ_URL, {
         method: "POST",

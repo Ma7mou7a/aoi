@@ -1,0 +1,1 @@
+ALTER TYPE "public"."snapshot_trigger" ADD VALUE 'reweigh';

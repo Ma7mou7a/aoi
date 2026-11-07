@@ -30,6 +30,9 @@ import { loadUser as loadAccount, saveCoachMemory } from "./accounts";
 import { cipherFor, FIELDS, type UserCipher } from "./vault";
 import type { AffectState } from "../affect";
 import { inSentence } from "../text";
+import { guardCertainty } from "../scenarios/certainty";
+import { detectAsymmetry } from "../scenarios/asymmetry";
+import { detectScenario, disputeReply, fortuneReply, plateauOpener, plateauReply, rushOpener, whyReply, type ScenarioReply } from "./scenarios";
 
 /** How many recent blocks the coach can see and cite. */
 const RECENT_RUNS = 6;
@@ -169,6 +172,30 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   let memory = startMemory;
   const dims = getDimensions();
 
+  // The surprise scenarios (why / pushback / fortune teller) are answered from data, before any model.
+  if (question) {
+    const sc = detectScenario(question);
+    if (sc) {
+      const hint = classifyIntent(question).skill;
+      const [lastPlayed] = await db
+        .select({ dimensionId: schema.taskRuns.dimensionId })
+        .from(schema.taskRuns)
+        .where(and(eq(schema.taskRuns.userId, userId), eq(schema.taskRuns.status, "completed")))
+        .orderBy(desc(schema.taskRuns.startedAt))
+        .limit(1);
+      const goal = memory.goal && memory.goal !== "curious" ? memory.goal : undefined;
+      const reply =
+        sc.kind === "why"
+          ? await whyReply(userId, user.displayName, sc.lang)
+          : sc.kind === "dispute"
+            ? await disputeReply(userId, user.displayName, sc.reason, hint, sc.lang)
+            : sc.kind === "plateau"
+              ? await plateauReply(userId, user.displayName, sc.lang, hint)
+              : await fortuneReply(userId, hint ?? memory.favouriteSkill ?? goal ?? lastPlayed?.dimensionId ?? "working_memory", sc.horizonDays, sc.exact, sc.lang);
+      return storeScenarioReply(userId, question, reply, memory);
+    }
+  }
+
   // Step 1, understand: with AI consent an AI picks what to compute from a fixed menu (src/lib/server/router.ts);
   // otherwise, or if it fails, the keyword rules do. Buttons and debriefs need no reading.
   let routedBy: "ai" | "keywords" | undefined;
@@ -297,7 +324,37 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   // A forecast answer shouldn't offer the pace that was just asked about.
   if (classified.pace) final.actions = final.actions.filter((a) => a.forecast?.gamesPerWeek !== classified.pace);
   final.content = applyClinicalGuard(question, final.content);
+  // Layer A, in the coach's voice: a rushed last game is asked about, never read as a drop in ability.
+  if (isDebrief) {
+    const opener = await rushOpener(userId);
+    if (opener) prefix.unshift(opener);
+    // Stagnation plateau, in the coach's voice: named in the debrief before the engine changes the format.
+    else {
+      const stuck = await plateauOpener(userId);
+      if (stuck) prefix.unshift(stuck);
+    }
+  }
+  // Split profile: name it instead of averaging it away (progress and debriefs).
+  if (classified.intent === "progress" || isDebrief) {
+    const posts = await getPosteriors(userId);
+    const a = detectAsymmetry(dims.map((d) => ({ id: d.id, name: d.name, mean: posts[d.id].mean, sd: posts[d.id].sd, measured: posts[d.id].nObservations > 0 })));
+    if (a.asymmetric && a.strongest && a.weakest) {
+      prefix.push(
+        `Your profile is split, not average: ${a.strongest.name} is about ${a.strongest.pct}% while ${inSentence(a.weakest.name)} is about ${a.weakest.pct}%, and their ranges don't overlap. So your plan is asymmetric too: advanced ${inSentence(a.strongest.name)} games plus foundation ${inSentence(a.weakest.name)} games.`,
+      );
+    }
+  }
   if (prefix.length) final.content = `${prefix.join(" ")} ${final.content}`;
+  // Fortune-teller guardrail on every reply: no absolute claims about the future, whoever wrote it.
+  const guarded = guardCertainty(final.content);
+  final.content = guarded.text;
+  let certaintyRewrites = guarded.rewrites;
+  final.claims = final.claims.map((c) => {
+    const t = guardCertainty(c.claim);
+    const w = guardCertainty(c.why);
+    certaintyRewrites += t.rewrites + w.rewrites;
+    return { ...c, claim: t.text, why: w.text };
+  });
 
   // Spot-the-error mode (research mode + opt-in): sometimes change one number so it no longer matches the evidence.
   let plantedFlaw: PlantedFlawRecord | null = null;
@@ -339,6 +396,7 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
         intent,
         ...(routedBy ? { routedBy } : {}),
         ...(isDebrief ? { bet: prediction !== undefined } : {}),
+        ...(certaintyRewrites ? { certaintyRewrites } : {}),
       },
     })
     .returning();
@@ -348,6 +406,30 @@ export async function generateCoachMessage(userId: string, opts: CoachOptions = 
   if (isDebrief) memory = updateMemory(memory, { type: "debrief", bet: prediction !== undefined });
   await saveMemory(userId, memory);
   await recordSignals(userId, signals.map((s) => ({ ...s, coachMessageId: s.coachMessageId ?? msg.id })));
+  return openMessage(cipher, msg);
+}
+
+/** Store a scenario answer like any coach reply (encrypted), with its chart, and credit its signals. */
+async function storeScenarioReply(userId: string, question: string, r: ScenarioReply, memory: CoachMemory) {
+  const cipher = await cipherFor(userId);
+  const guarded = guardCertainty(r.content);
+  await db.insert(schema.coachMessages).values({ userId, role: "user", content: cipher.text(question, FIELDS.coachContent) });
+  const [msg] = await db
+    .insert(schema.coachMessages)
+    .values({
+      userId,
+      role: "coach",
+      content: cipher.text(guarded.text, FIELDS.coachContent),
+      nextStep: r.actions[0]?.label ?? null,
+      claims: r.claims,
+      actions: r.actions,
+      mood: r.mood,
+      model: "rules-v1",
+      meta: { source: "rules", intent: r.intent, scenario: r.scenario, ...(r.chart ? { chart: r.chart } : {}), ...(guarded.rewrites ? { certaintyRewrites: guarded.rewrites } : {}) },
+    })
+    .returning();
+  await saveMemory(userId, updateMemory(memory, { type: "question", intent: r.intent }));
+  await recordSignals(userId, r.signals.map((x) => ({ ...x, coachMessageId: msg.id })));
   return openMessage(cipher, msg);
 }
 

@@ -20,6 +20,8 @@ import { StroopTask } from "./tasks/StroopTask";
 import { markLookedAway } from "@/lib/focus/gaze";
 import { useFocusGuard, type FocusStatus } from "@/lib/focus/useFocusGuard";
 import { isChimeMuted, playFocusChime, setChimeMuted } from "@/lib/focus/chime";
+import { RushNudge, VariantBanner } from "./scenarios/LiveGuards";
+import { BetSeal } from "./scenarios/BetCard";
 
 const FOCUS_TEXT: Record<Exclude<FocusStatus, "off">, string> = {
   starting: "Starting Focus Guard…",
@@ -83,10 +85,11 @@ export function PlaySession({ mode, focus, daily = false, focusGuard = false }: 
       status,
       trials,
       selfEstimate,
+      focus,
     })
       .then(({ result, next }) => setState(status === "abandoned" ? (next ? { kind: "block", spec: next } : { kind: "done" }) : { kind: "result", spec, result, next }))
       .catch((e) => setState({ kind: "error", message: e.message }));
-  }, [takeIntervals]);
+  }, [takeIntervals, focus]);
 
   // A finished block first asks "How sure are you?" (the guess must come before the score is shown).
   const onFinish = useCallback<TaskFinish>(
@@ -142,6 +145,9 @@ export function PlaySession({ mode, focus, daily = false, focusGuard = false }: 
           {FOCUS_TEXT[guard.status]}
         </p>
       )}
+      {state.kind === "block" && <RushNudge spec={state.spec} />}
+      {state.kind === "block" && <VariantBanner spec={state.spec} />}
+      {state.kind === "block" && <BetSeal spec={state.spec} />}
       {renderState()}
       <PandaCorner mode={mode === "assessment" ? "quiet" : "lively"} />
     </>

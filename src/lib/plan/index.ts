@@ -2,6 +2,7 @@ import type { Dimension, Paradigm } from "../dimensions/schema";
 import { Z90, type Posterior } from "../profiler";
 import { predictedComposite } from "../selector";
 import { inSentence } from "../text";
+import { detectAsymmetry, levelForRole, type Role } from "../scenarios/asymmetry";
 
 export type PlanItemDraft = {
   dimensionId: string;
@@ -9,6 +10,8 @@ export type PlanItemDraft = {
   targetLevel: number;
   blocks: number;
   reason: string;
+  /** Split profile: stretch (advanced), foundation (basics) or maintain. */
+  role?: Role;
 };
 
 export type PlanDraft = { rationale: string; items: PlanItemDraft[] };
@@ -36,21 +39,33 @@ export function generateWeeklyPlan(input: {
     .filter((x): x is { dim: Dimension; task: NonNullable<typeof x.task> } => !!x.task);
   if (!playable.length) return { rationale: "No playable tasks yet.", items: [] };
 
+  // A split profile gets a split plan: never one "average" difficulty for everyone.
+  const asym = detectAsymmetry(
+    playable.map(({ dim }) => ({ id: dim.id, name: dim.name, mean: input.posteriors[dim.id].mean, sd: input.posteriors[dim.id].sd, measured: input.posteriors[dim.id].nObservations > 0 })),
+  );
   const scored = playable.map(({ dim, task }) => {
     const p = input.posteriors[dim.id];
     const measured = p.nObservations > 0;
     const uncertainty = Math.min(1, p.sd / dim.profile.prior.sd);
     const priority = measured ? 0.6 * uncertainty + 0.4 * (1 - p.mean) : 1.2;
     const target = task.difficulty.target_success;
-    const level = task.difficulty.levels.reduce((best, l) =>
+    const growth = task.difficulty.levels.reduce((best, l) =>
       Math.abs(predictedComposite(p.mean, l.ability_range) - target) < Math.abs(predictedComposite(p.mean, best.ability_range) - target) ? l : best,
     ).level;
-    const reason = !measured
+    const role: Role = asym.asymmetric ? asym.roles[dim.id] : "maintain";
+    const level = levelForRole(role, growth, task.difficulty.levels.map((l) => l.level));
+    const roleReason =
+      role === "stretch"
+        ? `Stretch: about ${pct(p.mean)}%, one of your strongest skills, so level ${level} pushes past the comfort zone.`
+        : role === "foundation"
+          ? `Foundation: about ${pct(p.mean)}%, so level ${level} builds the basics before anything harder.`
+          : null;
+    const reason = roleReason ?? (!measured
       ? `Not measured yet: a first block gives your ${inSentence(dim.name)} estimate a starting point.`
       : uncertainty > 0.6
         ? `The band is still ±${pct(Z90 * p.sd)}% wide: more blocks will sharpen the estimate.`
-        : `About ${pct(p.mean)}% now: level ${level} keeps you in the growth zone (~${pct(target)}% success).`;
-    return { dim, task, priority, level, reason };
+        : `About ${pct(p.mean)}% now: level ${level} keeps you in the growth zone (~${pct(target)}% success).`);
+    return { dim, task, priority, level, reason, role };
   });
 
   // At least one block each, then largest-remainder allocation of the rest by priority.
@@ -69,13 +84,16 @@ export function generateWeeklyPlan(input: {
   const items: PlanItemDraft[] = scored
     .map((x, i) => ({ x, blocks: base[i] + floors[i] }))
     .sort((a, b) => b.x.priority - a.x.priority)
-    .map(({ x, blocks }) => ({ dimensionId: x.dim.id, taskId: x.task.id, targetLevel: x.level, blocks, reason: x.reason }));
+    .map(({ x, blocks }) => ({ dimensionId: x.dim.id, taskId: x.task.id, targetLevel: x.level, blocks, reason: x.reason, ...(x.role !== "maintain" ? { role: x.role } : {}) }));
 
   const top = scored.sort((a, b) => b.priority - a.priority)[0];
+  const split = asym.asymmetric && asym.strongest && asym.weakest
+    ? ` Your profile is split (${asym.strongest.name} ${asym.strongest.pct}% vs ${inSentence(asym.weakest.name)} ${asym.weakest.pct}%), so the plan is too: advanced levels on the strong side, foundations on the weak side.`
+    : "";
   return {
     rationale: `${total} blocks this week, about 3 per session. Most go to ${inSentence(top.dim.name)}, where ${
       top.priority >= 1.2 ? "nothing is measured yet" : "the estimate is least certain or has the most room to grow"
-    }.`,
+    }.${split}`,
     items,
   };
 }

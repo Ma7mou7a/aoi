@@ -22,17 +22,49 @@ const trial = z.object({
   lookedAway: z.boolean().optional(),
 });
 
+const short = z.string().max(200);
+const decisionTrace = z.object({
+  mode: z.enum(["assessment", "training"]),
+  basis: short,
+  ranking: z
+    .array(z.object({ skill: short, name: short, meanPct: z.number(), bandPct: z.tuple([z.number(), z.number()]), blocks: z.number(), score: z.number() }))
+    .max(12),
+  chosen: short,
+  runnerUp: short.optional(),
+  marginPts: z.number().optional(),
+  adjustments: z.array(z.string().max(300)).max(10),
+  at: z.string().max(40),
+});
+const blockVariant = z.object({
+  kind: z.enum(["strategy", "stretch"]),
+  title: short,
+  detail: z.string().max(600),
+  strategy: z.object({ name: short, how: z.string().max(400) }).optional(),
+  baseline: z.array(z.number().min(0).max(1)).max(10).optional(),
+});
+
 const body = z.object({
   dimensionId: z.string().max(64),
   taskId: z.string().max(64),
   level: z.number().int().positive(),
   params: z.record(z.string(), z.unknown()),
-  reason: z.object({ rule: z.string().max(64), expectedSdReduction: z.number(), note: z.string().max(500) }),
+  reason: z.object({
+    rule: z.string().max(120),
+    expectedSdReduction: z.number(),
+    note: z.string().max(600),
+    trace: decisionTrace.optional(),
+    variant: blockVariant.optional(),
+    bet: z
+      .object({ mid: z.number(), low50: z.number(), high50: z.number(), low90: z.number(), high90: z.number(), at: z.string().max(40) })
+      .optional(),
+  }),
   startedAt: z.string().datetime(),
   status: z.enum(["completed", "abandoned"]),
   trials: z.array(trial).max(500),
   /** "How sure are you?" guess of the block score (0..1), made before the result is shown. */
   selfEstimate: z.number().min(0).max(1).nullable().optional(),
+  /** The skill the player chose for this session: the next game stays on it. */
+  focus: z.string().max(64).optional(),
 });
 
 /** Submit one block: stores trials, scores it, updates the Brain Twin, and returns the next block. */
@@ -61,8 +93,9 @@ export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: str
   const cameraOk = await consented("camera");
   const trials = b.trials.map((t) => ({ ...t, behaviour: behaviourOk ? t.behaviour : undefined, lookedAway: cameraOk ? t.lookedAway : undefined }));
 
-  const result = await recordRun({ ...b, trials, userId: user.id, sessionId: session.id, startedAt: new Date(b.startedAt), behaviourOk, sessionStartedAt: session.startedAt });
-  const next = await nextBlock(user.id, session.id, session.mode);
+  const { focus, ...run } = b;
+  const result = await recordRun({ ...run, trials, userId: user.id, sessionId: session.id, startedAt: new Date(b.startedAt), behaviourOk, sessionStartedAt: session.startedAt });
+  const next = await nextBlock(user.id, session.id, session.mode, focus);
   if (!next) {
     await db.update(schema.sessions).set({ status: "completed", endedAt: new Date() }).where(eq(schema.sessions.id, session.id));
   }

@@ -24,7 +24,9 @@ export type ValidityFlag =
   | "many_anticipations"
   | "many_timeouts"
   | "focus_lost"
-  | "looked_away";
+  | "looked_away"
+  /** Button masher: many answers faster than the task can be read, and mostly wrong. */
+  | "rushing";
 
 export type Validity = { valid: boolean; validTrials: number; flags: ValidityFlag[] };
 

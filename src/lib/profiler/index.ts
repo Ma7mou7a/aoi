@@ -46,6 +46,22 @@ export function updatePosterior(p: Posterior, observation: number, observationSd
   };
 }
 
+/**
+ * Brain Twin 2.0, layer 2: an outlier-proof update. Before trusting a game, compare it with what the Twin
+ * expected: z = (observation − mean) / √(sd² + obsSd²). A game more than ROBUST.z predictive SDs away is
+ * more likely a lapse (a bad moment, a distraction, a misread instruction) than a real jump in ability,
+ * so its noise is widened by |z| / ROBUST.z (a Huber-type weight). Typical games are untouched.
+ */
+export const ROBUST = { z: 2.5 } as const;
+
+export type RobustUpdate = { posterior: Posterior; z: number; damped: boolean; factor: number };
+
+export function robustUpdate(p: Posterior, observation: number, observationSd: number, nTrials: number, now = new Date()): RobustUpdate {
+  const z = (observation - p.mean) / Math.sqrt(p.sd ** 2 + observationSd ** 2);
+  const factor = Math.abs(z) > ROBUST.z ? Math.abs(z) / ROBUST.z : 1;
+  return { posterior: updatePosterior(p, observation, observationSd * factor, nTrials, now), z: Math.round(z * 10) / 10, damped: factor > 1, factor: Math.round(factor * 100) / 100 };
+}
+
 export function credibleInterval(p: Pick<Posterior, "mean" | "sd">, z = Z90): [number, number] {
   return [clamp01(p.mean - z * p.sd), clamp01(p.mean + z * p.sd)];
 }

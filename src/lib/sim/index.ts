@@ -10,7 +10,7 @@ import { generateTaskSwitching, simulateTaskSwitching, type TaskSwitchingParams 
 import { generateTrustMachine, simulateTrustMachine, type TrustParams } from "../tasks/trustMachine";
 
 /** Synthetic player types: a genuine player with a latent ability, or one of four invalid behaviours. */
-export type Behaviour = "genuine" | "random" | "same_key" | "no_response" | "anticipate";
+export type Behaviour = "genuine" | "random" | "same_key" | "no_response" | "anticipate" | "masher";
 
 /** One simulated block of a task at given (merged) params by a player with latent ability θ ∈ [0, 1]. */
 export function simulateBlock(paradigm: Paradigm, params: Record<string, unknown>, ability: number, seed: number, behaviour: Behaviour = "genuine"): TrialRecord[] {
@@ -70,7 +70,8 @@ function corrupt(paradigm: Paradigm, params: Record<string, unknown>, trials: Tr
       return { ...t, response: null, outcome: paradigm === "n_back" ? "no_response" : "timeout", correct: paradigm === "n_back" ? t.stimulus.isTarget !== true : false, rtMs: null };
     }
     const response = behaviour === "same_key" && paradigm !== "corsi" ? fixed : rng.pick(responses(paradigm, params, t, rng));
-    const rtMs = behaviour === "anticipate" ? 40 + rng.int(80) : 300 + rng.int(600);
+    // A button masher answers just above the anticipation floor: fast enough to dodge "too fast", too fast to read.
+    const rtMs = behaviour === "anticipate" ? 40 + rng.int(80) : behaviour === "masher" ? 210 + rng.int(150) : 300 + rng.int(600);
     return { ...t, response, outcome: response == null ? "no_response" : "response", correct: isCorrect(paradigm, t, response), rtMs: response == null ? null : rtMs };
   });
   if (paradigm !== "corsi") return out;

@@ -8,7 +8,9 @@ export type PandaState = "idle" | "wave" | "watch" | "think" | "cheer" | "proud"
 
 export type PandaEvent =
   | { type: "trial:correct" | "trial:wrong" | "block:start" | "block:end" | "milestone" | "reward" }
-  | { type: "coach:mood"; mood: PandaState };
+  | { type: "coach:mood"; mood: PandaState }
+  /** Every recorded trial's timing, for the live "slow down" check (Bao ignores it). */
+  | { type: "trial:data"; rtMs: number | null; correct: boolean | null; isPractice?: boolean; outcome?: string };
 
 /** "quiet" during assessment blocks (blink only), "lively" in practice. */
 export type ReactMode = "quiet" | "lively";
@@ -37,6 +39,8 @@ export function reactTo(s: ThrottleState, e: PandaEvent, mode: ReactMode): { pos
       return { pose: mode === "quiet" ? "quiet" : "watch", next: INITIAL_THROTTLE };
     case "block:end":
       return { pose: "proud", next: s };
+    case "trial:data":
+      return { pose: null, next: s };
   }
 }
 

@@ -23,6 +23,22 @@ export type LineKey =
   | "need_more_games";
 
 export const LINES: Record<LineKey, string[]> = {
+  why: [
+    "Fair question. Here's exactly why I picked it, straight from my notes.",
+    "No black box here. This is the reasoning I saved when I chose it.",
+    "Good one to ask. I keep a note of every choice, so here it is.",
+    "I never pick at random. Here's the record from when I chose it.",
+    "You deserve the real reason, not a story. This is what I saw.",
+    "Let me open my notebook. This is why that game came up.",
+  ],
+  dispute: [
+    "Thanks for telling me. You were there and I wasn't.",
+    "Good call pushing back. I'd rather be corrected than stubborn.",
+    "You know your day better than I do. Let me fix my picture.",
+    "Noted, and fair. One game shouldn't speak louder than you.",
+    "I like it when you question me. Let me re-weigh that game.",
+    "Thanks for the context, {name}. That changes how sure I am.",
+  ],
   debrief: [
     "Here's what your last game says, in plain words.",
     "I watched the whole thing. Here's the short version.",

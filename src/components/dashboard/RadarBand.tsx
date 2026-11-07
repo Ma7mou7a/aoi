@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ProfileView } from "@/lib/server/profile";
 import { ChartCard, DataTable } from "./ChartCard";
+import { detectAsymmetry } from "@/lib/scenarios/asymmetry";
 
 type Dim = ProfileView["dimensions"][number];
 
@@ -31,6 +32,9 @@ export function RadarBand({ dims }: { dims: Dim[] }) {
   const hi = dims.map((d, i) => point(i, n, d.ci[1]));
   const lo = dims.map((d, i) => point(i, n, d.ci[0])).reverse();
   const h = hover == null ? null : dims[hover];
+  // A split profile is shown as a split, not averaged away: strongest and weakest axes are marked.
+  const asym = detectAsymmetry(dims.map((d) => ({ id: d.id, name: d.name, mean: d.mean, sd: d.sd, measured: d.nObservations > 0 })));
+  const roleOf = (id: string) => (asym.asymmetric ? asym.roles[id] : "maintain");
 
   const table = (
     <DataTable
@@ -77,6 +81,11 @@ export function RadarBand({ dims }: { dims: Dim[] }) {
                 <text x={x} y={y + 14} textAnchor={anchor} fontSize={11} fill={d.nObservations ? "var(--chart-ink-2)" : "var(--chart-muted)"}>
                   {d.nObservations ? `${pct(d.mean)}%` : "not measured"}
                 </text>
+                {roleOf(d.id) !== "maintain" && (
+                  <text x={x} y={y < CY - R ? y - 16 : y + 28} textAnchor={anchor} fontSize={10.5} fontWeight={700} fill={roleOf(d.id) === "stretch" ? "var(--chart-accent)" : "var(--chart-series-2)"}>
+                    {roleOf(d.id) === "stretch" ? "▲ stretch" : "▼ foundation"}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -96,6 +105,11 @@ export function RadarBand({ dims }: { dims: Dim[] }) {
           </div>
         )}
       </div>
+      {asym.asymmetric && asym.strongest && asym.weakest && (
+        <p className="mt-3 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: "var(--chart-series-2)", color: "var(--chart-ink)" }}>
+          <b>Split profile, not an average.</b> {asym.strongest.name} ({asym.strongest.pct}%, likely {asym.strongest.band[0]}–{asym.strongest.band[1]}%) and {asym.weakest.name} ({asym.weakest.pct}%, likely {asym.weakest.band[0]}–{asym.weakest.band[1]}%) are {asym.gapPts} points apart and their ranges don&apos;t overlap. Your plan trains them differently: advanced levels on the strong side, foundations on the other.
+        </p>
+      )}
     </ChartCard>
   );
 }

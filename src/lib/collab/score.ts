@@ -64,6 +64,10 @@ export const SIGNALS = {
   caught_planted_flaw: { component: "critical_verification", value: 1.0, label: "Spotted a deliberate error" },
   missed_planted_flaw: { component: "critical_verification", value: 0.0, label: "Missed a deliberate error" },
   flagged_correct_claim: { component: "critical_verification", value: 0.4, label: "Flagged a claim that was actually correct" },
+  // Pushback: disagreeing with a result and giving a reason is the behaviour we want, so it is rewarded
+  // (critical verification + iteration). Value 0.6 instead of 1 once it becomes a habit (> 3 in a week).
+  pushback_with_context: { component: "critical_verification", value: 1.0, label: "Pushed back on a result and said why" },
+  contested_result: { component: "iteration", value: 1.0, label: "Had the coach re-weigh a result instead of accepting it" },
   // Second-opinion game, one graded event per block (value = the block's rate, not this default).
   trust_kept_right_answer: { component: "critical_verification", value: 0.5, label: "Second opinion: kept your right answer when the AI was wrong" },
   // AI Lab, one event per round where the real AI argued against your first answer.
@@ -84,6 +88,7 @@ export const SIGNALS = {
   in_scope_question: { component: "responsible_use", value: 1.0, label: "Asked a question within the coach's scope" },
   clinical_question: { component: "responsible_use", value: 0.3, label: "Asked the coach a health question it can't answer" },
   reviewed_data_settings: { component: "responsible_use", value: 1.0, label: "Reviewed privacy and data settings" },
+  reported_block_context: { component: "responsible_use", value: 1.0, label: "Told the coach honestly what happened in a flagged game" },
   trust_used_right_help: { component: "responsible_use", value: 0.5, label: "Second opinion: switched to the AI when it was right" },
 } as const satisfies Record<string, { component: Component; value: number; label: string }>;
 

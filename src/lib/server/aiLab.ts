@@ -11,7 +11,7 @@ import { award } from "./rewards";
 import { HttpError } from "./user";
 
 /**
- * AI Lab: two games played against a real AI (Claude or Groq, whichever the coach uses). The AI only
+ * AI Lab: two games played against a real AI (the same open-weight model the coach uses). The AI only
  * ever sees trivia from src/lib/aiLab/bank.ts, never anything about the player. The answer key lives
  * in ai_lab_rounds and is revealed only after the player commits. With no AI provider the games use
  * pre-written texts and say so.
